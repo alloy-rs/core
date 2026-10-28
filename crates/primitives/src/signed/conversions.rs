@@ -307,8 +307,9 @@ macro_rules! impl_conversions {
                     }
 
                     let abs = (!uint).wrapping_add(1);
-                    let tc = twos_complement(Uint::<BITS, LIMBS>::from(abs));
-                    Ok(Self(tc))
+                    let abs =
+                        Uint::<BITS, LIMBS>::try_from(abs).map_err(|_| BigIntConversionError)?;
+                    Self::checked_from_sign_and_abs(Sign::Negative, abs).ok_or(BigIntConversionError)
                 }
             }
 

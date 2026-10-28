@@ -188,7 +188,9 @@ impl TypedData {
     /// [`encodeData`]: https://eips.ethereum.org/EIPS/eip-712#definition-of-encodedata
     pub fn encode_data(&self) -> Result<Vec<u8>> {
         let s = self.coerce()?;
-        Ok(self.resolver.encode_data(&s)?.unwrap())
+        self.resolver
+            .encode_data(&s)?
+            .ok_or_else(|| crate::Error::custom("EIP-712 primary type must be a struct"))
     }
 
     /// Calculate the [`encodeType`] for this value.
@@ -316,6 +318,23 @@ mod tests {
             hex::encode(&hash[..]),
             "8d4a3f4082945b7879e2b55f181c31a77c8c0a464b70669458abbaaf99de4c38",
         );
+    }
+
+    #[test]
+    fn primitive_primary_type_returns_error() {
+        let json = json!({
+            "types": {
+                "EIP712Domain": [],
+                "uint256": []
+            },
+            "primaryType": "uint256",
+            "domain": {},
+            "message": "1"
+        });
+
+        let typed_data: TypedData = serde_json::from_value(json).unwrap();
+
+        assert!(typed_data.hash_struct().is_err());
     }
 
     #[test]

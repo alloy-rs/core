@@ -51,6 +51,7 @@ pub use alloy_sol_macro::sol;
 #[doc(hidden)]
 #[allow(missing_debug_implementations)]
 pub mod private {
+    #[allow(deprecated)]
     pub use super::{
         abi::RECURSION_LIMIT,
         utils::{next_multiple_of_32, words_for, words_for_len},
@@ -121,6 +122,124 @@ pub mod private {
     pub fn str_to_owned(s: &str) -> String {
         s.to_owned()
     }
+
+    /// Const-constructible mirrors of the [`alloy_json_abi`] items emitted by `#[sol(abi)]`.
+    ///
+    /// The macro emits each item as promoted constant data and converts it with a single
+    /// non-generic call, instead of expanding a full owned literal for every item.
+    #[cfg(feature = "json")]
+    mod static_abi {
+        use alloc::vec::Vec;
+        use alloy_json_abi::{
+            Constructor, Error, Event, EventParam, Function, InternalType, Param, StateMutability,
+        };
+
+        #[derive(Clone, Copy)]
+        pub struct StaticParam {
+            pub ty: &'static str,
+            pub name: &'static str,
+            pub internal_type: Option<&'static str>,
+            pub components: &'static [Self],
+        }
+
+        #[derive(Clone, Copy)]
+        pub struct StaticEventParam {
+            pub ty: &'static str,
+            pub name: &'static str,
+            pub indexed: bool,
+            pub internal_type: Option<&'static str>,
+            pub components: &'static [StaticParam],
+        }
+
+        #[derive(Clone, Copy)]
+        pub struct StaticConstructor {
+            pub inputs: &'static [StaticParam],
+            pub state_mutability: StateMutability,
+        }
+
+        #[derive(Clone, Copy)]
+        pub struct StaticFunction {
+            pub name: &'static str,
+            pub inputs: &'static [StaticParam],
+            pub outputs: &'static [StaticParam],
+            pub state_mutability: StateMutability,
+        }
+
+        #[derive(Clone, Copy)]
+        pub struct StaticEvent {
+            pub name: &'static str,
+            pub inputs: &'static [StaticEventParam],
+            pub anonymous: bool,
+        }
+
+        #[derive(Clone, Copy)]
+        pub struct StaticError {
+            pub name: &'static str,
+            pub inputs: &'static [StaticParam],
+        }
+
+        impl StaticConstructor {
+            #[inline(never)]
+            pub fn to_abi(&self) -> Constructor {
+                Constructor { inputs: params(self.inputs), state_mutability: self.state_mutability }
+            }
+        }
+
+        impl StaticFunction {
+            #[inline(never)]
+            pub fn to_abi(&self) -> Function {
+                Function {
+                    name: self.name.into(),
+                    inputs: params(self.inputs),
+                    outputs: params(self.outputs),
+                    state_mutability: self.state_mutability,
+                }
+            }
+        }
+
+        impl StaticEvent {
+            #[inline(never)]
+            pub fn to_abi(&self) -> Event {
+                Event {
+                    name: self.name.into(),
+                    inputs: self
+                        .inputs
+                        .iter()
+                        .map(|p| EventParam {
+                            ty: p.ty.into(),
+                            name: p.name.into(),
+                            indexed: p.indexed,
+                            components: params(p.components),
+                            internal_type: p.internal_type.and_then(InternalType::parse),
+                        })
+                        .collect(),
+                    anonymous: self.anonymous,
+                }
+            }
+        }
+
+        impl StaticError {
+            #[inline(never)]
+            pub fn to_abi(&self) -> Error {
+                Error { name: self.name.into(), inputs: params(self.inputs) }
+            }
+        }
+
+        fn params(items: &[StaticParam]) -> Vec<Param> {
+            items
+                .iter()
+                .map(|p| Param {
+                    ty: p.ty.into(),
+                    name: p.name.into(),
+                    components: params(p.components),
+                    internal_type: p.internal_type.and_then(InternalType::parse),
+                })
+                .collect()
+        }
+    }
+
+    #[cfg(feature = "json")]
+    pub use static_abi::*;
 
     #[inline(never)]
     pub fn make_btree_map<K: Ord, V>(items: Vec<(K, V)>) -> BTreeMap<K, V> {

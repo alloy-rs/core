@@ -14,7 +14,6 @@
 extern crate alloc;
 
 use paste as _;
-use rustc_hash as _;
 use sha3 as _;
 #[cfg(feature = "tiny-keccak")]
 use tiny_keccak as _;
@@ -72,6 +71,8 @@ mod signature;
 pub use signature::{Signature, SignatureError, normalize_v, to_eip155_v};
 
 pub mod utils;
+#[cfg(feature = "keccak-cache")]
+pub use utils::init_keccak_cache;
 pub use utils::{KECCAK256_EMPTY, Keccak256, eip191_hash_message, keccak256, keccak256_uncached};
 
 #[doc(hidden)] // Use `hex` directly instead!
@@ -93,7 +94,7 @@ pub use ::hex::serde as serde_hex;
 // Not public API.
 #[doc(hidden)]
 pub mod private {
-    pub use alloc::{borrow::Cow, vec::Vec};
+    pub use alloc::{borrow::Cow, boxed::Box, vec::Vec};
     pub use core::{
         self,
         borrow::{Borrow, BorrowMut},
@@ -126,8 +127,14 @@ pub mod private {
     #[cfg(feature = "diesel")]
     pub use diesel;
 
+    #[cfg(feature = "postgres")]
+    pub use {bytes, postgres_types};
+
     #[cfg(feature = "sqlx")]
     pub use sqlx_core;
+
+    #[cfg(feature = "sqlx-postgres")]
+    pub use sqlx_postgres;
 
     #[cfg(feature = "schemars")]
     pub use schemars;

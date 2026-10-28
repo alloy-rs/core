@@ -1,23 +1,44 @@
 //! A minimalistic one-way set associative cache for Keccak256 values.
 //!
 //! This cache has a fixed size to allow fast access and minimize per-call overhead.
+//!
+//! With the `keccak-cache-stats` feature, hit/miss/insert/collision counts are
+//! tracked in the global [`KECCAK_CACHE_STATS`] static.
 
 use super::{hint::unlikely, keccak256_impl as keccak256};
 use crate::{B256, KECCAK256_EMPTY};
-use std::mem::MaybeUninit;
+use std::{mem::MaybeUninit, sync::OnceLock};
+
+#[cfg(feature = "keccak-cache-stats")]
+pub use stats::{KECCAK_CACHE_STATS, KeccakCacheStats};
 
 /// Maximum input length that can be cached.
 pub(super) const MAX_INPUT_LEN: usize =
     128 - size_of::<B256>() - size_of::<u8>() - size_of::<usize>();
 
-const COUNT: usize = 1 << 17; // ~131k entries * 128 bytes = 16MiB
-static CACHE: fixed_cache::Cache<Key, B256, BuildHasher, CacheConfig> =
-    fixed_cache::static_cache!(Key, B256, COUNT, BuildHasher::new());
+const DEFAULT_COUNT: usize = 1 << 17; // ~131k entries * 128 bytes = 16MiB
+static CACHE: OnceLock<Cache> = OnceLock::new();
+
+type Cache = fixed_cache::Cache<Key, B256, BuildHasher, CacheConfig>;
 
 struct CacheConfig {}
 impl fixed_cache::CacheConfig for CacheConfig {
-    const STATS: bool = false;
+    const STATS: bool = cfg!(feature = "keccak-cache-stats");
     const EPOCHS: bool = false;
+}
+
+/// Initializes the process-global keccak cache with `entries` buckets.
+///
+/// Returns `true` if this call initialized the cache, and `false` if the cache was already
+/// initialized by an earlier call or by the first cached hash computation. If this is never called,
+/// the cache is initialized lazily with the default size on first use.
+///
+/// # Panics
+///
+/// Panics if `entries` is not a power of two or is less than 4.
+#[must_use]
+pub fn init_keccak_cache(entries: usize) -> bool {
+    init_cache(&CACHE, entries)
 }
 
 pub(super) fn compute(input: &[u8], imp: impl FnOnce(&[u8]) -> B256) -> B256 {
@@ -25,13 +46,32 @@ pub(super) fn compute(input: &[u8], imp: impl FnOnce(&[u8]) -> B256) -> B256 {
         return if input.is_empty() { KECCAK256_EMPTY } else { keccak256(input) };
     }
 
-    CACHE.get_or_insert_with_ref(input, imp, |input| {
+    let cache = CACHE.get_or_init(default_cache);
+    cache.get_or_insert_with_ref(input, imp, |input| {
         let mut data = [MaybeUninit::uninit(); MAX_INPUT_LEN];
         unsafe {
             std::ptr::copy_nonoverlapping(input.as_ptr(), data.as_mut_ptr().cast(), input.len())
         };
         Key { len: input.len() as u8, data }
     })
+}
+
+fn init_cache(cache: &OnceLock<Cache>, entries: usize) -> bool {
+    if cache.get().is_some() {
+        return false;
+    }
+    cache.set(new_cache(entries)).is_ok()
+}
+
+fn default_cache() -> Cache {
+    new_cache(DEFAULT_COUNT)
+}
+
+fn new_cache(entries: usize) -> Cache {
+    let cache = fixed_cache::Cache::new(entries, BuildHasher::new());
+    #[cfg(feature = "keccak-cache-stats")]
+    let cache = cache.with_stats(Some(fixed_cache::Stats::new(&stats::KECCAK_CACHE_STATS)));
+    cache
 }
 
 type BuildHasher = std::hash::BuildHasherDefault<Hasher>;
@@ -110,6 +150,105 @@ impl Key {
     const fn get(&self) -> &[u8] {
         unsafe { std::slice::from_raw_parts(self.data.as_ptr().cast(), self.len as usize) }
     }
+}
+
+#[cfg(feature = "keccak-cache-stats")]
+mod stats {
+    use super::Key;
+    use crate::B256;
+    use std::sync::atomic::{AtomicU64, Ordering};
+
+    /// Counters for the global keccak cache.
+    ///
+    /// Accessed via the [`KECCAK_CACHE_STATS`] static. All counters use relaxed atomics.
+    ///
+    /// Available only with the `keccak-cache-stats` feature.
+    #[derive(Debug, Default)]
+    pub struct KeccakCacheStats {
+        hits: AtomicU64,
+        misses: AtomicU64,
+        inserts: AtomicU64,
+        collisions: AtomicU64,
+    }
+
+    impl KeccakCacheStats {
+        const fn new() -> Self {
+            Self {
+                hits: AtomicU64::new(0),
+                misses: AtomicU64::new(0),
+                inserts: AtomicU64::new(0),
+                collisions: AtomicU64::new(0),
+            }
+        }
+
+        /// Returns the number of cache hits.
+        #[inline]
+        pub fn hits(&self) -> u64 {
+            self.hits.load(Ordering::Relaxed)
+        }
+
+        /// Returns the number of cache misses.
+        #[inline]
+        pub fn misses(&self) -> u64 {
+            self.misses.load(Ordering::Relaxed)
+        }
+
+        /// Returns the number of inserted entries.
+        ///
+        /// Includes inserts that evicted a different key on hash collision (see
+        /// [`collisions`](Self::collisions)).
+        #[inline]
+        pub fn inserts(&self) -> u64 {
+            self.inserts.load(Ordering::Relaxed)
+        }
+
+        /// Returns the number of collisions (a different key was evicted on insert).
+        #[inline]
+        pub fn collisions(&self) -> u64 {
+            self.collisions.load(Ordering::Relaxed)
+        }
+
+        /// Resets all counters to zero.
+        pub fn reset(&self) {
+            self.hits.store(0, Ordering::Relaxed);
+            self.misses.store(0, Ordering::Relaxed);
+            self.inserts.store(0, Ordering::Relaxed);
+            self.collisions.store(0, Ordering::Relaxed);
+        }
+    }
+
+    impl fixed_cache::StatsHandler<Key, B256> for &'static KeccakCacheStats {
+        #[inline]
+        fn on_hit(&self, _key: &Key, _value: &B256) {
+            self.hits.fetch_add(1, Ordering::Relaxed);
+        }
+
+        #[inline]
+        fn on_miss(&self, _key: fixed_cache::AnyRef<'_>) {
+            self.misses.fetch_add(1, Ordering::Relaxed);
+        }
+
+        #[inline]
+        fn on_insert(&self, key: &Key, _value: &B256, evicted: Option<(&Key, &B256)>) {
+            match evicted {
+                // Race: another thread inserted the same key concurrently. Same input
+                // always produces the same hash, so this is a no-op redundant write.
+                Some((old, _)) if old == key => {}
+                Some(_) => {
+                    self.inserts.fetch_add(1, Ordering::Relaxed);
+                    self.collisions.fetch_add(1, Ordering::Relaxed);
+                }
+                None => {
+                    self.inserts.fetch_add(1, Ordering::Relaxed);
+                }
+            }
+        }
+    }
+
+    /// Global counters for the keccak cache.
+    ///
+    /// Available only with the `keccak-cache-stats` feature.
+    pub static KECCAK_CACHE_STATS: KeccakCacheStats = KeccakCacheStats::new();
 }
 
 #[cfg(test)]

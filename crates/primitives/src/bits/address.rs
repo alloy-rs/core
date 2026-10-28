@@ -521,6 +521,22 @@ impl Address {
     pub fn from_private_key(private_key: &k256::ecdsa::SigningKey) -> Self {
         Self::from_public_key(private_key.verifying_key())
     }
+
+    /// Converts a [`secp256k1::PublicKey`] to its corresponding Ethereum address.
+    #[inline]
+    #[cfg(feature = "secp256k1")]
+    pub fn from_secp256k1_public_key(pubkey: &secp256k1::PublicKey) -> Self {
+        Self::from_raw_public_key(&pubkey.serialize_uncompressed()[1..])
+    }
+
+    /// Converts a [`secp256k1::SecretKey`] to its corresponding Ethereum address.
+    #[inline]
+    #[cfg(feature = "secp256k1")]
+    pub fn from_secp256k1_secret_key(secret_key: &secp256k1::SecretKey) -> Self {
+        let secp = secp256k1::Secp256k1::signing_only();
+        let pubkey = secp256k1::PublicKey::from_secret_key(&secp, secret_key);
+        Self::from_secp256k1_public_key(&pubkey)
+    }
 }
 
 /// Stack-allocated buffer for efficiently computing address checksums.

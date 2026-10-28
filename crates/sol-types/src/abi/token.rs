@@ -17,7 +17,7 @@ use crate::{
 };
 use alloc::vec::Vec;
 use alloy_primitives::{Bytes, FixedBytes, I256, U256, hex, utils::vec_try_with_capacity};
-use core::fmt;
+use core::{fmt, mem, mem::MaybeUninit, ptr};
 
 #[allow(unknown_lints, unnameable_types)]
 mod sealed {
@@ -55,8 +55,31 @@ pub trait Token<'de>: Sealed + Sized {
     /// True if the token represents a dynamically-sized type.
     const DYNAMIC: bool;
 
+    /// The minimum number of words required in the containing head.
+    const MINIMUM_WORDS: usize;
+
     /// Decode a token from a decoder.
-    fn decode_from(dec: &mut Decoder<'de>) -> Result<Self>;
+    fn decode_from(dec: &mut Decoder<'de, '_>) -> Result<Self>;
+
+    /// Decode tokens from a decoder into the given uninitialized buffer.
+    ///
+    /// On success, returns the initialized slice.
+    /// On error, no elements are initialized (partially initialized elements are dropped).
+    ///
+    /// The default implementation simply loops over [`decode_from`](Self::decode_from).
+    /// Implementations may override this to provide a more efficient batch decode,
+    /// e.g. a single `memcpy` for [`WordToken`].
+    ///
+    /// # Safety
+    ///
+    /// `out` must point to valid, writable memory for `out.len()` elements.
+    #[inline]
+    unsafe fn decode_many_from<'a>(
+        dec: &mut Decoder<'de, '_>,
+        out: &'a mut [MaybeUninit<Self>],
+    ) -> Result<&'a mut [Self]> {
+        try_init_each(out, || Self::decode_from(dec))
+    }
 
     /// Calculate the number of head words.
     fn head_words(&self) -> usize;
@@ -72,6 +95,18 @@ pub trait Token<'de>: Sealed + Sized {
 
     /// Append head words to the encoder.
     fn head_append(&self, enc: &mut Encoder);
+
+    /// Append head words for a slice of tokens to the encoder.
+    ///
+    /// The default implementation simply loops over [`head_append`](Self::head_append).
+    /// Implementations may override this to provide a more efficient batch encode,
+    /// e.g. a single `memcpy` for [`WordToken`].
+    #[inline]
+    fn head_append_many(tokens: &[Self], enc: &mut Encoder) {
+        for token in tokens {
+            token.head_append(enc);
+        }
+    }
 
     /// Append tail words to the encoder.
     fn tail_append(&self, enc: &mut Encoder);
@@ -90,11 +125,12 @@ pub trait TokenSeq<'a>: Token<'a> {
     fn encode_sequence(&self, enc: &mut Encoder);
 
     /// ABI-decode the token sequence from the encoder.
-    fn decode_sequence(dec: &mut Decoder<'a>) -> Result<Self>;
+    fn decode_sequence(dec: &mut Decoder<'a, '_>) -> Result<Self>;
 }
 
 /// A single EVM word - T for any value type.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[repr(transparent)]
 pub struct WordToken(pub Word);
 
 impl<T> From<&T> for WordToken
@@ -184,10 +220,28 @@ impl AsRef<[u8]> for WordToken {
 
 impl<'a> Token<'a> for WordToken {
     const DYNAMIC: bool = false;
+    const MINIMUM_WORDS: usize = 1;
 
     #[inline]
-    fn decode_from(dec: &mut Decoder<'a>) -> Result<Self> {
+    fn decode_from(dec: &mut Decoder<'a, '_>) -> Result<Self> {
         dec.take_word().copied().map(Self)
+    }
+
+    #[inline]
+    unsafe fn decode_many_from<'b>(
+        dec: &mut Decoder<'a, '_>,
+        out: &'b mut [MaybeUninit<Self>],
+    ) -> Result<&'b mut [Self]> {
+        let len = out.len();
+        let byte_len = len * Word::len_bytes();
+        let slice = dec.take_slice(byte_len)?;
+        // SAFETY: `MaybeUninit<WordToken>` has the same layout as `WordToken` which is
+        // `#[repr(transparent)]` over `Word` (`[u8; 32]`), all with alignment 1.
+        // `slice` is exactly `len * 32` bytes, matching the output layout.
+        unsafe {
+            core::ptr::copy_nonoverlapping(slice.as_ptr(), out.as_mut_ptr().cast::<u8>(), byte_len);
+            Ok(core::slice::from_raw_parts_mut(out.as_mut_ptr().cast::<Self>(), len))
+        }
     }
 
     #[inline]
@@ -203,6 +257,13 @@ impl<'a> Token<'a> for WordToken {
     #[inline]
     fn head_append(&self, enc: &mut Encoder) {
         enc.append_word(self.0);
+    }
+
+    #[inline]
+    fn head_append_many(tokens: &[Self], enc: &mut Encoder) {
+        // SAFETY: `WordToken` is `#[repr(transparent)]` over `Word`.
+        let words = unsafe { &*(tokens as *const [Self] as *const [Word]) };
+        enc.append_words(words);
     }
 
     #[inline]
@@ -252,9 +313,10 @@ impl<T, const N: usize> AsRef<[T; N]> for FixedSeqToken<T, N> {
 
 impl<'de, T: Token<'de>, const N: usize> Token<'de> for FixedSeqToken<T, N> {
     const DYNAMIC: bool = T::DYNAMIC;
+    const MINIMUM_WORDS: usize = if Self::DYNAMIC { 1 } else { T::MINIMUM_WORDS.saturating_mul(N) };
 
     #[inline]
-    fn decode_from(dec: &mut Decoder<'de>) -> Result<Self> {
+    fn decode_from(dec: &mut Decoder<'de, '_>) -> Result<Self> {
         if Self::DYNAMIC {
             dec.take_indirection().and_then(|mut child| Self::decode_sequence(&mut child))
         } else {
@@ -288,9 +350,7 @@ impl<'de, T: Token<'de>, const N: usize> Token<'de> for FixedSeqToken<T, N> {
         if Self::DYNAMIC {
             enc.append_indirection();
         } else {
-            for inner in &self.0 {
-                inner.head_append(enc);
-            }
+            T::head_append_many(&self.0, enc);
         }
     }
 
@@ -303,23 +363,23 @@ impl<'de, T: Token<'de>, const N: usize> Token<'de> for FixedSeqToken<T, N> {
 }
 
 impl<'de, T: Token<'de>, const N: usize> TokenSeq<'de> for FixedSeqToken<T, N> {
+    #[inline]
     fn encode_sequence(&self, enc: &mut Encoder) {
-        enc.push_offset(self.0.iter().map(T::head_words).sum());
-
-        for inner in &self.0 {
-            inner.head_append(enc);
-            enc.bump_offset(inner.tail_words());
-        }
-        for inner in &self.0 {
-            inner.tail_append(enc);
-        }
-
-        enc.pop_offset();
+        encode_sequence_impl(&self.0, enc);
     }
 
     #[inline]
-    fn decode_sequence(dec: &mut Decoder<'de>) -> Result<Self> {
-        crate::impl_core::try_from_fn(|_| T::decode_from(dec)).map(Self)
+    fn decode_sequence(dec: &mut Decoder<'de, '_>) -> Result<Self> {
+        dec.set_strict_head_words(
+            T::MINIMUM_WORDS.checked_mul(N).ok_or_else(|| crate::Error::Overrun)?,
+        )?;
+        let mut arr = crate::impl_core::uninit_array::<T, N>();
+        // SAFETY: `arr` is valid writable memory for `N` elements.
+        // `decode_many_from` initializes all elements on success.
+        unsafe {
+            T::decode_many_from(dec, &mut arr)?;
+            Ok(Self(crate::impl_core::array_assume_init(arr)))
+        }
     }
 }
 
@@ -365,19 +425,62 @@ impl<T> AsRef<[T]> for DynSeqToken<T> {
 
 impl<'de, T: Token<'de>> Token<'de> for DynSeqToken<T> {
     const DYNAMIC: bool = true;
+    const MINIMUM_WORDS: usize = 1;
 
     #[inline]
-    fn decode_from(dec: &mut Decoder<'de>) -> Result<Self> {
+    fn decode_from(dec: &mut Decoder<'de, '_>) -> Result<Self> {
         let mut child = dec.take_indirection()?;
         let len = child.take_offset()?;
+        if T::MINIMUM_WORDS == 0 {
+            debug_assert_eq!(core::mem::size_of::<T>(), 0);
+            if child.is_strict() && len != 0 {
+                return Err(crate::Error::ReserMismatch);
+            }
+            // Charge a byte per element to bound work on zero-sized tokens.
+            child.reserve(len)?;
+            #[allow(clippy::uninit_vec)]
+            let tokens = {
+                let mut tokens = Vec::new();
+                // SAFETY: `MINIMUM_WORDS == 0` is only implemented for zero-sized
+                // token types. A `Vec` of a zero-sized type has `usize::MAX`
+                // capacity, so setting its length does not allocate or initialize
+                // memory.
+                unsafe { tokens.set_len(len) };
+                tokens
+            };
+            return Ok(Self(tokens));
+        }
         // This appears to be an unclarity in the Solidity spec. The spec
         // specifies that offsets are relative to the first word of
         // `enc(X)`. But known-good test vectors are relative to the
         // word AFTER the array size
+        let required_words =
+            T::MINIMUM_WORDS.checked_mul(len).ok_or_else(|| crate::Error::Overrun)?;
         let mut child = child.raw_child()?;
+        child.set_strict_head_words(required_words)?;
+        if required_words > child.remaining_words() {
+            return Err(crate::Error::Overrun);
+        }
+        if child.is_strict() && T::DYNAMIC {
+            let mut tokens = Vec::new();
+            for _ in 0..len {
+                let token = T::decode_from(&mut child)?;
+                if tokens.len() == tokens.capacity() {
+                    let additional = tokens.capacity().max(1).min(len - tokens.len());
+                    child.reserve_elements::<T>(additional)?;
+                    tokens.try_reserve_exact(additional)?;
+                }
+                tokens.push(token);
+            }
+            return Ok(Self(tokens));
+        }
+        child.reserve_elements::<T>(len)?;
         let mut tokens = vec_try_with_capacity(len)?;
-        for _ in 0..len {
-            tokens.push(T::decode_from(&mut child)?);
+        // SAFETY: `spare_capacity_mut` returns valid writable memory.
+        // `decode_many_from` initializes all `len` elements on success.
+        unsafe {
+            T::decode_many_from(&mut child, &mut tokens.spare_capacity_mut()[..len])?;
+            tokens.set_len(len);
         }
         Ok(Self(tokens))
     }
@@ -407,22 +510,14 @@ impl<'de, T: Token<'de>> Token<'de> for DynSeqToken<T> {
 }
 
 impl<'de, T: Token<'de>> TokenSeq<'de> for DynSeqToken<T> {
+    #[inline]
     fn encode_sequence(&self, enc: &mut Encoder) {
-        enc.push_offset(self.0.iter().map(T::head_words).sum());
-
-        for inner in &self.0 {
-            inner.head_append(enc);
-            enc.bump_offset(inner.tail_words());
-        }
-        for inner in &self.0 {
-            inner.tail_append(enc);
-        }
-
-        enc.pop_offset();
+        encode_sequence_impl(&self.0, enc);
     }
 
     #[inline]
-    fn decode_sequence(dec: &mut Decoder<'de>) -> Result<Self> {
+    fn decode_sequence(dec: &mut Decoder<'de, '_>) -> Result<Self> {
+        dec.set_strict_head_words(Self::MINIMUM_WORDS)?;
         Self::decode_from(dec)
     }
 }
@@ -446,18 +541,21 @@ impl fmt::Debug for PackedSeqToken<'_> {
 }
 
 impl<'a> From<&'a [u8]> for PackedSeqToken<'a> {
+    #[inline]
     fn from(value: &'a [u8]) -> Self {
         Self(value)
     }
 }
 
 impl<'a> From<&'a Vec<u8>> for PackedSeqToken<'a> {
+    #[inline]
     fn from(value: &'a Vec<u8>) -> Self {
         Self(value.as_slice())
     }
 }
 
 impl AsRef<[u8]> for PackedSeqToken<'_> {
+    #[inline]
     fn as_ref(&self) -> &[u8] {
         self.0
     }
@@ -465,12 +563,14 @@ impl AsRef<[u8]> for PackedSeqToken<'_> {
 
 impl<'de: 'a, 'a> Token<'de> for PackedSeqToken<'a> {
     const DYNAMIC: bool = true;
+    const MINIMUM_WORDS: usize = 1;
 
     #[inline]
-    fn decode_from(dec: &mut Decoder<'de>) -> Result<Self> {
+    fn decode_from(dec: &mut Decoder<'de, '_>) -> Result<Self> {
         let mut child = dec.take_indirection()?;
         let len = child.take_offset()?;
-        let bytes = child.peek_len(len)?;
+        let bytes = child.take_padded_slice(len)?;
+        child.reserve(len)?;
         Ok(PackedSeqToken(bytes))
     }
 
@@ -525,9 +625,14 @@ macro_rules! tuple_impls {
         #[allow(non_snake_case)]
         impl<'de, $($ty: Token<'de>,)+> Token<'de> for ($($ty,)+) {
             const DYNAMIC: bool = $( <$ty as Token>::DYNAMIC )||+;
+            const MINIMUM_WORDS: usize = if Self::DYNAMIC {
+                1
+            } else {
+                0usize $( .saturating_add(<$ty as Token>::MINIMUM_WORDS) )+
+            };
 
             #[inline]
-            fn decode_from(dec: &mut Decoder<'de>) -> Result<Self> {
+            fn decode_from(dec: &mut Decoder<'de, '_>) -> Result<Self> {
                 // The first element in a dynamic tuple is an offset to the tuple's data;
                 // for a static tuples, the data begins right away
                 if Self::DYNAMIC {
@@ -560,7 +665,7 @@ macro_rules! tuple_impls {
                 }
             }
 
-            #[inline]
+            #[inline(always)]
             fn head_append(&self, enc: &mut Encoder) {
                 if Self::DYNAMIC {
                     enc.append_indirection();
@@ -584,24 +689,27 @@ macro_rules! tuple_impls {
         impl<'de, $($ty: Token<'de>,)+> TokenSeq<'de> for ($($ty,)+) {
             const IS_TUPLE: bool = true;
 
+            #[inline(always)]
             fn encode_sequence(&self, enc: &mut Encoder) {
                 let ($($ty,)+) = self;
-                enc.push_offset(0 $( + $ty.head_words() )+);
+                let mut offset = (0 $( + $ty.head_words() )+) * 32;
 
                 $(
-                    $ty.head_append(enc);
-                    enc.bump_offset($ty.tail_words());
+                    append_head($ty, enc, &mut offset);
                 )+
 
                 $(
                     $ty.tail_append(enc);
                 )+
-
-                enc.pop_offset();
             }
 
             #[inline]
-            fn decode_sequence(dec: &mut Decoder<'de>) -> Result<Self> {
+            fn decode_sequence(dec: &mut Decoder<'de, '_>) -> Result<Self> {
+                let head_words = 0usize $(
+                    .checked_add(<$ty as Token>::MINIMUM_WORDS)
+                    .ok_or_else(|| crate::Error::Overrun)?
+                )+;
+                dec.set_strict_head_words(head_words)?;
                 Ok(($(
                     match <$ty as Token>::decode_from(dec) {
                         Ok(t) => t,
@@ -615,9 +723,10 @@ macro_rules! tuple_impls {
 
 impl<'de> Token<'de> for () {
     const DYNAMIC: bool = false;
+    const MINIMUM_WORDS: usize = 0;
 
     #[inline]
-    fn decode_from(_dec: &mut Decoder<'de>) -> Result<Self> {
+    fn decode_from(_dec: &mut Decoder<'de, '_>) -> Result<Self> {
         Ok(())
     }
 
@@ -645,12 +754,76 @@ impl<'de> TokenSeq<'de> for () {
     fn encode_sequence(&self, _enc: &mut Encoder) {}
 
     #[inline]
-    fn decode_sequence(_dec: &mut Decoder<'de>) -> Result<Self> {
+    fn decode_sequence(_dec: &mut Decoder<'de, '_>) -> Result<Self> {
         Ok(())
     }
 }
 
 all_the_tuples!(tuple_impls);
+
+/// Shared implementation for [`TokenSeq::encode_sequence`] used by both
+/// [`FixedSeqToken`] and [`DynSeqToken`].
+fn encode_sequence_impl<'de, T: Token<'de>>(tokens: &[T], enc: &mut Encoder) {
+    if T::DYNAMIC {
+        // Every dynamic token has a one-word head.
+        let mut offset = tokens.len() * 32;
+        for inner in tokens {
+            append_head(inner, enc, &mut offset);
+        }
+        for inner in tokens {
+            inner.tail_append(enc);
+        }
+    } else {
+        T::head_append_many(tokens, enc);
+    }
+}
+
+/// Appends the head of `token`, tracking the tail offset in `offset` instead of in `enc`.
+///
+/// A dynamic token's head is a pointer to the current `offset`, which then advances past its tail.
+#[inline]
+fn append_head<'de, T: Token<'de>>(token: &T, enc: &mut Encoder, offset: &mut usize) {
+    if T::DYNAMIC {
+        enc.append_offset(*offset);
+        *offset += token.tail_words() * 32;
+    } else {
+        token.head_append(enc);
+    }
+}
+
+/// Initializes each element of `out` by calling `f` for each slot.
+///
+/// On success, all elements in `out` are initialized and returned as `&mut [T]`.
+/// On failure or panic, already-initialized elements are dropped.
+#[inline]
+fn try_init_each<T, E, F>(out: &mut [MaybeUninit<T>], mut f: F) -> core::result::Result<&mut [T], E>
+where
+    F: FnMut() -> core::result::Result<T, E>,
+{
+    struct Guard<'a, T> {
+        buf: &'a mut [MaybeUninit<T>],
+        initialized: usize,
+    }
+    impl<T> Drop for Guard<'_, T> {
+        fn drop(&mut self) {
+            // SAFETY: the first `self.initialized` elements are guaranteed initialized.
+            unsafe {
+                let ptr = self.buf.as_mut_ptr().cast::<T>();
+                ptr::drop_in_place(ptr::slice_from_raw_parts_mut(ptr, self.initialized));
+            }
+        }
+    }
+
+    let mut guard = Guard { buf: out, initialized: 0 };
+    for x in guard.buf.iter_mut() {
+        x.write(f()?);
+        guard.initialized += 1;
+    }
+    let buf = guard.buf as *mut [MaybeUninit<T>] as *mut [T];
+    mem::forget(guard);
+    // SAFETY: all `len` elements are initialized.
+    Ok(unsafe { &mut *buf })
+}
 
 #[cfg(test)]
 mod tests {

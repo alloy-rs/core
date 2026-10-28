@@ -271,16 +271,18 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
         self.0.leading_zeros()
     }
 
-    /// Returns the number of leading zeros in the binary representation of
+    /// Returns the number of trailing zeros in the binary representation of
     /// `self`.
     #[inline]
+    #[allow(clippy::missing_const_for_fn)] // `ruint` exposes this as const only in newer versions.
     pub fn trailing_zeros(&self) -> usize {
         self.0.trailing_zeros()
     }
 
-    /// Returns the number of leading ones in the binary representation of
+    /// Returns the number of trailing ones in the binary representation of
     /// `self`.
     #[inline]
+    #[allow(clippy::missing_const_for_fn)] // `ruint` exposes this as const only in newer versions.
     pub fn trailing_ones(&self) -> usize {
         self.0.trailing_ones()
     }
@@ -540,7 +542,7 @@ mod tests {
     use alloc::string::ToString;
     use core::ops::Neg;
     use ruint::{
-        BaseConvertError, ParseError,
+        ParseError,
         aliases::{U0, U1, U128, U160, U256},
     };
 
@@ -653,12 +655,7 @@ mod tests {
                 assert_eq!(value.into_sign_and_abs(), (Sign::Positive, unsigned));
 
                 let err = <$i_struct>::from_dec_str("invalid string").unwrap_err();
-                assert_eq!(
-                    err,
-                    ParseSignedError::Ruint(ParseError::BaseConvertError(
-                        BaseConvertError::InvalidDigit(18, 10)
-                    ))
-                );
+                assert_eq!(err, ParseSignedError::Ruint(ParseError::InvalidDigit('i')));
 
                 let err = <$i_struct>::from_dec_str(&format!("1{}", <$u_struct>::MAX)).unwrap_err();
                 assert_eq!(err, ParseSignedError::IntegerOverflow);
@@ -957,6 +954,37 @@ mod tests {
         run_test!(I160, U160);
         run_test!(I192, U192);
         run_test!(I256, U256);
+    }
+
+    #[test]
+    fn bit_shift_overflow() {
+        // Regression: the overflow check used a hardcoded `256` instead of the type's own
+        // `BITS`, so for every width below 256 a shift by `BITS..256` silently reported no
+        // overflow. `checked_shl`/`checked_shr` then returned `Some(ZERO)` instead of `None`,
+        // unlike `Uint` and the Rust primitives.
+        macro_rules! run_test {
+            ($i_struct:ty) => {
+                let bits = <$i_struct>::BITS;
+
+                assert_eq!(<$i_struct>::ONE.overflowing_shl(bits), (<$i_struct>::ZERO, true));
+                assert_eq!(<$i_struct>::ONE.checked_shl(bits), None);
+                assert_eq!(<$i_struct>::MINUS_ONE.overflowing_shr(bits), (<$i_struct>::ZERO, true));
+                assert_eq!(<$i_struct>::MINUS_ONE.checked_shr(bits), None);
+
+                // A shift by one less than the width is still in range.
+                assert!(!<$i_struct>::ONE.overflowing_shl(bits - 1).1);
+                assert!(<$i_struct>::ONE.checked_shl(bits - 1).is_some());
+                assert!(!<$i_struct>::MINUS_ONE.overflowing_shr(bits - 1).1);
+                assert!(<$i_struct>::MINUS_ONE.checked_shr(bits - 1).is_some());
+            };
+        }
+
+        run_test!(I8);
+        run_test!(I24);
+        run_test!(I64);
+        run_test!(I128);
+        run_test!(I160);
+        run_test!(I256);
     }
 
     #[test]
@@ -1703,5 +1731,9 @@ mod tests {
         assert!(<I128 as UintTryTo<I24>>::uint_try_to(&I128::MIN).is_err());
         assert!(I24::uint_try_from(I128::MAX).is_err());
         assert!(<I128 as UintTryTo<I24>>::uint_try_to(&I128::MAX).is_err());
+
+        assert_eq!(I24::try_from(-8_388_608i32), Ok(I24::MIN));
+        assert!(I24::try_from(-8_388_609i32).is_err());
+        assert!(I24::try_from(i32::MIN).is_err());
     }
 }

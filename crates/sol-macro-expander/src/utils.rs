@@ -1,13 +1,17 @@
 use ast::Spanned;
 use proc_macro2::{Span, TokenStream};
 use quote::ToTokens;
-use sha3::{Digest, Keccak256};
+use tiny_keccak::{Hasher, Keccak};
 
 /// Simple interface to the [`keccak256`] hash function.
 ///
 /// [`keccak256`]: https://en.wikipedia.org/wiki/SHA-3
 pub(crate) fn keccak256<T: AsRef<[u8]>>(bytes: T) -> [u8; 32] {
-    Keccak256::digest(bytes).into()
+    let mut hasher = Keccak::v256();
+    hasher.update(bytes.as_ref());
+    let mut output = [0u8; 32];
+    hasher.finalize(&mut output);
+    output
 }
 
 pub(crate) fn selector<T: AsRef<[u8]>>(bytes: T) -> ExprArray<u8> {
@@ -81,17 +85,17 @@ impl<T: ToTokens> ToTokens for ExprArray<T> {
     }
 }
 
-/// Applies [`proc_macro_error2`] programmatically.
+/// Applies [`proc_macro_error3`] programmatically.
 pub(crate) fn pme_compat(f: impl FnOnce() -> TokenStream) -> TokenStream {
     pme_compat_result(|| Ok(f())).unwrap()
 }
 
-/// Applies [`proc_macro_error2`] programmatically.
+/// Applies [`proc_macro_error3`] programmatically.
 pub(crate) fn pme_compat_result(
     f: impl FnOnce() -> syn::Result<TokenStream>,
 ) -> syn::Result<TokenStream> {
     let mut r = None;
-    let e = proc_macro_error2::entry_point(
+    let e = proc_macro_error3::entry_point(
         std::panic::AssertUnwindSafe(|| {
             r = Some(f());
             Default::default()

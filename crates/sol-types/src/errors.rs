@@ -7,10 +7,11 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-use crate::abi;
 use alloc::{borrow::Cow, boxed::Box, collections::TryReserveError, string::String};
 use alloy_primitives::{B256, LogData, hex};
-use core::fmt;
+use core::{cmp, fmt};
+
+const MAX_TYPE_CHECK_FAIL_DATA_LEN: usize = 128;
 
 /// ABI result type.
 pub type Result<T, E = Error> = core::result::Result<T, E>;
@@ -22,7 +23,7 @@ pub enum Error {
     TypeCheckFail {
         /// The Solidity type we failed to produce.
         expected_type: Cow<'static, str>,
-        /// Hex-encoded data.
+        /// Hex-encoded data, when available.
         data: String,
     },
 
@@ -39,7 +40,10 @@ pub enum Error {
     ReserMismatch,
 
     /// ABI Decoding recursion limit exceeded.
-    RecursionLimitExceeded(u8),
+    RecursionLimitExceeded(usize),
+
+    /// ABI decoding exceeded its configured memory limit.
+    MemoryLimitExceeded(usize),
 
     /// Invalid enum value.
     InvalidEnumValue {
@@ -49,6 +53,16 @@ pub enum Error {
         value: u8,
         /// The maximum valid value.
         max: u8,
+    },
+
+    /// Invalid event signature hash.
+    InvalidEventSignatureHash {
+        /// The event signature.
+        name: &'static str,
+        /// The received signature hash.
+        got: B256,
+        /// The expected signature hash.
+        expected: B256,
     },
 
     /// Could not decode an event from log topics.
@@ -88,12 +102,17 @@ impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::TypeCheckFail { expected_type, data } => {
-                write!(f, "type check failed for {expected_type:?} with data: {data}",)
+                write!(f, "type check failed for {expected_type:?}")?;
+                if !data.is_empty() {
+                    write!(f, " with data: {data}")?;
+                }
+                Ok(())
             }
             Self::Overrun
             | Self::BufferNotEmpty
             | Self::ReserMismatch
-            | Self::RecursionLimitExceeded(_) => {
+            | Self::RecursionLimitExceeded(_)
+            | Self::MemoryLimitExceeded(_) => {
                 f.write_str("ABI decoding failed: ")?;
                 match *self {
                     Self::Overrun => f.write_str("buffer overrun while deserializing"),
@@ -102,12 +121,21 @@ impl fmt::Display for Error {
                     Self::RecursionLimitExceeded(limit) => {
                         write!(f, "recursion limit of {limit} exceeded during decoding")
                     }
+                    Self::MemoryLimitExceeded(limit) => {
+                        write!(f, "memory limit of {limit} bytes exceeded during decoding")
+                    }
                     _ => unreachable!(),
                 }
             }
             Self::Reserve(e) => e.fmt(f),
             Self::InvalidEnumValue { name, value, max } => {
                 write!(f, "`{value}` is not a valid {name} enum value (max: `{max}`)")
+            }
+            Self::InvalidEventSignatureHash { name, got, expected } => {
+                write!(
+                    f,
+                    "invalid signature hash for event {name:?}: got {got}, expected {expected}"
+                )
             }
             Self::InvalidLog { name, log } => {
                 write!(f, "could not decode {name} from log: {log:?}")
@@ -140,13 +168,14 @@ impl Error {
 
     /// Instantiates a new [`Error::TypeCheckFail`] with the provided token.
     #[cold]
-    pub fn type_check_fail_token<T: crate::SolType>(token: &T::Token<'_>) -> Self {
-        Self::type_check_fail(&abi::encode(token), T::SOL_NAME)
+    pub fn type_check_fail_token<T: crate::SolType>(_token: &T::Token<'_>) -> Self {
+        Self::type_check_fail(&[], T::SOL_NAME)
     }
 
     /// Instantiates a new [`Error::TypeCheckFail`] with the provided data.
     #[cold]
     pub fn type_check_fail(data: &[u8], expected_type: impl Into<Cow<'static, str>>) -> Self {
+        let data = &data[..cmp::min(data.len(), MAX_TYPE_CHECK_FAIL_DATA_LEN)];
         Self::TypeCheckFail { expected_type: expected_type.into(), data: hex::encode(data) }
     }
 
@@ -158,10 +187,12 @@ impl Error {
 
     #[doc(hidden)] // Not public API.
     #[cold]
-    pub fn invalid_event_signature_hash(name: &'static str, got: B256, expected: B256) -> Self {
-        Self::custom(format!(
-            "invalid signature hash for event {name:?}: got {got}, expected {expected}"
-        ))
+    pub const fn invalid_event_signature_hash(
+        name: &'static str,
+        got: B256,
+        expected: B256,
+    ) -> Self {
+        Self::InvalidEventSignatureHash { name, got, expected }
     }
 }
 
@@ -176,5 +207,34 @@ impl From<TryReserveError> for Error {
     #[inline]
     fn from(value: TryReserveError) -> Self {
         Self::Reserve(value)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use alloc::string::ToString;
+
+    #[test]
+    fn type_check_fail_data_is_bounded() {
+        let error = Error::type_check_fail(&[0; MAX_TYPE_CHECK_FAIL_DATA_LEN + 1], "test");
+        let Error::TypeCheckFail { data, .. } = error else { unreachable!() };
+        assert_eq!(data.len(), MAX_TYPE_CHECK_FAIL_DATA_LEN * 2);
+    }
+
+    #[test]
+    fn type_check_fail_token_omits_token_data() {
+        let token = crate::abi::token::WordToken(crate::Word::ZERO);
+        let error = Error::type_check_fail_token::<crate::sol_data::Bool>(&token);
+        let Error::TypeCheckFail { data, .. } = error else { unreachable!() };
+        assert!(data.is_empty());
+    }
+
+    #[test]
+    fn empty_type_check_fail_data_is_not_displayed() {
+        assert_eq!(
+            Error::type_check_fail(&[], "test").to_string(),
+            "type check failed for \"test\""
+        );
     }
 }

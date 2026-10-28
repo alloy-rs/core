@@ -1,9 +1,11 @@
-use alloy_primitives::B256;
+use alloy_primitives::{B256, b256};
 use alloy_sol_types::{SolStruct, eip712_domain, sol};
 
 #[test]
 fn encode_type_nesting() {
     sol! {
+        #![sol(all_derives)]
+
         struct A {
             uint256 a;
         }
@@ -28,11 +30,17 @@ fn encode_type_nesting() {
     assert_eq!(B::eip712_encode_type(), "B(bytes32 b)");
     assert_eq!(C::eip712_encode_type(), "C(A a,B b)A(uint256 a)B(bytes32 b)");
     assert_eq!(D::eip712_encode_type(), "D(C c,A a,B b)A(uint256 a)B(bytes32 b)C(A a,B b)");
+    assert_eq!(
+        D::default().eip712_type_hash(),
+        b256!("c4acb12ce6b40000061de8f15de55637de14657a4a32b5d85968bbfc2198e898")
+    );
 }
 
 #[test]
 fn encode_data_nesting() {
     sol! {
+        #![sol(all_derives)]
+
         struct Person {
             string name;
             address wallet;
@@ -45,6 +53,19 @@ fn encode_data_nesting() {
         }
     }
     let domain = eip712_domain! {};
+
+    assert_eq!(
+        Mail::eip712_encode_type(),
+        "Mail(Person from,Person to,string contents)Person(string name,address wallet)"
+    );
+    assert_eq!(
+        Mail::default().eip712_type_hash(),
+        b256!("a0cedeb2dc280ba39b857546d74f5549c3a1d7bdc2dd96bf881f76108e23dac2")
+    );
+    assert_eq!(
+        Person::default().eip712_type_hash(),
+        b256!("b9d8c78acf9b987311de6c7b45bb6a9c8e1bf361fa7fd3467a2163f994c79500")
+    );
 
     let mail = Mail {
         from: Person {
@@ -89,4 +110,89 @@ fn test_eip712_interface_prefix() {
         MyStruct::eip712_encode_type(),
         "MyStruct(ParentStructA structA,ParentStructB structB)ParentStructA(uint256 numberA)ParentStructB(uint256 numberB)"
     );
+}
+
+#[test]
+fn test_eip712_strips_custom_type_namespaces() {
+    sol! {
+        contract A {
+            struct StructB {
+                uint256 x;
+            }
+        }
+        struct StructA {
+            A.StructB[] b;
+            A.StructB[3] c;
+            A.StructB[][] d;
+            A.StructB e;
+        }
+    }
+
+    assert_eq!(
+        StructA::eip712_encode_type(),
+        "StructA(StructB[] b,StructB[3] c,StructB[][] d,StructB e)StructB(uint256 x)"
+    );
+}
+
+#[test]
+fn encode_type_resolves_in_declaring_namespace() {
+    sol! {
+        #![sol(all_derives)]
+
+        contract Outer {
+            type Id is uint64;
+
+            enum Level {
+                Low,
+                High
+            }
+
+            struct Inner {
+                Id id;
+                Level level;
+            }
+
+            struct Wrapper {
+                Inner inner;
+                Inner[] more;
+            }
+        }
+
+        struct Top {
+            Outer.Wrapper wrapper;
+            Outer.Inner inner;
+        }
+    }
+
+    assert_eq!(
+        Top::eip712_encode_type(),
+        "Top(Wrapper wrapper,Inner inner)Inner(uint64 id,uint8 level)Wrapper(Inner inner,Inner[] more)"
+    );
+    let inner = Outer::Inner { id: 0, level: Outer::Level::Low };
+    let top = Top { wrapper: Outer::Wrapper { inner: inner.clone(), more: vec![] }, inner };
+    assert_eq!(
+        top.eip712_type_hash(),
+        b256!("b9e3a672c6f13136c1e3191881e3719beb78be11a605e1b1856d893a2d543067")
+    );
+}
+
+#[test]
+fn encode_type_prefers_local_struct_over_global() {
+    sol! {
+        struct Inner {
+            uint256 a;
+        }
+
+        contract Outer {
+            struct Inner {
+                bytes b;
+            }
+
+            struct Wrapper {
+                Inner inner;
+            }
+        }
+    }
+
+    assert_eq!(Outer::Wrapper::eip712_encode_type(), "Wrapper(Inner inner)Inner(bytes b)");
 }

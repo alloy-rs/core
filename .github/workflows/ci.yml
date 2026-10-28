@@ -1,5 +1,7 @@
 name: CI
 
+permissions: {}
+
 on:
   push:
     branches: [main]
@@ -17,6 +19,9 @@ jobs:
     name: test ${{ matrix.os }} ${{ matrix.rust }} ${{ matrix.flags }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
+    permissions:
+      id-token: write
+      contents: read
     strategy:
       fail-fast: false
       matrix:
@@ -48,17 +53,31 @@ jobs:
             rust: "nightly"
             flags: "--all-features"
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@master
+      - name: Secure runner
+        uses: tempoxyz/gh-actions/actions/secure-runner@2ab28a31ae569be9f780c7675b684471060afa40 # 2026-10-09T21-43-19Z-2ab28a31
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: tempoxyz/gh-actions/vendor/dtolnay/rust-toolchain@2ab28a31ae569be9f780c7675b684471060afa40 # 2026-10-09T21-43-19Z-2ab28a31
         with:
           toolchain: ${{ matrix.rust }}
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           cache-on-failure: true
+      - name: disable allocative
+        shell: bash
+        run: |
+          sed -i '/^allocative = { workspace = true, optional = true }$/d' crates/primitives/Cargo.toml
+          sed -i 's/^allocative = \["dep:allocative"\]$/allocative = []/' crates/primitives/Cargo.toml
+          sed -i 's/feature = "allocative"/all(feature = "allocative", any())/g' crates/primitives/src/lib.rs crates/primitives/src/bits/{fixed.rs,macros.rs}
       # Only run tests on latest stable and above
+      - name: pin deps
+        if: ${{ matrix.rust == '1.85' }} # MSRV
+        run: cargo +nightly update -Z minimal-versions
       - name: build
         if: ${{ matrix.rust == '1.85' }} # MSRV
         run: cargo build --workspace ${{ matrix.flags }}
+
       - name: test
         if: ${{ matrix.rust != '1.85' }} # MSRV
         run: cargo test --workspace ${{ matrix.flags }}
@@ -67,6 +86,9 @@ jobs:
     name: miri ${{ matrix.flags }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      id-token: write
+      contents: read
     strategy:
       fail-fast: false
       matrix:
@@ -74,22 +96,47 @@ jobs:
     env:
       MIRIFLAGS: -Zmiri-strict-provenance -Zmiri-tree-borrows
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@miri
-      - uses: Swatinem/rust-cache@v2
+      - name: Secure runner
+        uses: tempoxyz/gh-actions/actions/secure-runner@2ab28a31ae569be9f780c7675b684471060afa40 # 2026-10-09T21-43-19Z-2ab28a31
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: tempoxyz/gh-actions/vendor/dtolnay/rust-toolchain@2ab28a31ae569be9f780c7675b684471060afa40 # 2026-10-09T21-43-19Z-2ab28a31
+        with:
+          toolchain: nightly
+          components: miri
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - name: disable allocative
+        run: |
+          sed -i '/^allocative = { workspace = true, optional = true }$/d' crates/primitives/Cargo.toml
+          sed -i 's/^allocative = \["dep:allocative"\]$/allocative = []/' crates/primitives/Cargo.toml
+          sed -i 's/feature = "allocative"/all(feature = "allocative", any())/g' crates/primitives/src/lib.rs crates/primitives/src/bits/{fixed.rs,macros.rs}
       - run: cargo miri test ${{ matrix.flags }}
 
   wasm:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      id-token: write
+      contents: read
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - name: Secure runner
+        uses: tempoxyz/gh-actions/actions/secure-runner@2ab28a31ae569be9f780c7675b684471060afa40 # 2026-10-09T21-43-19Z-2ab28a31
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          persist-credentials: false
+      - uses: tempoxyz/gh-actions/vendor/dtolnay/rust-toolchain@2ab28a31ae569be9f780c7675b684471060afa40 # 2026-10-09T21-43-19Z-2ab28a31
+        with:
+          toolchain: stable
           targets: wasm32-unknown-unknown
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           cache-on-failure: true
+      - name: disable allocative
+        run: |
+          sed -i '/^allocative = { workspace = true, optional = true }$/d' crates/primitives/Cargo.toml
+          sed -i 's/^allocative = \["dep:allocative"\]$/allocative = []/' crates/primitives/Cargo.toml
+          sed -i 's/feature = "allocative"/all(feature = "allocative", any())/g' crates/primitives/src/lib.rs crates/primitives/src/bits/{fixed.rs,macros.rs}
       - name: check
         run: cargo check --workspace --target wasm32-unknown-unknown
 
@@ -97,20 +144,37 @@ jobs:
     name: features ${{ matrix.rust }} ${{ matrix.flags }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      id-token: write
+      contents: read
     strategy:
       fail-fast: false
       matrix:
         rust: ["stable", "nightly"]
         flags: ["", "--all-targets"]
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@master
+      - name: Secure runner
+        uses: tempoxyz/gh-actions/actions/secure-runner@2ab28a31ae569be9f780c7675b684471060afa40 # 2026-10-09T21-43-19Z-2ab28a31
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: tempoxyz/gh-actions/vendor/dtolnay/rust-toolchain@2ab28a31ae569be9f780c7675b684471060afa40 # 2026-10-09T21-43-19Z-2ab28a31
         with:
           toolchain: ${{ matrix.rust }}
-      - uses: taiki-e/install-action@cargo-hack
-      - uses: Swatinem/rust-cache@v2
+      - name: Install cargo-hack
+        uses: tempoxyz/gh-actions/vendor/taiki-e/install-action@2ab28a31ae569be9f780c7675b684471060afa40 # 2026-10-09T21-43-19Z-2ab28a31
+        with:
+          tool: cargo-hack@0.6.45
+          checksum: true
+          fallback: none
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           cache-on-failure: true
+      - name: disable allocative
+        run: |
+          sed -i '/^allocative = { workspace = true, optional = true }$/d' crates/primitives/Cargo.toml
+          sed -i 's/^allocative = \["dep:allocative"\]$/allocative = []/' crates/primitives/Cargo.toml
+          sed -i 's/feature = "allocative"/all(feature = "allocative", any())/g' crates/primitives/src/lib.rs crates/primitives/src/bits/{fixed.rs,macros.rs}
       - name: cargo hack
         run: |
           args=(${{ matrix.flags }})
@@ -118,38 +182,76 @@ jobs:
           ./scripts/check_features.sh "${args[@]}"
 
   check-no-std:
-    name: check no_std ${{ matrix.features }}
+    name: check no_std
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      id-token: write
+      contents: read
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - name: Secure runner
+        uses: tempoxyz/gh-actions/actions/secure-runner@2ab28a31ae569be9f780c7675b684471060afa40 # 2026-10-09T21-43-19Z-2ab28a31
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          persist-credentials: false
+      - uses: tempoxyz/gh-actions/vendor/dtolnay/rust-toolchain@2ab28a31ae569be9f780c7675b684471060afa40 # 2026-10-09T21-43-19Z-2ab28a31
+        with:
+          toolchain: stable
           targets: riscv32imac-unknown-none-elf
-      - uses: taiki-e/install-action@cargo-hack
-      - uses: Swatinem/rust-cache@v2
+      - name: Install cargo-hack
+        uses: tempoxyz/gh-actions/vendor/taiki-e/install-action@2ab28a31ae569be9f780c7675b684471060afa40 # 2026-10-09T21-43-19Z-2ab28a31
+        with:
+          tool: cargo-hack@0.6.45
+          checksum: true
+          fallback: none
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           cache-on-failure: true
+      - name: disable allocative
+        run: |
+          sed -i '/^allocative = { workspace = true, optional = true }$/d' crates/primitives/Cargo.toml
+          sed -i 's/^allocative = \["dep:allocative"\]$/allocative = []/' crates/primitives/Cargo.toml
+          sed -i 's/feature = "allocative"/all(feature = "allocative", any())/g' crates/primitives/src/lib.rs crates/primitives/src/bits/{fixed.rs,macros.rs}
       - run: ./scripts/check_no_std.sh
 
   typos:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      id-token: write
+      contents: read
     steps:
-      - uses: actions/checkout@v5
-      - uses: crate-ci/typos@v1
+      - name: Secure runner
+        uses: tempoxyz/gh-actions/actions/secure-runner@2ab28a31ae569be9f780c7675b684471060afa40 # 2026-10-09T21-43-19Z-2ab28a31
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: crate-ci/typos@02ea592e44b3a53c302f697cddca7641cd051c3d # v1.45.0
 
   clippy:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      id-token: write
+      contents: read
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@nightly
+      - name: Secure runner
+        uses: tempoxyz/gh-actions/actions/secure-runner@2ab28a31ae569be9f780c7675b684471060afa40 # 2026-10-09T21-43-19Z-2ab28a31
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          persist-credentials: false
+      - uses: tempoxyz/gh-actions/vendor/dtolnay/rust-toolchain@2ab28a31ae569be9f780c7675b684471060afa40 # 2026-10-09T21-43-19Z-2ab28a31
+        with:
+          toolchain: nightly
           components: clippy
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           cache-on-failure: true
+      - name: disable allocative
+        run: |
+          sed -i '/^allocative = { workspace = true, optional = true }$/d' crates/primitives/Cargo.toml
+          sed -i 's/^allocative = \["dep:allocative"\]$/allocative = []/' crates/primitives/Cargo.toml
+          sed -i 's/feature = "allocative"/all(feature = "allocative", any())/g' crates/primitives/src/lib.rs crates/primitives/src/bits/{fixed.rs,macros.rs}
       - run: cargo clippy --workspace --all-targets --all-features
         env:
           RUSTFLAGS: -Dwarnings
@@ -157,12 +259,27 @@ jobs:
   docs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      id-token: write
+      contents: read
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@nightly
-      - uses: Swatinem/rust-cache@v2
+      - name: Secure runner
+        uses: tempoxyz/gh-actions/actions/secure-runner@2ab28a31ae569be9f780c7675b684471060afa40 # 2026-10-09T21-43-19Z-2ab28a31
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: tempoxyz/gh-actions/vendor/dtolnay/rust-toolchain@2ab28a31ae569be9f780c7675b684471060afa40 # 2026-10-09T21-43-19Z-2ab28a31
+        with:
+          # Pin docs to a known-good nightly until the 2026-07-02 rustdoc ICE is fixed.
+          toolchain: nightly-2026-06-27
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           cache-on-failure: true
+      - name: disable allocative
+        run: |
+          sed -i '/^allocative = { workspace = true, optional = true }$/d' crates/primitives/Cargo.toml
+          sed -i 's/^allocative = \["dep:allocative"\]$/allocative = []/' crates/primitives/Cargo.toml
+          sed -i 's/feature = "allocative"/all(feature = "allocative", any())/g' crates/primitives/src/lib.rs crates/primitives/src/bits/{fixed.rs,macros.rs}
       - name: Build documentation
         run: cargo doc --workspace --all-features --no-deps --document-private-items
         env:
@@ -171,20 +288,36 @@ jobs:
   fmt:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      id-token: write
+      contents: read
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@nightly
+      - name: Secure runner
+        uses: tempoxyz/gh-actions/actions/secure-runner@2ab28a31ae569be9f780c7675b684471060afa40 # 2026-10-09T21-43-19Z-2ab28a31
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          persist-credentials: false
+      - uses: tempoxyz/gh-actions/vendor/dtolnay/rust-toolchain@2ab28a31ae569be9f780c7675b684471060afa40 # 2026-10-09T21-43-19Z-2ab28a31
+        with:
+          toolchain: nightly
           components: rustfmt
       - run: cargo fmt --all --check
 
   deny:
-    uses: tempoxyz/ci/.github/workflows/deny.yml@main
+    uses: tempoxyz/gh-actions/.github/workflows/rust-deny.yml@2ab28a31ae569be9f780c7675b684471060afa40 # 2026-10-09T21-43-19Z-2ab28a31
+    permissions:
+      contents: read
+      id-token: write
+    with:
+      rust-toolchain: nightly
 
   ci-success:
     name: ci success
     runs-on: ubuntu-latest
     if: always()
+    permissions:
+      id-token: write
+      contents: read
     needs:
       - test
       - miri
@@ -197,7 +330,9 @@ jobs:
       - fmt
       - deny
     steps:
+      - name: Secure runner
+        uses: tempoxyz/gh-actions/actions/secure-runner@2ab28a31ae569be9f780c7675b684471060afa40 # 2026-10-09T21-43-19Z-2ab28a31
       - name: Decide whether the needed jobs succeeded or failed
-        uses: re-actors/alls-green@release/v1
+        uses: re-actors/alls-green@b5b5b37504aa4183270bd3d855c52a67f212be35 # v1.3.0
         with:
           jobs: ${{ toJSON(needs) }}

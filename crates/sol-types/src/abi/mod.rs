@@ -37,10 +37,15 @@
 //! This is the least useful one. Most users will not need it.
 
 mod encoder;
+pub(crate) use encoder::encode_sequence_to;
 pub use encoder::{Encoder, encode, encode_params, encode_sequence};
 
 mod decoder;
-pub use decoder::{Decoder, RECURSION_LIMIT, decode, decode_params, decode_sequence};
+#[allow(deprecated)]
+pub use decoder::{
+    AbiDecoderConfig, Decoder, RECURSION_LIMIT, decode, decode_params, decode_params_with_config,
+    decode_sequence, decode_sequence_with_config, decode_with_config,
+};
 
 pub mod token;
 pub use token::{Token, TokenSeq};

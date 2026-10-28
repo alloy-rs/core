@@ -84,6 +84,9 @@ rayon = { workspace = true, optional = true }
 # k256
 k256 = { workspace = true, optional = true, features = ["ecdsa"] }
 
+# secp256k1
+secp256k1 = { workspace = true, optional = true }
+
 # map
 hashbrown = { workspace = true, optional = true, features = [
     "default-hasher",
@@ -92,7 +95,7 @@ hashbrown = { workspace = true, optional = true, features = [
 indexmap = { workspace = true, optional = true }
 foldhash = { workspace = true, optional = true }
 rapidhash = { workspace = true, optional = true }
-rustc-hash.workspace = true # Always on for FbHasher
+rustc-hash = { workspace = true, optional = true }
 
 # arbitrary
 arbitrary = { workspace = true, optional = true, features = ["derive"] }
@@ -110,6 +113,7 @@ diesel = { workspace = true, optional = true }
 
 # sqlx support (optional, for DB integration)
 sqlx-core = { workspace = true, optional = true }
+sqlx-postgres = { workspace = true, optional = true }
 
 [dev-dependencies]
 bcs.workspace = true
@@ -128,13 +132,15 @@ std = [
     "rapidhash?/std",
     "indexmap?/std",
     "k256?/std",
+    "secp256k1?/std",
+    "secp256k1?/global-context",
     "keccak-asm?/std",
     "proptest?/std",
     "rand?/std",
     "rand?/thread_rng",
-    "rustc-hash/std",
+    "rustc-hash?/std",
     "serde?/std",
-    "sha3/std",
+    "fixed-cache?/std",
 ]
 nightly = [
     "foldhash?/nightly",
@@ -143,7 +149,8 @@ nightly = [
     "hex/nightly",
     # TODO: Re-enable on next ruint version (>1.17.2)
     # "ruint/nightly",
-    "rustc-hash/nightly",
+    # TODO: Re-enable after https://github.com/rust-lang/rustc-hash/pull/77
+    # "rustc-hash/nightly",
     "fixed-cache?/nightly",
 ]
 
@@ -153,22 +160,24 @@ sha3-keccak = []
 tiny-keccak = ["dep:tiny-keccak"]
 keccak-cache = ["std", "dep:rapidhash", "dep:fixed-cache"]
 keccak-cache-global = ["keccak-cache"]
+keccak-cache-stats = ["keccak-cache", "fixed-cache/stats"]
 
-map = ["dep:hashbrown"]
+map = ["dep:hashbrown", "dep:foldhash"]
 map-hashbrown = ["map"]
 map-indexmap = ["map", "dep:indexmap"]
 map-foldhash = ["map", "dep:foldhash"]
 map-rapidhash = ["map", "dep:rapidhash"]
-map-fxhash = ["map"]
+map-fxhash = ["map", "dep:rustc-hash"]
 
 getrandom = ["dep:getrandom"]
 k256 = ["dep:k256"]
+secp256k1 = ["dep:secp256k1"]
 rand = [
     "dep:rand",
     "getrandom",
     "ruint/rand-09",
     "rapidhash?/rand",
-    "rustc-hash/rand",
+    "rustc-hash?/rand",
 ]
 rayon = ["dep:rayon", "hashbrown?/rayon", "indexmap?/rayon"]
 rkyv = ["dep:rkyv", "ruint/rkyv"]
@@ -198,6 +207,7 @@ arbitrary = [
 postgres = ["std", "dep:postgres-types", "ruint/postgres"]
 diesel = ["std", "dep:diesel", "ruint/diesel"]
 sqlx = ["std", "dep:sqlx-core", "ruint/sqlx"]
+sqlx-postgres = ["sqlx", "dep:sqlx-postgres"]
 
 # `const-hex` compatibility feature for `hex`.
 # Should not be needed most of the time.

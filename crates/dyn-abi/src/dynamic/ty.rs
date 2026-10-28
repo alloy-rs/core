@@ -1,10 +1,13 @@
 use crate::{DynSolValue, DynToken, Error, Result, SolType, Specifier, Word};
 use alloc::{borrow::Cow, boxed::Box, string::String, vec::Vec};
-use alloy_primitives::{
-    try_vec,
-    utils::{box_try_new, vec_try_with_capacity},
+use alloy_primitives::utils::vec_try_with_capacity;
+use alloy_sol_types::{
+    abi::{
+        Decoder,
+        token::{PackedSeqToken, Token},
+    },
+    sol_data,
 };
-use alloy_sol_types::{abi::Decoder, sol_data};
 use core::{fmt, iter::zip, num::NonZeroUsize, str::FromStr};
 use parser::TypeSpecifier;
 
@@ -242,7 +245,7 @@ impl DynSolType {
                 DynSolValue::FixedArray(v) if v.len() == *size && v.iter().all(|v| t.matches(v))
             ),
             Self::Tuple(types) => {
-                matches!(value, as_tuple!(DynSolValue tuple) if zip(types, tuple).all(|(t, v)| t.matches(v)))
+                matches!(value, as_tuple!(DynSolValue tuple) if types.len() == tuple.len() && zip(types, tuple).all(|(t, v)| t.matches(v)))
             }
             #[cfg(feature = "eip712")]
             Self::CustomStruct { name: _, prop_names, tuple } => {
@@ -253,7 +256,7 @@ impl DynSolType {
                         && tuple.len() == t.len()
                         && zip(tuple, t).all(|(a, b)| a.matches(b))
                 } else if let DynSolValue::Tuple(v) = value {
-                    zip(v, tuple).all(|(v, t)| t.matches(v))
+                    v.len() == tuple.len() && zip(v, tuple).all(|(v, t)| t.matches(v))
                 } else {
                     false
                 }
@@ -262,35 +265,18 @@ impl DynSolType {
     }
 
     /// Dynamic detokenization.
-    // This should not fail when using a token created by `Self::empty_dyn_token`.
     #[allow(clippy::unnecessary_to_owned)] // https://github.com/rust-lang/rust-clippy/issues/8148
     pub fn detokenize(&self, token: DynToken<'_>) -> Result<DynSolValue> {
         match (self, token) {
-            (Self::Bool, DynToken::Word(word)) => {
-                Ok(DynSolValue::Bool(sol_data::Bool::detokenize(word.into())))
-            }
-
-            // cheating here, but it's ok
-            (Self::Int(size), DynToken::Word(word)) => {
-                Ok(DynSolValue::Int(sol_data::Int::<256>::detokenize(word.into()), *size))
-            }
-
-            (Self::Uint(size), DynToken::Word(word)) => {
-                Ok(DynSolValue::Uint(sol_data::Uint::<256>::detokenize(word.into()), *size))
-            }
-
-            (Self::FixedBytes(size), DynToken::Word(word)) => Ok(DynSolValue::FixedBytes(
-                sol_data::FixedBytes::<32>::detokenize(word.into()),
-                *size,
-            )),
-
-            (Self::Address, DynToken::Word(word)) => {
-                Ok(DynSolValue::Address(sol_data::Address::detokenize(word.into())))
-            }
-
-            (Self::Function, DynToken::Word(word)) => {
-                Ok(DynSolValue::Function(sol_data::Function::detokenize(word.into())))
-            }
+            (
+                Self::Bool
+                | Self::Int(_)
+                | Self::Uint(_)
+                | Self::FixedBytes(_)
+                | Self::Address
+                | Self::Function,
+                DynToken::Word(word),
+            ) => Ok(self.word_value(word)),
 
             (Self::Bytes, DynToken::PackedSeq(buf)) => Ok(DynSolValue::Bytes(buf.to_vec())),
 
@@ -463,40 +449,6 @@ impl DynSolType {
         self.sol_type_name().into_owned()
     }
 
-    /// Instantiate an empty dyn token, to be decoded into.
-    ///
-    /// ## Warning
-    ///
-    /// This function may allocate an unbounded amount of memory based on user
-    /// input types. It must be used with care to avoid DOS issues.
-    fn empty_dyn_token<'a>(&self) -> Result<DynToken<'a>> {
-        Ok(match self {
-            Self::Address
-            | Self::Function
-            | Self::Bool
-            | Self::FixedBytes(_)
-            | Self::Int(_)
-            | Self::Uint(_) => DynToken::Word(Word::ZERO),
-
-            Self::Bytes | Self::String => DynToken::PackedSeq(&[]),
-
-            Self::Array(t) => DynToken::DynSeq {
-                contents: Default::default(),
-                template: Some(box_try_new(t.empty_dyn_token()?)?),
-            },
-            &Self::FixedArray(ref t, size) => {
-                DynToken::FixedSeq(try_vec![t.empty_dyn_token()?; size]?.into(), size)
-            }
-            as_tuple!(Self tuple) => {
-                let mut tokens = vec_try_with_capacity(tuple.len())?;
-                for ty in tuple {
-                    tokens.push(ty.empty_dyn_token()?);
-                }
-                DynToken::FixedSeq(tokens.into(), tuple.len())
-            }
-        })
-    }
-
     /// Decode an event topic into a [`DynSolValue`].
     pub(crate) fn decode_event_topic(&self, topic: Word) -> DynSolValue {
         match self {
@@ -505,7 +457,7 @@ impl DynSolType {
             | Self::Bool
             | Self::FixedBytes(_)
             | Self::Int(_)
-            | Self::Uint(_) => self.detokenize(DynToken::Word(topic)).unwrap(),
+            | Self::Uint(_) => self.word_value(topic),
             _ => DynSolValue::FixedBytes(topic, 32),
         }
     }
@@ -518,7 +470,7 @@ impl DynSolType {
     #[inline]
     #[cfg_attr(debug_assertions, track_caller)]
     pub fn abi_decode(&self, data: &[u8]) -> Result<DynSolValue> {
-        self.abi_decode_inner(&mut Decoder::new(data), DynToken::decode_single_populate)
+        self.abi_decode_inner(&mut Decoder::new(data), None)
     }
 
     /// Decode a [`DynSolValue`] from a byte slice. Fails if the value does not
@@ -555,7 +507,7 @@ impl DynSolType {
     #[inline]
     #[cfg_attr(debug_assertions, track_caller)]
     pub fn abi_decode_sequence(&self, data: &[u8]) -> Result<DynSolValue> {
-        self.abi_decode_inner(&mut Decoder::new(data), DynToken::decode_sequence_populate)
+        self.decode_checked(&mut Decoder::new(data), None, Self::decode_sequence)
     }
 
     /// Returns `true` if this type is dynamically sized type.
@@ -591,22 +543,45 @@ impl DynSolType {
             Self::String |
             Self::Array(_) => 1,
             // fixed-seq types are the sum of their components
-            Self::FixedArray(v, size) => size * v.minimum_words(),
-            Self::Tuple(tuple) => tuple.iter().map(|ty| ty.minimum_words()).sum(),
+            Self::FixedArray(v, size) => size.saturating_mul(v.minimum_words()),
+            Self::Tuple(tuple) => tuple
+                .iter()
+                .fold(0usize, |sum, ty| sum.saturating_add(ty.minimum_words())),
             #[cfg(feature = "eip712")]
-            Self::CustomStruct { tuple, ..} => tuple.iter().map(|ty| ty.minimum_words()).sum(),
+            Self::CustomStruct { tuple, .. } => tuple
+                .iter()
+                .fold(0usize, |sum, ty| sum.saturating_add(ty.minimum_words())),
         }
+    }
+
+    /// Decodes a single value from `decoder`.
+    ///
+    /// If `validate` is `Some`, every word is checked for dirty padding, and strings for UTF-8 if
+    /// the flag is `true`, once the value is decoded.
+    #[inline]
+    #[cfg_attr(debug_assertions, track_caller)]
+    pub(crate) fn abi_decode_inner<'d>(
+        &self,
+        decoder: &mut Decoder<'d, '_>,
+        validate: Option<bool>,
+    ) -> Result<DynSolValue> {
+        self.decode_checked(decoder, validate, Self::decode_value)
     }
 
     #[inline]
     #[cfg_attr(debug_assertions, track_caller)]
-    pub(crate) fn abi_decode_inner<'d, F>(
+    fn decode_checked<'d, F>(
         &self,
-        decoder: &mut Decoder<'d>,
-        f: F,
+        decoder: &mut Decoder<'d, '_>,
+        validate: Option<bool>,
+        decode: F,
     ) -> Result<DynSolValue>
     where
-        F: FnOnce(&mut DynToken<'d>, &mut Decoder<'d>) -> Result<()>,
+        F: for<'t> FnOnce(
+            &'t Self,
+            &mut Decoder<'d, '_>,
+            &mut Validation<'d, 't>,
+        ) -> Result<DynSolValue>,
     {
         if self.is_zst() {
             return Ok(self.zero_sized_value().expect("checked"));
@@ -616,14 +591,203 @@ impl DynSolType {
             return Err(Error::SolTypes(alloy_sol_types::Error::Overrun));
         }
 
-        let mut token = self.empty_dyn_token()?;
-        f(&mut token, decoder)?;
-        let value = self.detokenize(token).expect("invalid empty_dyn_token");
+        let mut validation = Validation::new(validate);
+        let value = decode(self, decoder, &mut validation)?;
+        validation.finish()?;
         debug_assert!(
             self.matches(&value),
             "decoded value does not match type:\n  type: {self:?}\n value: {value:?}"
         );
         Ok(value)
+    }
+
+    /// Decodes one value of this type from `dec`.
+    fn decode_value<'d, 't>(
+        &'t self,
+        dec: &mut Decoder<'d, '_>,
+        validation: &mut Validation<'d, 't>,
+    ) -> Result<DynSolValue> {
+        match self {
+            Self::Address
+            | Self::Function
+            | Self::Bool
+            | Self::FixedBytes(_)
+            | Self::Int(_)
+            | Self::Uint(_) => {
+                let word = dec.take_word()?;
+                validation.word(self, word);
+                Ok(self.word_value(*word))
+            }
+            // Once validation has failed the decoded value is discarded, so skip copying payloads
+            // that the decoder's memory limit does not account for.
+            Self::Bytes => {
+                let token = PackedSeqToken::decode_from(dec)?;
+                let bytes = if validation.failed() { Vec::new() } else { token.0.to_vec() };
+                Ok(DynSolValue::Bytes(bytes))
+            }
+            Self::String => {
+                let token = PackedSeqToken::decode_from(dec)?;
+                validation.utf8(token.0);
+                let string = if validation.failed() {
+                    String::new()
+                } else {
+                    sol_data::String::detokenize(token)
+                };
+                Ok(DynSolValue::String(string))
+            }
+            Self::Array(ty) => {
+                let mut child = dec.take_indirection()?;
+                let size = child.take_offset()?;
+                let minimum_words = ty.minimum_words();
+                if size == 0 || minimum_words == 0 {
+                    // Arrays of zero-sized elements can encode an attacker-controlled length
+                    // without corresponding element data. Preserve the empty representation used
+                    // by zero-sized top-level arrays instead of allocating `size` elements.
+                    return Ok(DynSolValue::Array(Vec::new()));
+                }
+
+                // This appears to be an unclarity in the Solidity spec. The
+                // spec specifies that offsets are relative to the beginning of
+                // `enc(X)`. But known-good test vectors have it relative to the
+                // word AFTER the array size
+                let mut child = child.raw_child()?;
+
+                let required_words = minimum_words
+                    .checked_mul(size)
+                    .ok_or_else(|| alloy_sol_types::Error::Overrun)?;
+                child.set_strict_head_words(required_words)?;
+                if child.remaining_words() < required_words {
+                    return Err(alloy_sol_types::Error::Overrun.into());
+                }
+
+                child.reserve_elements::<DynSolValue>(size)?;
+                let mut values = vec_try_with_capacity(size)?;
+                for _ in 0..size {
+                    values.push(ty.decode_value(&mut child, validation)?);
+                }
+                Ok(DynSolValue::Array(values))
+            }
+            // Fixed arrays, tuples and structs.
+            _ => {
+                if self.is_dynamic_seq() {
+                    let mut child = dec.take_indirection()?;
+                    self.decode_sequence(&mut child, validation)
+                } else {
+                    let (value, offset) = {
+                        let mut child = dec.raw_child()?;
+                        let value = self.decode_sequence(&mut child, validation)?;
+                        (value, dec.offset_from_child(&child))
+                    };
+                    dec.set_offset(offset);
+                    Ok(value)
+                }
+            }
+        }
+    }
+
+    /// Decodes a sequence of this type, consuming its head words from `dec` in place.
+    fn decode_sequence<'d, 't>(
+        &'t self,
+        dec: &mut Decoder<'d, '_>,
+        validation: &mut Validation<'d, 't>,
+    ) -> Result<DynSolValue> {
+        match self {
+            Self::FixedArray(ty, size) => {
+                let head_words = ty
+                    .minimum_words()
+                    .checked_mul(*size)
+                    .ok_or_else(|| alloy_sol_types::Error::Overrun)?;
+                dec.set_strict_head_words(head_words)?;
+                let mut values = vec_try_with_capacity(*size)?;
+                for _ in 0..*size {
+                    values.push(ty.decode_value(dec, validation)?);
+                }
+                Ok(DynSolValue::FixedArray(values))
+            }
+            Self::Tuple(types) => {
+                Self::decode_tuple(types, dec, validation).map(DynSolValue::Tuple)
+            }
+            #[cfg(feature = "eip712")]
+            Self::CustomStruct { name, tuple, prop_names } => {
+                Self::decode_tuple(tuple, dec, validation).map(|tuple| DynSolValue::CustomStruct {
+                    name: name.clone(),
+                    prop_names: prop_names.clone(),
+                    tuple,
+                })
+            }
+            Self::Array(_) => {
+                dec.set_strict_head_words(1)?;
+                self.decode_value(dec, validation)
+            }
+            _ => Err(Error::custom("Called decode_sequence_populate on non-sequence token")),
+        }
+    }
+
+    fn decode_tuple<'d, 't>(
+        types: &'t [Self],
+        dec: &mut Decoder<'d, '_>,
+        validation: &mut Validation<'d, 't>,
+    ) -> Result<Vec<DynSolValue>> {
+        let head_words = types
+            .iter()
+            .try_fold(0usize, |sum, ty| sum.checked_add(ty.minimum_words()))
+            .ok_or_else(|| alloy_sol_types::Error::Overrun)?;
+        dec.set_strict_head_words(head_words)?;
+        let mut values = vec_try_with_capacity(types.len())?;
+        for ty in types {
+            values.push(ty.decode_value(dec, validation)?);
+        }
+        Ok(values)
+    }
+
+    /// Returns `true` if a fixed sequence of this type is decoded behind an offset.
+    ///
+    /// Unlike [`is_dynamic`](Self::is_dynamic), a zero-length fixed array is never dynamic: it
+    /// has no elements to place behind an offset.
+    fn is_dynamic_seq(&self) -> bool {
+        match self {
+            Self::Bytes | Self::String | Self::Array(_) => true,
+            Self::FixedArray(ty, size) => *size != 0 && ty.is_dynamic_seq(),
+            as_tuple!(Self types) => types.iter().any(Self::is_dynamic_seq),
+            _ => false,
+        }
+    }
+
+    fn word_value(&self, word: Word) -> DynSolValue {
+        match self {
+            Self::Bool => DynSolValue::Bool(sol_data::Bool::detokenize(word.into())),
+            // cheating here, but it's ok
+            Self::Int(size) => {
+                DynSolValue::Int(sol_data::Int::<256>::detokenize(word.into()), *size)
+            }
+            Self::Uint(size) => {
+                DynSolValue::Uint(sol_data::Uint::<256>::detokenize(word.into()), *size)
+            }
+            Self::FixedBytes(size) => {
+                DynSolValue::FixedBytes(sol_data::FixedBytes::<32>::detokenize(word.into()), *size)
+            }
+            Self::Address => DynSolValue::Address(sol_data::Address::detokenize(word.into())),
+            Self::Function => DynSolValue::Function(sol_data::Function::detokenize(word.into())),
+            _ => unreachable!("not a word type"),
+        }
+    }
+
+    /// Returns `true` if `word` is a canonical encoding of this word type.
+    fn is_valid_word(&self, word: &Word) -> bool {
+        let token = (*word).into();
+        match self {
+            Self::Bool => sol_data::Bool::valid_token(&token),
+            Self::Address => sol_data::Address::valid_token(&token),
+            Self::Function => sol_data::Function::valid_token(&token),
+            Self::Uint(bits) => word[..32 - bits / 8].iter().all(|&b| b == 0),
+            Self::Int(bits) => {
+                let padding = 32 - bits / 8;
+                let fill = if word[padding] & 0x80 == 0 { 0 } else { 0xff };
+                word[..padding].iter().all(|&b| b == fill)
+            }
+            Self::FixedBytes(size) => word[*size..].iter().all(|&b| b == 0),
+            _ => unreachable!("not a word type"),
+        }
     }
 
     /// Wrap in an array of the specified size
@@ -666,11 +830,76 @@ impl DynSolType {
     }
 }
 
+/// The first value that failed validation while decoding.
+enum Invalid<'d, 't> {
+    Word(&'d Word, &'t DynSolType),
+    NotUtf8(&'d [u8]),
+}
+
+/// Tracks word validation while decoding.
+///
+/// Validation needs the raw words, which the decoded values lose, so it runs during decoding. The
+/// first failure is kept and reported only once decoding succeeds, so malformed data is reported
+/// before invalid data.
+struct Validation<'d, 't> {
+    /// `Some` if validation is enabled, holding whether strings must be valid UTF-8.
+    utf8: Option<bool>,
+    invalid: Option<Invalid<'d, 't>>,
+}
+
+impl<'d, 't> Validation<'d, 't> {
+    #[inline]
+    const fn new(utf8: Option<bool>) -> Self {
+        Self { utf8, invalid: None }
+    }
+
+    #[inline]
+    fn word(&mut self, ty: &'t DynSolType, word: &'d Word) {
+        if self.utf8.is_some() && self.invalid.is_none() && !ty.is_valid_word(word) {
+            self.invalid = Some(Invalid::Word(word, ty));
+        }
+    }
+
+    #[inline]
+    const fn failed(&self) -> bool {
+        self.invalid.is_some()
+    }
+
+    #[inline]
+    fn utf8(&mut self, bytes: &'d [u8]) {
+        if self.utf8 == Some(true) && self.invalid.is_none() && core::str::from_utf8(bytes).is_err()
+        {
+            self.invalid = Some(Invalid::NotUtf8(bytes));
+        }
+    }
+
+    #[inline]
+    fn finish(self) -> Result<()> {
+        match self.invalid {
+            None => Ok(()),
+            Some(Invalid::Word(word, ty)) => {
+                Err(alloy_sol_types::Error::type_check_fail(word.as_slice(), ty.sol_type_name())
+                    .into())
+            }
+            Some(Invalid::NotUtf8(bytes)) => {
+                Err(alloy_sol_types::Error::type_check_fail(bytes, "string").into())
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use alloc::string::ToString;
-    use alloy_primitives::{Address, hex};
+    use alloy_primitives::{Address, U256, hex};
+
+    fn pad_usize(value: usize) -> Word {
+        let mut word = Word::ZERO;
+        let bytes = value.to_be_bytes();
+        word[Word::len_bytes() - bytes.len()..].copy_from_slice(&bytes);
+        word
+    }
 
     #[test]
     fn dynamically_encodes() {
@@ -696,6 +925,33 @@ mod tests {
         let mut enc = crate::Encoder::default();
         DynSolValue::encode_seq_to(val.as_fixed_seq().unwrap(), &mut enc);
         assert_eq!(enc.finish(), vec![word1, word2]);
+    }
+
+    #[test]
+    fn test_function_packed_encoding_size() {
+        use alloy_primitives::Function;
+
+        let addr = Address::repeat_byte(0x01);
+        let val_addr = DynSolValue::Address(addr);
+        assert_eq!(val_addr.abi_packed_encoded_size(), 20);
+        assert_eq!(val_addr.abi_encode_packed().len(), val_addr.abi_packed_encoded_size());
+
+        let func = Function::from((addr, [0x02; 4]));
+        let val_func = DynSolValue::Function(func);
+        assert_eq!(val_func.abi_packed_encoded_size(), 24);
+        assert_eq!(val_func.abi_encode_packed().len(), val_func.abi_packed_encoded_size());
+
+        let val_array = DynSolValue::Array(vec![val_func.clone(), val_func]);
+        assert_eq!(val_array.abi_packed_encoded_size(), 64);
+        assert_eq!(val_array.abi_encode_packed().len(), val_array.abi_packed_encoded_size());
+    }
+
+    #[test]
+    fn tuple_matches_rejects_short_values() {
+        let ty = DynSolType::Tuple(vec![DynSolType::Uint(256), DynSolType::Bool]);
+        let value = DynSolValue::Tuple(vec![DynSolValue::Uint(U256::ZERO, 256)]);
+
+        assert!(!ty.matches(&value));
     }
 
     // also tests the type name parser
@@ -1064,6 +1320,43 @@ re-enc: {re_enc}
     }
 
     #[test]
+    fn nested_zst_array_dos() {
+        let my_type: DynSolType = "(uint256,()[])".parse().unwrap();
+        let value = my_type.abi_decode_params(&hex!(
+            "
+            0000000000000000000000000000000000000000000000000000000000000001
+            0000000000000000000000000000000000000000000000000000000000000040
+            00000000000000000000000000000000000000000000000000000000FFFFFFFF
+            "
+        ));
+        assert_eq!(
+            value,
+            Ok(DynSolValue::Tuple(vec![
+                DynSolValue::Uint(U256::from(1), 256),
+                DynSolValue::Array(vec![])
+            ]))
+        );
+    }
+
+    #[test]
+    fn dynamic_array_required_words_overflow() {
+        let my_type: DynSolType = "uint256[2][]".parse().unwrap();
+        let mut encoded = Vec::with_capacity(64);
+        encoded.extend_from_slice(pad_usize(32).as_slice());
+        encoded.extend_from_slice(pad_usize(usize::MAX).as_slice());
+
+        assert_eq!(my_type.abi_decode(&encoded), Err(alloy_sol_types::Error::Overrun.into()));
+    }
+
+    #[test]
+    fn minimum_words_saturates() {
+        let element = DynSolType::Tuple(vec![DynSolType::Uint(256), DynSolType::Uint(256)]);
+        let my_type = DynSolType::FixedArray(Box::new(element), usize::MAX);
+
+        assert_eq!(my_type.minimum_words(), usize::MAX);
+    }
+
+    #[test]
     #[cfg_attr(miri, ignore = "takes too long")]
     fn recursive_dos() {
         // https://github.com/alloy-rs/core/issues/490
@@ -1235,15 +1528,28 @@ expected: {expected}",
             1111111111111111111111111111111111111111,\
             2222222222222222222222222222222222222222\
         ]", "
-            0000000000000000000000001111111111111111111111111111111111111111
-            0000000000000000000000002222222222222222222222222222222222222222
+            1111111111111111111111111111111111111111000000000000000000000000
+            2222222222222222222222222222222222222222000000000000000000000000
         "),
         fbytes_5("bytes20[2]", "[\
             1111111111111111111111111111111111111111,\
             2222222222222222222222222222222222222222\
         ]", "
-            0000000000000000000000001111111111111111111111111111111111111111
-            0000000000000000000000002222222222222222222222222222222222222222
+            1111111111111111111111111111111111111111000000000000000000000000
+            2222222222222222222222222222222222222222000000000000000000000000
+        "),
+        fbytes_6("bytes1[2]", "[12, 34]", "
+            1200000000000000000000000000000000000000000000000000000000000000
+            3400000000000000000000000000000000000000000000000000000000000000
+        "),
+
+        int_array_1("int8[]", "[-1, 1]", "
+            ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+            0000000000000000000000000000000000000000000000000000000000000001
+        "),
+        int_array_2("int16[2]", "[-2, 3]", "
+            fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe
+            0000000000000000000000000000000000000000000000000000000000000003
         "),
 
         dynamic_array_of_addresses("address[]", "[\

@@ -16,7 +16,8 @@ cfg_if! {
     }
 }
 
-// Used by `FbHasher`.
+// Used by the optional `FxBuildHasher`.
+#[cfg(feature = "map-fxhash")]
 cfg_if! {
     if #[cfg(all(feature = "std", feature = "rand"))] {
         pub(super) use rustc_hash::FxRandomState as FxBuildHasherInner;

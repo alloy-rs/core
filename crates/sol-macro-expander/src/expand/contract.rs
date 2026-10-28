@@ -5,7 +5,7 @@ use crate::utils::ExprArray;
 use alloy_sol_macro_input::{ContainsSolAttrs, docs_str, mk_doc};
 use ast::{Item, ItemContract, ItemError, ItemEvent, ItemFunction, SolIdent, Spanned};
 use heck::ToSnakeCase;
-use proc_macro2::{Ident, TokenStream};
+use proc_macro2::{Ident, Span, TokenStream};
 use quote::{format_ident, quote};
 use syn::{Attribute, Result, parse_quote};
 
@@ -170,7 +170,12 @@ pub(super) fn expand(cx: &mut ExpCtxt<'_>, contract: &ItemContract) -> Result<To
         let doc_str = format!("Container for all the [`{name}`](self) custom errors.");
         attrs.push(parse_quote!(#[doc = #doc_str]));
         attrs.push(parse_quote!(#[derive(Clone)]));
-        enum_expander.expand(ToExpand::Errors(&errors), attrs)
+        let enum_tokens = enum_expander.expand(ToExpand::Errors(&errors), attrs);
+        let builders = generate_error_builders(name, &errors, cx);
+        quote! {
+            #enum_tokens
+            #builders
+        }
     });
 
     let events_enum = (!events.is_empty()).then(|| {
@@ -178,11 +183,13 @@ pub(super) fn expand(cx: &mut ExpCtxt<'_>, contract: &ItemContract) -> Result<To
         let doc_str = format!("Container for all the [`{name}`](self) events.");
         attrs.push(parse_quote!(#[doc = #doc_str]));
         attrs.push(parse_quote!(#[derive(Clone)]));
-        enum_expander.expand(ToExpand::Events(&events), attrs)
+        let enum_tokens = enum_expander.expand(ToExpand::Events(&events), attrs);
+        let builders = generate_event_builders(name, &events, cx);
+        quote! {
+            #enum_tokens
+            #builders
+        }
     });
-
-    // Do not propagate contract-level derives to the functions enum.
-    cx.attrs = prev_cx_attrs;
 
     let functions_enum = (!functions.is_empty()).then(|| {
         let mut attrs = enum_attrs;
@@ -193,6 +200,12 @@ pub(super) fn expand(cx: &mut ExpCtxt<'_>, contract: &ItemContract) -> Result<To
         enum_expander.expand(ToExpand::Functions(&functions), attrs)
     });
 
+    // Restore the context attributes now that the errors, events and functions enums have all
+    // been expanded with the contract-level `extra_derives`/`all_derives`. Previously the
+    // functions (calls) enum was expanded after this reset, so it only derived `Clone` while the
+    // errors and events enums (and the call structs themselves) got the user's extra derives.
+    cx.attrs = prev_cx_attrs;
+
     let mod_descr_doc = (docs && docs_str(&mod_attrs).trim().is_empty())
         .then(|| mk_doc("Module containing a contract's types and functions."));
     let mod_iface_doc = (docs && !docs_str(&mod_attrs).contains("```solidity\n"))
@@ -200,13 +213,11 @@ pub(super) fn expand(cx: &mut ExpCtxt<'_>, contract: &ItemContract) -> Result<To
 
     let abi = abi.then(|| {
         if_json! {
-            use crate::verbatim::verbatim;
             use super::to_abi;
 
-            let crates = &cx.crates;
-            let constructor = verbatim(&constructor.map(|x| to_abi::constructor(x, cx)), crates);
-            let fallback = verbatim(&fallback.map(|x| to_abi::fallback(x, cx)), crates);
-            let receive = verbatim(&receive.map(|x| to_abi::receive(x, cx)), crates);
+            let constructor = to_abi::constructor(constructor, cx);
+            let fallback = to_abi::fallback(fallback, cx);
+            let receive = to_abi::receive(receive, cx);
             let functions_map = to_abi::functions_map(&functions, cx);
             let events_map = to_abi::events_map(&events, cx);
             let errors_map = to_abi::errors_map(&errors, cx);
@@ -566,6 +577,12 @@ struct ExpandData {
     min_data_len: usize,
     trait_: Ident,
     selectors: Vec<ExprArray<u8>>,
+    /// Whether the builtin `#[sol(all_derives)]` traits can be derived on the
+    /// generated enum. Computed from the underlying items' parameter types,
+    /// because the variant type names may be synthetic (overloaded items get
+    /// `_N` suffixes, call variants use `*Call` structs) and thus not
+    /// resolvable as items.
+    can_derive_builtin: bool,
 }
 
 impl ExpandData {
@@ -632,12 +649,15 @@ impl ToExpand<'_> {
                         .unwrap(),
                     trait_: format_ident!("SolCall"),
                     selectors: functions.iter().map(|f| cx.function_selector(f)).collect(),
+                    can_derive_builtin: functions
+                        .iter()
+                        .all(|f| f.parameters.types().all(|ty| cx.can_derive_builtin_traits(ty))),
                 }
             }
 
             Self::Errors(errors) => ExpandData {
                 name: format_ident!("{contract_name}Errors"),
-                variants: errors.iter().map(|error| error.name.0.clone()).collect(),
+                variants: errors.iter().map(|&error| cx.overloaded_name(error.into()).0).collect(),
                 types: None,
                 min_data_len: errors
                     .iter()
@@ -646,6 +666,9 @@ impl ToExpand<'_> {
                     .unwrap(),
                 trait_: format_ident!("SolError"),
                 selectors: errors.iter().map(|e| cx.error_selector(e)).collect(),
+                can_derive_builtin: errors.iter().all(|&error| {
+                    error.parameters.types().all(|ty| cx.can_derive_builtin_traits(ty))
+                }),
             },
 
             Self::Events(events) => {
@@ -663,6 +686,9 @@ impl ToExpand<'_> {
                         .unwrap(),
                     trait_: format_ident!("SolEvent"),
                     selectors: events.iter().map(|e| cx.event_selector(e)).collect(),
+                    can_derive_builtin: events.iter().all(|&event| {
+                        event.parameters.iter().all(|p| cx.can_derive_builtin_traits(&p.ty))
+                    }),
                 }
             }
         }
@@ -729,11 +755,34 @@ impl CallLikeExpander<'_> {
                     selector: [u8; 4],
                     data: &[u8],
                 )-> alloy_sol_types::Result<Self> {
-                    static DECODE_SHIMS: &[fn(&[u8]) -> alloy_sol_types::Result<#name>] = &[
+                    Self::abi_decode_raw_with_config(
+                        selector,
+                        data,
+                        alloy_sol_types::abi::AbiDecoderConfig::default(),
+                    )
+                }
+
+                #[inline]
+                #[allow(non_snake_case)]
+                fn abi_decode_raw_with_config(
+                    selector: [u8; 4],
+                    data: &[u8],
+                    config: alloy_sol_types::abi::AbiDecoderConfig,
+                ) -> alloy_sol_types::Result<Self> {
+                    static DECODE_SHIMS: &[fn(
+                        &[u8],
+                        alloy_sol_types::abi::AbiDecoderConfig,
+                    ) -> alloy_sol_types::Result<#name>] = &[
                         #({
-                            fn #sorted_variants(data: &[u8]) -> alloy_sol_types::Result<#name> {
-                                <#sorted_types as alloy_sol_types::#trait_>::abi_decode_raw(data)
-                                    .map(#name::#sorted_variants)
+                            fn #sorted_variants(
+                                data: &[u8],
+                                config: alloy_sol_types::abi::AbiDecoderConfig,
+                            ) -> alloy_sol_types::Result<#name> {
+                                <#sorted_types as alloy_sol_types::#trait_>::abi_decode_raw_with_config(
+                                    data,
+                                    config,
+                                )
+                                .map(#name::#sorted_variants)
                             }
                             #sorted_variants
                         }),*
@@ -746,33 +795,7 @@ impl CallLikeExpander<'_> {
                         ));
                     };
                     // `SELECTORS` and `DECODE_SHIMS` have the same length and are sorted in the same order.
-                    DECODE_SHIMS[idx](data)
-                }
-
-                #[inline]
-                #[allow(non_snake_case)]
-                fn abi_decode_raw_validate(
-                    selector: [u8; 4],
-                    data: &[u8],
-                ) -> alloy_sol_types::Result<Self> {
-                    static DECODE_VALIDATE_SHIMS: &[fn(&[u8]) -> alloy_sol_types::Result<#name>] = &[
-                        #({
-                            fn #sorted_variants(data: &[u8]) -> alloy_sol_types::Result<#name> {
-                                <#sorted_types as alloy_sol_types::#trait_>::abi_decode_raw_validate(data)
-                                    .map(#name::#sorted_variants)
-                            }
-                            #sorted_variants
-                        }),*
-                    ];
-
-                    let Ok(idx) = Self::SELECTORS.binary_search(&selector) else {
-                        return Err(alloy_sol_types::Error::unknown_selector(
-                            <Self as alloy_sol_types::SolInterface>::NAME,
-                            selector,
-                        ));
-                    };
-                    // `SELECTORS` and `DECODE_VALIDATE_SHIMS` have the same length and are sorted in the same order.
-                    DECODE_VALIDATE_SHIMS[idx](data)
+                    DECODE_SHIMS[idx](data, config)
                 }
 
                 #[inline]
@@ -788,6 +811,14 @@ impl CallLikeExpander<'_> {
                     match self {#(
                         Self::#variants(inner) =>
                             <#types as alloy_sol_types::#trait_>::abi_encode_raw(inner, out),
+                    )*}
+                }
+
+                #[inline]
+                fn abi_encode(&self) -> alloy_sol_types::private::Vec<u8> {
+                    match self {#(
+                        Self::#variants(inner) =>
+                            <#types as alloy_sol_types::#trait_>::abi_encode(inner),
                     )*}
                 }
             }
@@ -812,6 +843,16 @@ impl CallLikeExpander<'_> {
 
         let e_name = |&e: &&ItemEvent| self.cx.overloaded_name(e.into());
         let err = quote! {
+            if topics
+                .len()
+                .checked_mul(alloy_sol_types::Word::len_bytes())
+                .and_then(|len| len.checked_add(data.len()))
+                .is_none_or(|len| len > config.get_memory_limit())
+            {
+                return alloy_sol_types::private::Err(alloy_sol_types::Error::MemoryLimitExceeded(
+                    config.get_memory_limit(),
+                ));
+            }
             alloy_sol_types::private::Err(alloy_sol_types::Error::InvalidLog {
                 name: <Self as alloy_sol_types::SolEventInterface>::NAME,
                 log: alloy_sol_types::private::Box::new(alloy_sol_types::private::LogData::new_unchecked(
@@ -822,37 +863,71 @@ impl CallLikeExpander<'_> {
         };
         let non_anon_impl = has_non_anon.then(|| {
             let variants = events.iter().filter(|e| !e.is_anonymous()).map(e_name);
-            let ret = has_anon.then(|| quote!(return));
-            let ret_err = (!has_anon).then_some(&err);
-            quote! {
+            if has_anon {
+                quote! {
+                    match topics.first().copied() {
+                        #(
+                            Some(<#variants as alloy_sol_types::#trait_>::SIGNATURE_HASH) => {
+                                record_result(<#variants as alloy_sol_types::#trait_>::decode_raw_log_with_config(topics, data, config)
+                                    .map(Self::#variants))?;
+                            }
+                        )*
+                        _ => {}
+                    }
+                }
+            } else { quote! {
                 match topics.first().copied() {
                     #(
                         Some(<#variants as alloy_sol_types::#trait_>::SIGNATURE_HASH) =>
-                            #ret <#variants as alloy_sol_types::#trait_>::decode_raw_log(topics, data)
+                            <#variants as alloy_sol_types::#trait_>::decode_raw_log_with_config(topics, data, config)
                                 .map(Self::#variants),
                     )*
-                    _ => { #ret_err }
+                    _ => { #err }
                 }
-            }
+            } }
         });
-        let anon_impl = has_anon.then(|| {
+        let decode_impl = if has_anon {
             let variants = events.iter().filter(|e| e.is_anonymous()).map(e_name);
             quote! {
-                #(
-                    if let Ok(res) = <#variants as alloy_sol_types::#trait_>::decode_raw_log(topics, data) {
-                        return Ok(Self::#variants(res));
+                let mut decoded = None;
+                let mut record_result = |result: alloy_sol_types::Result<Self>| -> alloy_sol_types::Result<()> {
+                    match result {
+                        Ok(candidate) => {
+                            if decoded.replace(candidate).is_some() {
+                                return Err(alloy_sol_types::Error::custom("ambiguous event log"));
+                            }
+                        }
+                        Err(err @ (
+                            alloy_sol_types::Error::MemoryLimitExceeded(_)
+                            | alloy_sol_types::Error::RecursionLimitExceeded(_)
+                            | alloy_sol_types::Error::Reserve(_)
+                        )) => {
+                            return Err(err);
+                        }
+                        Err(_) => {}
                     }
+                    Ok(())
+                };
+                #non_anon_impl
+                #(
+                    record_result(<#variants as alloy_sol_types::#trait_>::decode_raw_log_with_config(topics, data, config)
+                        .map(Self::#variants))?;
                 )*
+                if let Some(decoded) = decoded {
+                    return Ok(decoded);
+                }
                 #err
             }
-        });
-
+        } else {
+            quote! { #non_anon_impl }
+        };
         let into_impl = {
             let variants = events.iter().map(e_name);
             let v2 = variants.clone();
             quote! {
                 #[automatically_derived]
                 impl alloy_sol_types::private::IntoLogData for #name {
+                    #[inline]
                     fn to_log_data(&self) -> alloy_sol_types::private::LogData {
                         match self {#(
                             Self::#variants(inner) =>
@@ -860,6 +935,7 @@ impl CallLikeExpander<'_> {
                         )*}
                     }
 
+                    #[inline]
                     fn into_log_data(self) -> alloy_sol_types::private::LogData {
                         match self {#(
                             Self::#v2(inner) =>
@@ -879,8 +955,19 @@ impl CallLikeExpander<'_> {
                 const COUNT: usize = #count;
 
                 fn decode_raw_log(topics: &[alloy_sol_types::Word], data: &[u8]) -> alloy_sol_types::Result<Self> {
-                    #non_anon_impl
-                    #anon_impl
+                    <Self as alloy_sol_types::SolEventInterface>::decode_raw_log_with_config(
+                        topics,
+                        data,
+                        alloy_sol_types::abi::AbiDecoderConfig::default(),
+                    )
+                }
+
+                fn decode_raw_log_with_config(
+                    topics: &[alloy_sol_types::Word],
+                    data: &[u8],
+                    config: alloy_sol_types::abi::AbiDecoderConfig,
+                ) -> alloy_sol_types::Result<Self> {
+                    #decode_impl
                 }
             }
 
@@ -905,7 +992,7 @@ impl CallLikeExpander<'_> {
         assert!(selectors.iter().all(|s| s.array.len() == selector_len));
         let selector_type = quote!([u8; #selector_len]);
 
-        self.cx.type_derives(&mut attrs, types.iter().cloned().map(ast::Type::custom), false);
+        self.cx.enum_derives(&mut attrs, data.can_derive_builtin);
         let trait_ = &data.trait_;
 
         let mut tokens = quote! {
@@ -1077,6 +1164,138 @@ fn call_builder_method_function_name(f: &ItemFunction, cx: &ExpCtxt<'_>) -> SolI
         }
         _ => call_name_ident,
     }
+}
+
+/// Generates snake_case constructor helpers on the `{Interface}Errors` enum.
+fn generate_error_builders(
+    contract_name: &SolIdent,
+    errors: &[&ItemError],
+    cx: &ExpCtxt<'_>,
+) -> TokenStream {
+    let enum_name = format_ident!("{contract_name}Errors");
+    let methods = errors.iter().map(|error| {
+        let variant_name = cx.overloaded_name((*error).into());
+        let fn_name = snakify_ident(&variant_name);
+        let sig = cx.error_signature(error);
+        let doc = format!("Creates a [`{variant_name}`] error.\n\n```solidity\nerror {sig}\n```");
+
+        match error.parameters.len() {
+            // Unit struct: `error Foo();`
+            0 => {
+                quote! {
+                    #[doc = #doc]
+                    #[inline]
+                    pub fn #fn_name() -> Self {
+                        Self::#variant_name(#variant_name)
+                    }
+                }
+            }
+            // Single unnamed param: `error Foo(uint256);` → tuple struct
+            1 if error.parameters[0].name.is_none() => {
+                let ty = cx.expand_rust_type(&error.parameters[0].ty);
+                let param_name = format_ident!("_0");
+                quote! {
+                    #[doc = #doc]
+                    #[inline]
+                    pub fn #fn_name(#param_name: #ty) -> Self {
+                        Self::#variant_name(#variant_name(#param_name))
+                    }
+                }
+            }
+            // Named fields: `error Foo(uint256 bar, address baz);`
+            _ => {
+                let params: Vec<_> = error
+                    .parameters
+                    .iter()
+                    .enumerate()
+                    .map(|(i, p)| {
+                        let sol_name = super::anon_name((i, p.name.as_ref()));
+                        let param_name = snakify_ident(&sol_name);
+                        (sol_name, param_name, cx.expand_rust_type(&p.ty))
+                    })
+                    .collect();
+                builder_method(&fn_name, &doc, &variant_name, &params)
+            }
+        }
+    });
+
+    quote! {
+        #[automatically_derived]
+        impl #enum_name {
+            #(#methods)*
+        }
+    }
+}
+
+/// Generates snake_case constructor helpers on the `{Interface}Events` enum.
+fn generate_event_builders(
+    contract_name: &SolIdent,
+    events: &[&ItemEvent],
+    cx: &ExpCtxt<'_>,
+) -> TokenStream {
+    let enum_name = format_ident!("{contract_name}Events");
+    let methods = events.iter().map(|event| {
+        let variant_name = cx.overloaded_name((*event).into());
+        let fn_name = snakify_ident(&variant_name);
+        let sig = cx.event_signature(event);
+        let doc = format!("Creates a [`{variant_name}`] event.\n\n```solidity\nevent {sig}\n```");
+
+        if event.parameters.is_empty() {
+            quote! {
+                #[doc = #doc]
+                #[inline]
+                pub fn #fn_name() -> Self {
+                    Self::#variant_name(#variant_name)
+                }
+            }
+        } else {
+            let params: Vec<_> = event
+                .parameters
+                .iter()
+                .enumerate()
+                .map(|(i, p)| {
+                    let sol_name = super::anon_name((i, p.name.as_ref()));
+                    let param_name = snakify_ident(&sol_name);
+                    (sol_name, param_name, cx.expand_event_param_type(p))
+                })
+                .collect();
+            builder_method(&fn_name, &doc, &variant_name, &params)
+        }
+    });
+
+    quote! {
+        #[automatically_derived]
+        impl #enum_name {
+            #(#methods)*
+        }
+    }
+}
+
+/// Emits a single named-field builder method.
+fn builder_method(
+    fn_name: &Ident,
+    doc: &str,
+    variant_name: &SolIdent,
+    params: &[(Ident, Ident, TokenStream)],
+) -> TokenStream {
+    let fn_params = params.iter().map(|(_, param_name, ty)| quote!(#param_name: #ty));
+    let field_inits = params.iter().map(|(sol_name, param_name, _)| quote!(#sol_name: #param_name));
+    quote! {
+        #[doc = #doc]
+        #[inline]
+        pub fn #fn_name(#(#fn_params),*) -> Self {
+            Self::#variant_name(#variant_name {
+                #(#field_inits),*
+            })
+        }
+    }
+}
+
+/// Converts a name to snake_case, falling back to a raw identifier if the
+/// result is a Rust keyword.
+fn snakify_ident(name: &impl ToString) -> Ident {
+    let s = snakify(&name.to_string());
+    syn::parse_str::<Ident>(&s).unwrap_or_else(|_| Ident::new_raw(&s, Span::call_site()))
 }
 
 /// `heck` doesn't treat numbers as new words, and discards leading underscores.

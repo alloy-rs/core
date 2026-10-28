@@ -5,11 +5,174 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.5.7](https://github.com/alloy-rs/core/releases/tag/v1.5.7) - 2026-02-18
+## [1.7.3](https://github.com/alloy-rs/core/releases/tag/v1.7.3) - 2026-09-10
+
+### Bug Fixes
+
+- Allow non atomic targets ([#1184](https://github.com/alloy-rs/core/issues/1184))
+- [primitives] Use BITS in Signed overflowing_shl/shr overflow check ([#1174](https://github.com/alloy-rs/core/issues/1174))
+
+### Features
+
+- [sol-types] Add validation that allows trailing bytes ([#1186](https://github.com/alloy-rs/core/issues/1186))
+
+## [1.7.2](https://github.com/alloy-rs/core/releases/tag/v1.7.2) - 2026-09-03
+
+### Dependencies
+
+- [deps] Bump re-actors/alls-green from 1.2.2 to 1.3.0 in the ci-weekly group ([#1178](https://github.com/alloy-rs/core/issues/1178))
+
+### Features
+
+- [primitives] Add Postgres support to fixed-bytes wrappers ([#1175](https://github.com/alloy-rs/core/issues/1175))
+- [sol-types] Add strict ABI decoding ([#1180](https://github.com/alloy-rs/core/issues/1180))
+- [primitives] Add sqlx PgHasArrayType for BYTEA types ([#1182](https://github.com/alloy-rs/core/issues/1182))
+
+### Miscellaneous Tasks
+
+- Release 1.7.2
+- [ci] Disable allocative in CI ([#1183](https://github.com/alloy-rs/core/issues/1183))
+
+## [1.7.1](https://github.com/alloy-rs/core/releases/tag/v1.7.1) - 2026-08-25
+
+### Bug Fixes
+
+- [sol-types] Default config trait methods ([#1171](https://github.com/alloy-rs/core/issues/1171))
+
+### Miscellaneous Tasks
+
+- Release 1.7.1
+- Use underscores for lint names ([#1169](https://github.com/alloy-rs/core/issues/1169))
+
+## [1.7.0](https://github.com/alloy-rs/core/releases/tag/v1.7.0) - 2026-08-25
+
+### Bug Fixes
+
+- [sol-types] Validate dynamic array length before allocation ([#1164](https://github.com/alloy-rs/core/issues/1164))
+- [primitives] Require list header when decoding logs ([#1166](https://github.com/alloy-rs/core/issues/1166))
+- [sol-macro] Preserve nested ABI component names ([#1162](https://github.com/alloy-rs/core/issues/1162))
+- [dyn-abi] Coerce JSON int values above i64::MAX for signed types ([#1158](https://github.com/alloy-rs/core/issues/1158))
+- [primitives] Return Err on parse_units multiply overflow ([#1156](https://github.com/alloy-rs/core/issues/1156))
+- Restore changelogs ([#1154](https://github.com/alloy-rs/core/issues/1154))
+
+### Dependencies
+
+- [deps] Bump the ci-weekly group with 2 updates ([#1163](https://github.com/alloy-rs/core/issues/1163))
+- [deps] Bump actions/checkout from 7.0.0 to 7.0.1 in the ci-weekly group ([#1159](https://github.com/alloy-rs/core/issues/1159))
+
+### Features
+
+- [sol-types] Add AbiDecoderConfig ([#1167](https://github.com/alloy-rs/core/issues/1167))
+- [dyn-abi] Add indexed event topic encoding for DynSolValue ([#1161](https://github.com/alloy-rs/core/issues/1161))
+- [json-abi] Support enum definitions ([#1155](https://github.com/alloy-rs/core/issues/1155))
+
+### Miscellaneous Tasks
+
+- Release 1.7.0
+
+### Performance
+
+- Manual Ord for FixedBytes using integer chunk comparison ([#1160](https://github.com/alloy-rs/core/issues/1160))
+
+### Testing
+
+- Remove needless hash borrow ([#1168](https://github.com/alloy-rs/core/issues/1168))
+
+## [1.6.1](https://github.com/alloy-rs/core/releases/tag/v1.6.1) - 2026-07-16
+
+### Bug Fixes
+
+- [sol-macro] Derive namespaced custom types ([#1152](https://github.com/alloy-rs/core/issues/1152))
+- [syn-solidity] Strip namespaces from custom types in EIP-712 formatting ([#1146](https://github.com/alloy-rs/core/issues/1146))
+- [json-abi] Dedup canonical signatures ([#1151](https://github.com/alloy-rs/core/issues/1151))
+- [dyn-abi] Correct packed encoded size for Function ([#1149](https://github.com/alloy-rs/core/issues/1149))
+- [sol-macro] Fix UDT NAME constant generation stringify typo ([#1145](https://github.com/alloy-rs/core/issues/1145))
+- Fix(dyn-abi): avoid nested zero-sized
+- [json-abi] Preserve anonymous event full signatures ([#1141](https://github.com/alloy-rs/core/issues/1141))
+- [sol-macro] Derive Default for dynamic arrays of non-Default elements ([#1129](https://github.com/alloy-rs/core/issues/1129))
+- [sol-macro] Derive builtin traits on overloaded event/error enums ([#1118](https://github.com/alloy-rs/core/issues/1118))
+- [primitives] Reject underflowing native signed ints ([#1139](https://github.com/alloy-rs/core/issues/1139))
+- [dyn-abi] Error on primitive EIP-712 data ([#1138](https://github.com/alloy-rs/core/issues/1138))
+- [dyn-abi] Require tuple match arity ([#1137](https://github.com/alloy-rs/core/issues/1137))
+- [dyn-abi] Enforce signed int string width ([#1136](https://github.com/alloy-rs/core/issues/1136))
+- [dyn-abi] Validate EIP-712 fixed bytes length ([#1135](https://github.com/alloy-rs/core/issues/1135))
+- [sol-macro-expander] Propagate extra_derives to the functions enum ([#1124](https://github.com/alloy-rs/core/issues/1124))
+- [dyn-abi] Validate event topic count before decoding body ([#1122](https://github.com/alloy-rs/core/issues/1122))
+- Switch to proc-macro-error3 ([#1121](https://github.com/alloy-rs/core/issues/1121))
+- Reject extra event topics during decoding ([#1112](https://github.com/alloy-rs/core/issues/1112))
+- Disable proptest default features ([#1110](https://github.com/alloy-rs/core/issues/1110))
+- [EIP-712] PropDef::parse supports extra whitespaces ([#1102](https://github.com/alloy-rs/core/issues/1102))
+- [dyn-abi] Allow self-referential struct types in EIP-712 canonicalize ([#1103](https://github.com/alloy-rs/core/issues/1103)) ([#1105](https://github.com/alloy-rs/core/issues/1105))
+
+### Dependencies
+
+- [deps] Bump actions/checkout from 6.0.2 to 7.0.0 in the ci-weekly group across 1 directory ([#1130](https://github.com/alloy-rs/core/issues/1130))
+
+### Features
+
+- [primitives] Use foldhash for fixed-size maps ([#1153](https://github.com/alloy-rs/core/issues/1153))
+- Allow customizing keccak cache size ([#1115](https://github.com/alloy-rs/core/issues/1115))
+- Keccak cache stats ([#1114](https://github.com/alloy-rs/core/issues/1114))
+- [primitives] Add Signature v_byte helper ([#1111](https://github.com/alloy-rs/core/issues/1111))
+
+### Miscellaneous Tasks
+
+- Release 1.6.1
+- Disable rustc-hash nightly feature ([#1132](https://github.com/alloy-rs/core/issues/1132))
+- Group weekly dependabot updates ([#1127](https://github.com/alloy-rs/core/issues/1127))
+
+### Other
+
+- Set rust-toolchain inputs explicitly ([#1131](https://github.com/alloy-rs/core/issues/1131))
+
+### Performance
+
+- Optimize bloom membership checks ([#1134](https://github.com/alloy-rs/core/issues/1134))
+- Use global secp256k1 context for signature recovery ([#1119](https://github.com/alloy-rs/core/issues/1119))
+- [sol-types] Avoid allocating event signature errors ([#1109](https://github.com/alloy-rs/core/issues/1109))
+
+### Testing
+
+- Cover anonymous event decoding ([#1113](https://github.com/alloy-rs/core/issues/1113))
+
+## [1.6.0](https://github.com/alloy-rs/core/releases/tag/v1.6.0) - 2026-05-14
+
+### Bug Fixes
+
+- [syn-solidity] Parse `delete` statement as expression, not variable declaration ([#1087](https://github.com/alloy-rs/core/issues/1087))
+- [sol-types] Remove unsound unwrap_unchecked in suffix_offset ([#1083](https://github.com/alloy-rs/core/issues/1083))
+- [dyn-abi] Handle short data in decode_error without panicking ([#1084](https://github.com/alloy-rs/core/issues/1084))
+- Nightly clippy fixes ([#1085](https://github.com/alloy-rs/core/issues/1085))
+
+### Dependencies
+
+- [deps] Bump all ([#1098](https://github.com/alloy-rs/core/issues/1098))
+- Harden supply chain — pin actions, lock permissions, deny git deps ([#1092](https://github.com/alloy-rs/core/issues/1092))
+- Bump winnow, proptest-derive, macro-string ([#1088](https://github.com/alloy-rs/core/issues/1088))
+
+### Features
+
+- Add optional `secp256k1` backend for ECDSA operations ([#1104](https://github.com/alloy-rs/core/issues/1104))
+- [sol-macro] Helper builders for errors and events ([#1080](https://github.com/alloy-rs/core/issues/1080))
+
+### Miscellaneous Tasks
+
+- Release 1.6.0
+
+### Performance
+
+- Add Token::head_append_many for batch encoding ([#1090](https://github.com/alloy-rs/core/issues/1090))
+- Add Token::decode_many_from for batch decoding ([#1089](https://github.com/alloy-rs/core/issues/1089))
+
+## [1.5.7](https://github.com/alloy-rs/core/releases/tag/v1.5.7) - 2026-02-27
 
 ### Bug Fixes
 
 - [sol-macro] Prevent direct String usage in expanded code ([#1076](https://github.com/alloy-rs/core/issues/1076))
+
+### Miscellaneous Tasks
+
+- Release 1.5.7 ([#1077](https://github.com/alloy-rs/core/issues/1077))
 
 ## [1.5.6](https://github.com/alloy-rs/core/releases/tag/v1.5.6) - 2026-02-12
 
@@ -241,10 +404,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Colon 712 identifiers ([#963](https://github.com/alloy-rs/core/issues/963))
 
-### Dependencies
-
-- [meta] Add edition 2024 bump to .git-blame-ignore-revs
-
 ### Miscellaneous Tasks
 
 - Release 1.2.1
@@ -254,7 +413,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Dependencies
 
-- Bump to edition 2024 ([#960](https://github.com/alloy-rs/core/issues/960))
 - Bump MSRV to 1.85 ([#959](https://github.com/alloy-rs/core/issues/959))
 
 ### Miscellaneous Tasks
@@ -328,40 +486,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.0.0](https://github.com/alloy-rs/core/releases/tag/v1.0.0) - 2025-04-03
 
-### Features
-
-- [primitives] Supporting diesel @ 2.2 ([#915](https://github.com/alloy-rs/core/issues/915))
-- 1.0-rc.1
-- Bump ruint, adjust rand feature
-
-### Miscellaneous Tasks
-
-- Release 1.0.0
-- Release 1.0.0-rc.1
-- Release 0.8.25
-
-### Other
-
-- Merge branch 'main' into v1.0-rc
-
-### Testing
-
-- Missing import
-- [dyn-abi] Remove dev-dependency on self
-
-## [0.8.24](https://github.com/alloy-rs/core/releases/tag/v0.8.24) - 2025-03-21
-
-### Features
-
-- [sol-macro] Improve call return encoding ([#909](https://github.com/alloy-rs/core/issues/909))
-
-## [0.8.23](https://github.com/alloy-rs/core/releases/tag/v0.8.23) - 2025-03-13
-
 ### Bug Fixes
 
 - [`sol-expander`] Rename from/into + impl From ([#905](https://github.com/alloy-rs/core/issues/905))
 - [`sol!`] Pass correct call_struct to call_builder in expansion ([#901](https://github.com/alloy-rs/core/issues/901))
 - [sol-macro] Rm fake transport from contract expansion ([#865](https://github.com/alloy-rs/core/issues/865))
+- [primitives] Remove undefined behavior in FixedBytes ([#919](https://github.com/alloy-rs/core/issues/919))
+- Do not rely on bytes dependency in `wrap_fixed_bytes!` ([#918](https://github.com/alloy-rs/core/issues/918))
 
 ### Dependencies
 
@@ -369,33 +500,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Features
 
+- [primitives] Supporting diesel @ 2.2 ([#915](https://github.com/alloy-rs/core/issues/915))
+- 1.0-rc.1
+- Bump ruint, adjust rand feature
+- [sol-macro] Improve call return encoding ([#909](https://github.com/alloy-rs/core/issues/909))
 - [primitives] Remove `From<String> for Bytes` ([#907](https://github.com/alloy-rs/core/issues/907))
 - [`sol!`] Gen unit/tuple structs for errors, calls, events with 0/1 param ([#883](https://github.com/alloy-rs/core/issues/883))
 - [sol-macro] Function calls should directly yield result  ([#855](https://github.com/alloy-rs/core/issues/855))
 - [sol-types] Rm `validate: bool`  ([#863](https://github.com/alloy-rs/core/issues/863))
-
-### Miscellaneous Tasks
-
-- Remove deprecated `Signature` ([#899](https://github.com/alloy-rs/core/issues/899))
-
-### Other
-
-- Merge branch 'main' into v1.0-rc
-
-## [1.0.0](https://github.com/alloy-rs/core/releases/tag/v1.0.0) - 2025-04-03
-
-### Bug Fixes
-
-- [primitives] Remove undefined behavior in FixedBytes ([#919](https://github.com/alloy-rs/core/issues/919))
-- Do not rely on bytes dependency in `wrap_fixed_bytes!` ([#918](https://github.com/alloy-rs/core/issues/918))
-
-### Features
-
 - Add inner mut ([#921](https://github.com/alloy-rs/core/issues/921))
 
 ### Miscellaneous Tasks
 
+- Release 1.0.0
+- Release 1.0.0-rc.1
+- Release 0.8.25
+- Remove deprecated `Signature` ([#899](https://github.com/alloy-rs/core/issues/899))
 - Add hash_ref function to sealed.rs ([#920](https://github.com/alloy-rs/core/issues/920))
+
+### Other
+
+- Merge branch 'main' into v1.0-rc
+- Merge branch 'main' into v1.0-rc
+
+### Testing
+
+- Missing import
+- [dyn-abi] Remove dev-dependency on self
 
 ## [0.8.24](https://github.com/alloy-rs/core/releases/tag/v0.8.24) - 2025-03-21
 
@@ -1404,7 +1535,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Restructure tests ([#421](https://github.com/alloy-rs/core/issues/421))
 - Rename `TokenType` GAT and trait to `Token` ([#417](https://github.com/alloy-rs/core/issues/417))
 - Remove dead code ([#416](https://github.com/alloy-rs/core/issues/416))
-- Update .git-blame-ignore-revs
 - Use winnow `separated` instead of `separated0` ([#403](https://github.com/alloy-rs/core/issues/403))
 - Clean up ABI, EIP-712, docs ([#373](https://github.com/alloy-rs/core/issues/373))
 - [sol-macro] Move generated docs below input attrs ([#363](https://github.com/alloy-rs/core/issues/363))
@@ -1415,10 +1545,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SSZ implementation for alloy primitives ([#407](https://github.com/alloy-rs/core/issues/407))
 - Enable rand feature for re-exported ruint crate ([#385](https://github.com/alloy-rs/core/issues/385))
 - Cargo build instead of check ([#368](https://github.com/alloy-rs/core/issues/368))
-
-### Styling
-
-- Update rustfmt config ([#406](https://github.com/alloy-rs/core/issues/406))
 
 ### Testing
 
@@ -1875,8 +2001,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Styling
 
-- Add fmt commit to .git-blame-ignore-revs ([#43](https://github.com/alloy-rs/core/issues/43))
-- Add rustfmt.toml ([#42](https://github.com/alloy-rs/core/issues/42))
 - Sol Type re-factoring ([#20](https://github.com/alloy-rs/core/issues/20))
 
 ### Testing

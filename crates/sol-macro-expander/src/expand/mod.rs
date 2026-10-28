@@ -7,7 +7,7 @@ use ast::{
     Spanned, Type, VariableDeclaration, Visit, VisitMut, visit_mut,
 };
 use indexmap::IndexMap;
-use proc_macro_error2::{abort, emit_error};
+use proc_macro_error3::{abort, emit_error};
 use proc_macro2::{Delimiter, Group, Ident, Punct, Spacing, Span, TokenStream, TokenTree};
 use quote::{TokenStreamExt, format_ident, quote};
 use std::{
@@ -45,6 +45,13 @@ pub fn expand(ast: File) -> Result<TokenStream> {
     utils::pme_compat_result(|| ExpCtxt::new(&ast).expand())
 }
 
+/// Like [`expand`], for an AST generated from a JSON ABI by `SolInput::normalize_json`.
+///
+/// The generated Solidity does not preserve the ABI's `internalType`s, so `#[sol(abi)]` omits them.
+pub fn expand_json(ast: File) -> Result<TokenStream> {
+    utils::pme_compat_result(|| ExpCtxt { from_json: true, ..ExpCtxt::new(&ast) }.expand())
+}
+
 /// Expands a Rust type from a Solidity type.
 pub fn expand_type(ty: &Type, crates: &ExternCrates) -> TokenStream {
     utils::pme_compat(|| {
@@ -76,25 +83,35 @@ impl<T> NamespacedMap<T> {
 
     /// Given [SolPath] and current namespace, resolves item
     pub fn resolve(&self, path: &SolPath, current_namespace: &Option<SolIdent>) -> Option<&T> {
+        self.resolve_entry(path, current_namespace).map(|(_, value)| value)
+    }
+
+    /// Resolves an item and returns the namespace it was found in.
+    fn resolve_entry(
+        &self,
+        path: &SolPath,
+        current_namespace: &Option<SolIdent>,
+    ) -> Option<(&Option<SolIdent>, &T)> {
         // If path contains two components, its `Contract.Something` where `Contract` is a namespace
         if path.len() == 2 {
-            self.get_by_name_and_namespace(&Some(path.first().clone()), path.last())
+            self.get_entry_by_name_and_namespace(&Some(path.first().clone()), path.last())
         } else {
             // If there's only one component, this is either global item, or item declared in the
             // current namespace.
             //
             // NOTE: This does not account for inheritance
-            self.get_by_name_and_namespace(&None, path.last())
-                .or_else(|| self.get_by_name_and_namespace(current_namespace, path.last()))
+            self.get_entry_by_name_and_namespace(&None, path.last())
+                .or_else(|| self.get_entry_by_name_and_namespace(current_namespace, path.last()))
         }
     }
 
-    fn get_by_name_and_namespace(
+    fn get_entry_by_name_and_namespace(
         &self,
         namespace: &Option<SolIdent>,
         name: &SolIdent,
-    ) -> Option<&T> {
-        self.0.get(namespace).and_then(|vals| vals.get(name))
+    ) -> Option<(&Option<SolIdent>, &T)> {
+        let (namespace, values) = self.0.get_key_value(namespace)?;
+        values.get(name).map(|value| (namespace, value))
     }
 }
 
@@ -123,6 +140,9 @@ pub struct ExpCtxt<'ast> {
 
     /// Current namespace. Switched during AST traversal and expansion of different contracts.
     current_namespace: Option<SolIdent>,
+
+    /// Whether the AST was generated from a JSON ABI.
+    from_json: bool,
 }
 
 // expand
@@ -137,6 +157,7 @@ impl<'ast> ExpCtxt<'ast> {
             crates: ExternCrates::default(),
             ast,
             current_namespace: None,
+            from_json: false,
         }
     }
 
@@ -537,7 +558,17 @@ impl<'ast> ExpCtxt<'ast> {
     }
 
     fn try_item(&self, name: &SolPath) -> Option<&Item> {
-        self.all_items.resolve(name, &self.current_namespace).copied()
+        self.try_item_in_namespace(name, &self.current_namespace).map(|(_, item)| item)
+    }
+
+    fn try_item_in_namespace(
+        &self,
+        name: &SolPath,
+        current_namespace: &Option<SolIdent>,
+    ) -> Option<(&Option<SolIdent>, &Item)> {
+        self.all_items
+            .resolve_entry(name, current_namespace)
+            .map(|(namespace, item)| (namespace, *item))
     }
 
     fn custom_type(&self, name: &SolPath) -> &Type {
@@ -561,6 +592,18 @@ impl<'ast> ExpCtxt<'ast> {
 
     fn indexed_as_hash(&self, param: &EventParameter) -> bool {
         param.indexed_as_hash(self.custom_is_value_type())
+    }
+
+    /// Expands an [`EventParameter`] to its Rust type, rewriting indexed
+    /// dynamically-sized types to `FixedBytes<32>`.
+    fn expand_event_param_type(&self, param: &EventParameter) -> TokenStream {
+        if self.indexed_as_hash(param) {
+            let bytes32 =
+                Type::FixedBytes(param.ty.span(), core::num::NonZeroU16::new(32).unwrap());
+            self.expand_rust_type(&bytes32)
+        } else {
+            self.expand_rust_type(&param.ty)
+        }
     }
 
     fn custom_is_value_type(&self) -> impl Fn(&SolPath) -> bool + '_ {
@@ -712,6 +755,26 @@ impl<'ast> ExpCtxt<'ast> {
         }
         let derives = derives.iter().map(|s| Ident::new(s, Span::call_site()));
         attrs.push(parse_quote! { #[derive(#(#derives), *)] });
+    }
+
+    /// Like [`type_derives`](Self::type_derives), but for the generated `*Calls`
+    /// / `*Errors` / `*Events` enums.
+    ///
+    /// The enum variant types may be synthetic names that don't resolve as
+    /// items (overloaded items get `_N` suffixes; call variants use `*Call`
+    /// structs), so whether the builtin traits can be derived is precomputed
+    /// from the underlying items' parameter types. Enums never derive
+    /// `Default`.
+    fn enum_derives(&self, attrs: &mut Vec<Attribute>, can_derive_builtin: bool) {
+        if let Some(extra) = &self.attrs.extra_derives {
+            if !extra.is_empty() {
+                attrs.push(parse_quote! { #[derive(#(#extra),*)] });
+            }
+        }
+
+        if self.attrs.all_derives == Some(true) && can_derive_builtin {
+            attrs.push(parse_quote! { #[derive(Debug, PartialEq, Eq, Hash)] });
+        }
     }
 
     /// Returns an error if any of the types in the parameters are unresolved.

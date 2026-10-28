@@ -1,0 +1,17 @@
+version: 2
+multi-ecosystem-groups:
+  weekly-dependencies:
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: UTC
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    patterns:
+      - '*'
+    multi-ecosystem-group: weekly-dependencies
+    cooldown:
+      # Buffer the scanner's seven-day minimum: Dependabot reads date-only tag metadata.
+      default-days: 8

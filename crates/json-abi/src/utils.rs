@@ -94,8 +94,8 @@ pub(crate) fn event_signature(name: &str, inputs: &[EventParam]) -> String {
     preimage
 }
 
-/// `$name($($inputs indexed names),*)`
-pub(crate) fn event_full_signature(name: &str, inputs: &[EventParam]) -> String {
+/// `$name($($inputs indexed names),*) $(anonymous)?`
+pub(crate) fn event_full_signature(name: &str, inputs: &[EventParam], anonymous: bool) -> String {
     let mut sig = String::with_capacity("event ".len() + name.len() + 2 + inputs.len() * PARAM_CAP);
     sig.push_str("event ");
     sig.push_str(name);
@@ -114,6 +114,9 @@ pub(crate) fn event_full_signature(name: &str, inputs: &[EventParam]) -> String 
         }
     }
     sig.push(')');
+    if anonymous {
+        sig.push_str(" anonymous");
+    }
     sig
 }
 
@@ -355,15 +358,17 @@ mod tests {
 
     #[test]
     fn test_event_full_signature() {
-        assert_eq!(event_full_signature("foo", &[]), "event foo()");
+        assert_eq!(event_full_signature("foo", &[], false), "event foo()");
+        assert_eq!(event_full_signature("foo", &[], true), "event foo() anonymous");
         assert_eq!(
-            event_full_signature("foo", &[eparam2("bool", "confirmed", true)]),
+            event_full_signature("foo", &[eparam2("bool", "confirmed", true)], false),
             "event foo(bool indexed confirmed)"
         );
         assert_eq!(
             event_full_signature(
                 "foo",
-                &[eparam2("bool", "confirmed", true), eparam2("string", "message", false)]
+                &[eparam2("bool", "confirmed", true), eparam2("string", "message", false)],
+                false
             ),
             "event foo(bool indexed confirmed, string message)"
         );
@@ -383,7 +388,8 @@ mod tests {
         assert_eq!(
             event_full_signature(
                 "SetupDirectDebit",
-                &[eparam2("address", "debtor", true), eparam2("address", "receiver", true), info,]
+                &[eparam2("address", "debtor", true), eparam2("address", "receiver", true), info,],
+                false
             ),
             "event SetupDirectDebit(address indexed debtor, address indexed receiver, tuple(uint256 amount, uint256 startTime, uint256 interval) info)"
         );

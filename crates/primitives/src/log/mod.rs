@@ -225,6 +225,9 @@ where
 impl alloy_rlp::Decodable for Log {
     fn decode(buf: &mut &[u8]) -> Result<Self, alloy_rlp::Error> {
         let h = alloy_rlp::Header::decode(buf)?;
+        if !h.list {
+            return Err(alloy_rlp::Error::UnexpectedString);
+        }
         let pre = buf.len();
 
         let address = alloy_rlp::Decodable::decode(buf)?;
@@ -251,5 +254,19 @@ mod tests {
         let mut buf = Vec::<u8>::new();
         log.encode(&mut buf);
         assert_eq!(Log::decode(&mut &buf[..]).unwrap(), log);
+    }
+
+    #[test]
+    fn rejects_string_wrapped_log() {
+        let canonical = alloy_rlp::encode(Log::default());
+        let mut payload = canonical.as_slice();
+        let header = alloy_rlp::Header::decode(&mut payload).unwrap();
+        assert!(header.list);
+
+        let mut encoded = Vec::new();
+        alloy_rlp::Header { list: false, payload_length: payload.len() }.encode(&mut encoded);
+        encoded.extend_from_slice(payload);
+
+        assert!(Log::decode(&mut encoded.as_slice()).is_err());
     }
 }
