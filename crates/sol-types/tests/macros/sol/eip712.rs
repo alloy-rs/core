@@ -217,3 +217,18 @@ fn encode_type_sorts_by_type_name() {
 
     assert_eq!(Root::eip712_encode_type(), "Root(A$B dollar,A a)A(uint256 b)A$B(uint256 a)");
 }
+#[test]
+fn encode_type_unescapes_rust_keywords() {
+    sol! {
+        struct const {
+            uint256 ref;
+        }
+
+        struct Order {
+            const loop;
+            address fn;
+        }
+    }
+
+    assert_eq!(Order::eip712_encode_type(), "Order(const loop,address fn)const(uint256 ref)");
+}
