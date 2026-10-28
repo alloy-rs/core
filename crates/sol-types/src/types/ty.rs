@@ -255,11 +255,11 @@ pub trait SolType: Sized {
     /// single-element sequence, rejecting words that are not valid for this type.
     ///
     /// This is the same as [`abi_decode`](Self::abi_decode), but it also calls
-    /// [`type_check`](Self::type_check) on the decoded token and returns
-    /// [`Error::TypeCheckFail`](crate::Error::TypeCheckFail) if the check fails. It is
-    /// equivalent to [`abi_decode_with_config`](Self::abi_decode_with_config) with
-    /// [`AbiDecoderConfig::validate`]. The other `*_validate` methods in this crate perform the
-    /// same check.
+    /// [`type_check`](Self::type_check) on the decoded token and returns an
+    /// error, usually [`Error::TypeCheckFail`](crate::Error::TypeCheckFail), if the check fails.
+    /// It is equivalent to [`abi_decode_with_config`](Self::abi_decode_with_config) with
+    /// `AbiDecoderConfig::new().validate(true)`. The other `*_validate` methods in this crate
+    /// perform the same check.
     ///
     /// # What is checked
     ///
@@ -276,9 +276,9 @@ pub trait SolType: Sized {
     /// | `bytesN` | non-zero bytes after the first `N` |
     /// | `string` | invalid UTF-8; `abi_decode` replaces invalid sequences with `U+FFFD` |
     /// | `enum` | non-zero bytes above the low byte, and values that are not a variant |
-    /// | user-defined value type | whatever its underlying type rejects |
+    /// | user-defined value type | whatever its underlying type rejects, plus any `#[sol(type_check = ...)]` function |
     ///
-    /// `bytes`, `uint256` and `int256` accept every word.
+    /// `uint256` and `int256` accept every word, and `bytes` accepts any contents.
     ///
     /// # What is not checked
     ///
