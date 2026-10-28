@@ -217,6 +217,7 @@ fn encode_type_sorts_by_type_name() {
 
     assert_eq!(Root::eip712_encode_type(), "Root(A$B dollar,A a)A(uint256 b)A$B(uint256 a)");
 }
+
 #[test]
 fn encode_type_unescapes_rust_keywords() {
     sol! {
