@@ -112,7 +112,8 @@ use syn::parse_macro_input;
 ///
 /// List of all `#[sol(...)]` supported values:
 /// - `rename = <string literal>`: overrides the Solidity name of an item, parameter or field,
-///   keeping the parsed Rust identifier. Not inherited by child items.
+///   keeping the parsed Rust identifier. Not inherited by child items. Struct fields renamed this
+///   way get a matching `#[serde(rename)]` when the struct derives `Serialize` or `Deserialize`.
 /// - `rename_all = <casing>`: applies a casing convention to the Solidity names of the annotated
 ///   item's children, or of all items when set on the file or a contract. Types and events are
 ///   renamed too, which changes their selectors and EIP-712 names. An explicit `rename` wins.
