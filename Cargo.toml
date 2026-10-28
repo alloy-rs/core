@@ -106,7 +106,8 @@ rand = { version = "0.9", default-features = false, features = ["os_rng"] }
 rayon = { version = "1.2", default-features = false }
 ruint = { version = "1.16.0", default-features = false, features = ["alloc"] }
 winnow = { version = "1.0", default-features = false, features = ["alloc", "ascii"] }
-fixed-cache = { version = "0.1.8", default-features = false }
+fixed-cache = { version = "0.1.11", default-features = false }
+equivalent = { version = "1", default-features = false }
 
 # sqlx support (optional, for DB integration)
 sqlx-core = { version = "0.8"}
