@@ -62,10 +62,11 @@ impl Specifier<DynSolType> for RootType<'_> {
             "int" => Ok(DynSolType::Int(256)),
             name => {
                 if let Some(sz) = name.strip_prefix("bytes") {
-                    if let Ok(sz) = sz.parse() {
-                        if sz != 0 && sz <= 32 {
-                            return Ok(DynSolType::FixedBytes(sz));
-                        }
+                    if let Ok(sz) = sz.parse()
+                        && sz != 0
+                        && sz <= 32
+                    {
+                        return Ok(DynSolType::FixedBytes(sz));
                     }
                     return Err(parser::Error::invalid_size(name).into());
                 }
@@ -75,14 +76,16 @@ impl Specifier<DynSolType> for RootType<'_> {
                     if let Some(s) = name.strip_prefix('u') { (s, true) } else { (name, false) };
 
                 if let Some(sz) = s.strip_prefix("int") {
-                    if let Ok(sz) = sz.parse() {
-                        if sz != 0 && sz <= 256 && sz % 8 == 0 {
-                            return if is_uint {
-                                Ok(DynSolType::Uint(sz))
-                            } else {
-                                Ok(DynSolType::Int(sz))
-                            };
-                        }
+                    if let Ok(sz) = sz.parse()
+                        && sz != 0
+                        && sz <= 256
+                        && sz % 8 == 0
+                    {
+                        return if is_uint {
+                            Ok(DynSolType::Uint(sz))
+                        } else {
+                            Ok(DynSolType::Int(sz))
+                        };
                     }
                     Err(parser::Error::invalid_size(name).into())
                 } else {
