@@ -198,6 +198,27 @@ fn encode_type_prefers_local_struct_over_global() {
 }
 
 #[test]
+fn encode_type_sorts_by_type_name() {
+    sol! {
+        #[sol(rename = "A$B")]
+        struct Dollar {
+            uint256 a;
+        }
+
+        struct A {
+            uint256 b;
+        }
+
+        struct Root {
+            Dollar dollar;
+            A a;
+        }
+    }
+
+    assert_eq!(Root::eip712_encode_type(), "Root(A$B dollar,A a)A(uint256 b)A$B(uint256 a)");
+}
+
+#[test]
 fn encode_type_unescapes_rust_keywords() {
     sol! {
         struct const {

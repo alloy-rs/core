@@ -55,7 +55,10 @@ pub trait SolStruct: SolType<RustType = Self> {
                 return root_type;
             }
 
-            components.sort_unstable();
+            // Sort by type name, which differs from sorting the whole definitions when a name
+            // contains `$`.
+            components
+                .sort_unstable_by(|a, b| (a.split('(').next(), &a).cmp(&(b.split('(').next(), &b)));
             components.dedup();
 
             let mut s = String::with_capacity(

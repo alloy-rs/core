@@ -140,6 +140,8 @@ fn to_sol_test(path: &str, abi: &JsonAbi, run_solc: bool) {
         | "DelegationManager"
         // https://github.com/alloy-rs/core/issues/746
         | "Bootstrap"
+        // Uses `#[sol(rename)]` attributes, which are not valid Solidity.
+        | "DollarIdentifiers"
     ) {
         return;
     }

@@ -235,8 +235,8 @@ mod tests {
     use super::*;
     use crate::{Error, TypedData};
     use alloc::string::ToString;
-    use alloy_primitives::hex;
-    use alloy_sol_types::sol;
+    use alloy_primitives::{U256, hex};
+    use alloy_sol_types::{SolStruct, sol};
     use serde_json::json;
 
     #[test]
@@ -742,6 +742,26 @@ mod tests {
             hex::encode(&hash[..]),
             "25c3d40a39e639a4d0b6e4d2ace5e1281e039c88494d97d8d08f99a6ea75d775",
         );
+    }
+
+    #[test]
+    fn from_sol_struct_with_renamed_fields() {
+        sol! {
+            #[derive(Serialize, Deserialize)]
+            #[sol(rename_all = "camelCase")]
+            struct Renamed {
+                uint256 first_value;
+                #[sol(rename = "explicit")]
+                string second_value;
+            }
+        }
+
+        let s = Renamed { first_value: U256::from(1), second_value: "hello".to_string() };
+        let domain = Eip712Domain::new(Some("Test".into()), None, None, None, None);
+
+        let typed_data = TypedData::from_struct(&s, Some(domain.clone()));
+        assert_eq!(typed_data.message, json!({ "firstValue": "0x1", "explicit": "hello" }));
+        assert_eq!(typed_data.eip712_signing_hash().unwrap(), s.eip712_signing_hash(&domain));
     }
 
     #[test]

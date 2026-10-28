@@ -122,9 +122,13 @@ impl ToAbi for ast::ItemFunction {
 
     fn to_dyn_abi(&self, cx: &ExpCtxt<'_>) -> Self::DynAbi {
         Function {
-            name: self.name.as_ref().map(|i| i.as_string()).unwrap_or_default(),
-            inputs: self.parameters.to_dyn_abi(cx),
-            outputs: self.returns.as_ref().map(|r| r.returns.to_dyn_abi(cx)).unwrap_or_default(),
+            name: cx.sol_name(self.name(), &self.attrs),
+            inputs: params_to_dyn_abi(&self.parameters, &cx.current_namespace, cx, &self.attrs),
+            outputs: self
+                .returns
+                .as_ref()
+                .map(|r| params_to_dyn_abi(&r.returns, &cx.current_namespace, cx, &self.attrs))
+                .unwrap_or_default(),
             state_mutability: self.attributes.to_dyn_abi(cx),
         }
     }
@@ -134,7 +138,10 @@ impl ToAbi for ast::ItemError {
     type DynAbi = Error;
 
     fn to_dyn_abi(&self, cx: &ExpCtxt<'_>) -> Self::DynAbi {
-        Error { name: self.name.as_string(), inputs: self.parameters.to_dyn_abi(cx) }
+        Error {
+            name: cx.sol_name(&self.name, &self.attrs),
+            inputs: params_to_dyn_abi(&self.parameters, &cx.current_namespace, cx, &self.attrs),
+        }
     }
 }
 
@@ -143,39 +150,47 @@ impl ToAbi for ast::ItemEvent {
 
     fn to_dyn_abi(&self, cx: &ExpCtxt<'_>) -> Self::DynAbi {
         Event {
-            name: self.name.as_string(),
-            inputs: self.parameters.iter().map(|e| e.to_dyn_abi(cx)).collect(),
+            name: cx.sol_name(&self.name, &self.attrs),
+            inputs: self
+                .parameters
+                .iter()
+                .map(|event| event_param_to_dyn_abi(event, cx, &self.attrs))
+                .collect(),
             anonymous: self.is_anonymous(),
         }
     }
 }
 
-impl<P> ToAbi for ast::Parameters<P> {
-    type DynAbi = Vec<Param>;
-
-    fn to_dyn_abi(&self, cx: &ExpCtxt<'_>) -> Self::DynAbi {
-        self.iter().map(|p| p.to_dyn_abi(cx)).collect()
-    }
+fn params_to_dyn_abi<P>(
+    params: &ast::Parameters<P>,
+    namespace: &Option<SolIdent>,
+    cx: &ExpCtxt<'_>,
+    parent_attrs: &[syn::Attribute],
+) -> Vec<Param> {
+    params
+        .iter()
+        .map(|param| {
+            let name = param
+                .name
+                .as_ref()
+                .map(|name| cx.child_sol_name(name, &param.attrs, parent_attrs, namespace));
+            ty_to_param(name, &param.ty, namespace, cx)
+        })
+        .collect()
 }
 
-impl ToAbi for ast::VariableDeclaration {
-    type DynAbi = Param;
-
-    fn to_dyn_abi(&self, cx: &ExpCtxt<'_>) -> Self::DynAbi {
-        let name = self.name.as_ref().map(SolIdent::as_string);
-        ty_to_param(name, &self.ty, &cx.current_namespace, cx)
-    }
-}
-
-impl ToAbi for ast::EventParameter {
-    type DynAbi = EventParam;
-
-    fn to_dyn_abi(&self, cx: &ExpCtxt<'_>) -> Self::DynAbi {
-        let name = self.name.as_ref().map(SolIdent::as_string);
-        let Param { ty, name, components, internal_type } =
-            ty_to_param(name, &self.ty, &cx.current_namespace, cx);
-        EventParam { ty, name, indexed: self.is_indexed(), internal_type, components }
-    }
+fn event_param_to_dyn_abi(
+    param: &ast::EventParameter,
+    cx: &ExpCtxt<'_>,
+    parent_attrs: &[syn::Attribute],
+) -> EventParam {
+    let name = param
+        .name
+        .as_ref()
+        .map(|name| cx.child_sol_name(name, &param.attrs, parent_attrs, &cx.current_namespace));
+    let Param { ty, name, components, internal_type } =
+        ty_to_param(name, &param.ty, &cx.current_namespace, cx);
+    EventParam { ty, name, indexed: param.is_indexed(), internal_type, components }
 }
 
 impl ToAbi for ast::FunctionAttributes {
@@ -211,20 +226,21 @@ fn ty_to_param(
             let (_, item) =
                 cx.all_items.get_entry_by_name_and_namespace(item_namespace, path.last()).unwrap();
             // Canonical names of types declared in a contract are qualified by the contract name.
-            let mut canonical = path.last().as_string();
+            let mut canonical = match item {
+                ast::Item::Contract(_) => path.last().as_string(),
+                item => cx.sol_name_in_namespace(
+                    path.last(),
+                    item.attrs().map_or(&[], Vec::as_slice),
+                    item_namespace,
+                ),
+            };
             if let Some(contract) = item_namespace {
                 canonical = format!("{}.{canonical}", contract.as_string());
             }
             let (ty, internal_type) = match item {
                 ast::Item::Struct(strukt) => {
-                    components = strukt
-                        .fields
-                        .iter()
-                        .map(|field| {
-                            let name = field.name.as_ref().map(SolIdent::as_string);
-                            ty_to_param(name, &field.ty, item_namespace, cx)
-                        })
-                        .collect();
+                    components =
+                        params_to_dyn_abi(&strukt.fields, item_namespace, cx, &strukt.attrs);
                     ("tuple".into(), format!("struct {canonical}"))
                 }
                 item => {
@@ -279,7 +295,10 @@ pub(super) fn constructor(function: Option<&ItemFunction>, cx: &ExpCtxt<'_>) -> 
     let alloy_sol_types = &cx.crates.sol_types;
     let Some(function) = function else { return quote!(::core::option::Option::None) };
     assert!(function.kind.is_constructor());
-    let inputs = params_tokens(&function.parameters.to_dyn_abi(cx), alloy_sol_types);
+    let inputs = params_tokens(
+        &params_to_dyn_abi(&function.parameters, &cx.current_namespace, cx, &function.attrs),
+        alloy_sol_types,
+    );
     let state_mutability = mutability_tokens(function.attributes.to_dyn_abi(cx), alloy_sol_types);
     quote! {
         ::core::option::Option::Some(

@@ -26,12 +26,12 @@ interface Bootstrap {
 
     receive() external payable;
 
-    function _getInitMSACalldata(BootstrapConfig[] memory _valdiators, BootstrapConfig[] memory _executors, BootstrapConfig memory _hook, BootstrapConfig[] memory _fallbacks) external view returns (bytes memory init);
+    function _getInitMSACalldata(#[sol(rename = "$valdiators")] BootstrapConfig[] memory _valdiators, #[sol(rename = "$executors")] BootstrapConfig[] memory _executors, BootstrapConfig memory _hook, BootstrapConfig[] memory _fallbacks) external view returns (bytes memory init);
     function entryPoint() external view returns (address);
     function getActiveFallbackHandler(bytes4 functionSig) external view returns (ModuleManager.FallbackHandler memory);
     function getActiveHook() external view returns (address hook);
     function getExecutorsPaginated(address cursor, uint256 size) external view returns (address[] memory array, address next);
     function getValidatorsPaginated(address cursor, uint256 size) external view returns (address[] memory array, address next);
-    function initMSA(BootstrapConfig[] memory _valdiators, BootstrapConfig[] memory _executors, BootstrapConfig memory _hook, BootstrapConfig[] memory _fallbacks) external;
+    function initMSA(#[sol(rename = "$valdiators")] BootstrapConfig[] memory _valdiators, #[sol(rename = "$executors")] BootstrapConfig[] memory _executors, BootstrapConfig memory _hook, BootstrapConfig[] memory _fallbacks) external;
     function singleInitMSA(address validator, bytes memory data) external;
 }
