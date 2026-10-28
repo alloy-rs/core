@@ -283,3 +283,65 @@ fn ignore_unlinked_bytecode_attr() {
 
     let _ = AnotherUnlinked::addCall { a: U256::ZERO, b: U256::ZERO };
 }
+
+// Ensure globals stay in the outer namespace and interface/contract items stay nested.
+#[test]
+fn contract_with_globals() {
+    mod container {
+        use super::*;
+        sol!(
+            #[derive(Debug, PartialEq, Eq)]
+            #[sol(standalone_globals)]
+            ContractUsingGlobals,
+            "../json-abi/tests/abi/ContractUsingGlobals.json"
+        );
+    }
+
+    // Globals should be available at the module scope, not under ContractWithGlobals.
+    let _udt: container::GlobalUDT = container::GlobalUDT::from(U256::from(123u64));
+    let enm: container::GlobalEnum = container::GlobalEnum::from(1u8);
+    let gs = container::GlobalStruct { value: U256::from(1), enum_: enm.clone().into() };
+
+    // GlobalEnum is flattened to a UDVT over uint8
+    let raw = enm.clone().into_underlying();
+    assert_eq!(raw, 1u8);
+
+    // Interface-scoped struct should live under the interface namespace.
+    let _iface_struct =
+        container::Interface::InterfaceStruct { kind: enm.into(), count: U256::from(2u64) };
+
+    // Events/errors belong to the contract (interface) namespace.
+    let _event_sig = <container::ContractUsingGlobals::GlobalEvent as SolEvent>::SIGNATURE;
+    let _error_sig = <container::ContractUsingGlobals::GlobalError as SolError>::SIGNATURE;
+
+    // Basic equality and Debug derive on globals.
+    assert_eq!(gs, gs);
+    let _ = format!("{gs:?}");
+}
+
+#[test]
+fn handler() {
+    mod container {
+        use super::*;
+        sol!(
+            #[sol(standalone_globals)]
+            Handler,
+            "../json-abi/tests/abi/Handler.json"
+        );
+    }
+    use container::*;
+
+    // Foo is a global struct, available at module scope.
+    let foo = Foo { newNumber: U256::from(1u64) };
+
+    // FooBar lives under the IHandler library namespace.
+    let foobar = IHandler::FooBar { foo };
+
+    // Calling the interface should accept the namespaced FooBar.
+    let call = Handler::handleCall { foobar };
+    // Encode to ensure the generated types/namespaces are valid (should not panic).
+    let _encoded = call.abi_encode();
+
+    // Check the function selector/signature.
+    assert_eq!(Handler::handleCall::SIGNATURE, "handle(((uint256)))");
+}

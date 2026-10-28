@@ -3,8 +3,9 @@ use pretty_assertions::assert_eq;
 use std::{
     collections::HashMap,
     fs,
+    io::Write,
     path::Path,
-    process::Command,
+    process::{Command, Stdio},
     sync::atomic::{AtomicBool, Ordering},
 };
 
@@ -136,8 +137,6 @@ fn to_sol_test(path: &str, abi: &JsonAbi, run_solc: bool) {
         |"ZeroXExchange"| "GaugeController" | "DoubleExponentInterestSetter" | "NamelessParams"
         // UniswapV1Exchange has return values with the same name.
         | "UniswapV1Exchange"
-        // https://github.com/alloy-rs/core/issues/744
-        | "DelegationManager"
         // https://github.com/alloy-rs/core/issues/746
         | "Bootstrap"
     ) {
@@ -145,7 +144,19 @@ fn to_sol_test(path: &str, abi: &JsonAbi, run_solc: bool) {
     }
 
     if run_solc {
-        let out = Command::new("solc").arg("--combined-json=abi").arg(&sol_path).output().unwrap();
+        // Globals only resolve from libraries when they are emitted at the root.
+        let standalone =
+            abi.to_sol(name, Some(ToSolConfig::new().for_sol_macro(true).standalone_globals(true)));
+        let mut solc = Command::new("solc")
+            .arg("--combined-json=abi")
+            .arg("-")
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .unwrap();
+        solc.stdin.take().unwrap().write_all(standalone.as_bytes()).unwrap();
+        let out = solc.wait_with_output().unwrap();
         let stdout = String::from_utf8_lossy(&out.stdout);
         let stderr = String::from_utf8_lossy(&out.stderr);
         let panik = |s| -> ! { panic!("{s}\n\nstdout:\n{stdout}\n\nstderr:\n{stderr}") };
