@@ -38,8 +38,10 @@ pub trait SolEnum: Sized + Copy + Into<u8> + TryFrom<u8, Error = crate::Error> {
 
     /// ABI decode the enum from the given buffer, with validation.
     ///
-    /// This is the same as [`abi_decode`](Self::abi_decode), as validation
-    /// is inherent in the `TryFrom<u8>` conversion.
+    /// This is the same as [`abi_decode`](Self::abi_decode), but it also rejects words with
+    /// non-zero bytes above the low byte, which `abi_decode` ignores. Values that are not a
+    /// variant are rejected by both. See
+    /// [`SolType::abi_decode_validate`](crate::SolType::abi_decode_validate) for what is checked.
     #[inline]
     // TODO: Deprecate in favor of a validating decoder configuration.
     // #[deprecated(note = "use a validating decoder configuration")]

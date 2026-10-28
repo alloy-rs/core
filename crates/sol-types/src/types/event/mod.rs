@@ -201,8 +201,9 @@ pub trait SolEvent: Sized {
 
     /// ABI-decodes the dynamic data of this event from the given buffer, with validation.
     ///
-    /// This is the same as [`abi_decode_data`](Self::abi_decode_data), but performs
-    /// validation checks on the decoded data tuple.
+    /// This is the same as [`abi_decode_data`](Self::abi_decode_data), but also validates the
+    /// decoded data. See [`SolType::abi_decode_validate`](crate::SolType::abi_decode_validate) for
+    /// what is checked.
     #[inline]
     // TODO: Deprecate in favor of a validating decoder configuration.
     // #[deprecated(note = "use a validating decoder configuration")]
@@ -240,8 +241,9 @@ pub trait SolEvent: Sized {
 
     /// Decode the event from the given log info, with validation.
     ///
-    /// This is the same as [`decode_raw_log`](Self::decode_raw_log), but performs
-    /// validation checks on the decoded topics and data.
+    /// This is the same as [`decode_raw_log`](Self::decode_raw_log), but also validates the
+    /// decoded topics and data. See
+    /// [`SolType::abi_decode_validate`](crate::SolType::abi_decode_validate) for what is checked.
     // TODO: Deprecate in favor of a validating decoder configuration.
     // #[deprecated(note = "use a validating decoder configuration")]
     fn decode_raw_log_validate<I, D>(topics: I, data: &[u8]) -> Result<Self>
@@ -263,6 +265,8 @@ pub trait SolEvent: Sized {
     }
 
     /// Decode the event from the given log object with validation.
+    ///
+    /// See [`decode_raw_log_validate`](Self::decode_raw_log_validate) for what is checked.
     // TODO: Deprecate in favor of a validating decoder configuration.
     // #[deprecated(note = "use a validating decoder configuration")]
     fn decode_log_data_validate(log: &LogData) -> Result<Self> {
@@ -281,6 +285,8 @@ pub trait SolEvent: Sized {
     }
 
     /// Decode the event from the given log object with validation.
+    ///
+    /// See [`decode_raw_log_validate`](Self::decode_raw_log_validate) for what is checked.
     // TODO: Deprecate in favor of a validating decoder configuration.
     // #[deprecated(note = "use a validating decoder configuration")]
     fn decode_log_validate(log: &Log) -> Result<Log<Self>> {

@@ -77,8 +77,9 @@ pub trait SolCall: Sized {
     /// ABI decode this call's arguments from the given slice, **without** its
     /// selector, with validation.
     ///
-    /// This is the same as [`abi_decode_raw`](Self::abi_decode_raw), but performs
-    /// validation checks on the decoded parameters tuple.
+    /// This is the same as [`abi_decode_raw`](Self::abi_decode_raw), but also validates the
+    /// decoded parameters. See
+    /// [`SolType::abi_decode_validate`](crate::SolType::abi_decode_validate) for what is checked.
     #[inline]
     // TODO: Deprecate in favor of a validating decoder configuration.
     // #[deprecated(note = "use a validating decoder configuration")]
@@ -108,8 +109,9 @@ pub trait SolCall: Sized {
     /// ABI decode this call's arguments from the given slice, **with** the
     /// selector, with validation.
     ///
-    /// This is the same as [`abi_decode`](Self::abi_decode), but performs
-    /// validation checks on the decoded parameters tuple.
+    /// This is the same as [`abi_decode`](Self::abi_decode), but also validates the decoded
+    /// parameters. See [`SolType::abi_decode_validate`](crate::SolType::abi_decode_validate) for
+    /// what is checked. The selector is checked either way.
     #[inline]
     // TODO: Deprecate in favor of a validating decoder configuration.
     // #[deprecated(note = "use a validating decoder configuration")]
@@ -156,8 +158,9 @@ pub trait SolCall: Sized {
 
     /// ABI decode this call's return values from the given slice, with validation.
     ///
-    /// This is the same as [`abi_decode_returns`](Self::abi_decode_returns), but performs
-    /// validation checks on the decoded return tuple.
+    /// This is the same as [`abi_decode_returns`](Self::abi_decode_returns), but also validates
+    /// the decoded return values. See
+    /// [`SolType::abi_decode_validate`](crate::SolType::abi_decode_validate) for what is checked.
     // TODO: Deprecate in favor of a validating decoder configuration.
     // #[deprecated(note = "use a validating decoder configuration")]
     fn abi_decode_returns_validate(data: &[u8]) -> Result<Self::Return> {

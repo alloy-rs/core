@@ -252,10 +252,63 @@ pub trait SolType: Sized {
     }
 
     /// Decodes this type's value from an ABI blob by interpreting it as
-    /// single-element sequence, with validation.
+    /// single-element sequence, rejecting words that are not valid for this type.
     ///
-    /// This is the same as [`abi_decode`](Self::abi_decode), but performs
-    /// validation checks on the decoded token.
+    /// This is the same as [`abi_decode`](Self::abi_decode), but it also calls
+    /// [`type_check`](Self::type_check) on the decoded token and returns
+    /// [`Error::TypeCheckFail`](crate::Error::TypeCheckFail) if the check fails. It is
+    /// equivalent to [`abi_decode_with_config`](Self::abi_decode_with_config) with
+    /// [`AbiDecoderConfig::validate`]. The other `*_validate` methods in this crate perform the
+    /// same check.
+    ///
+    /// # What is checked
+    ///
+    /// Each decoded value must be valid for its type. This applies to array elements, tuple
+    /// fields, and struct fields as well:
+    ///
+    /// | Type | Rejected |
+    /// | --- | --- |
+    /// | `bool` | any word other than `0` and `1`; `abi_decode` reads any non-zero word as `true` |
+    /// | `address` | non-zero bytes above the low 20 |
+    /// | `function` | non-zero bytes after the first 24 |
+    /// | `uintN` | non-zero bytes above the low `N / 8` |
+    /// | `intN` | upper bytes that are not the sign extension of the low `N / 8` bytes |
+    /// | `bytesN` | non-zero bytes after the first `N` |
+    /// | `string` | invalid UTF-8; `abi_decode` replaces invalid sequences with `U+FFFD` |
+    /// | `enum` | non-zero bytes above the low byte, and values that are not a variant |
+    /// | user-defined value type | whatever its underlying type rejects |
+    ///
+    /// `bytes`, `uint256` and `int256` accept every word.
+    ///
+    /// # What is not checked
+    ///
+    /// Validation checks values, not layout. Offsets and lengths must still point inside the
+    /// input, as in [`abi_decode`](Self::abi_decode). Beyond that, validation accepts:
+    ///
+    /// - bytes after the end of the encoding;
+    /// - non-zero or missing padding after the contents of `bytes` and `string`;
+    /// - gaps, overlaps, and reordering between dynamic data areas.
+    ///
+    /// [`AbiDecoderConfig::strict`] rejects all of these and implies validation. Setting
+    /// [`AbiDecoderConfig::validate_allow_trailing_bytes`] as well accepts trailing bytes again
+    /// and keeps every other strict check.
+    ///
+    /// ```
+    /// use alloy_sol_types::{SolType, abi::AbiDecoderConfig, sol_data::Bool};
+    ///
+    /// // A `bool` word holding 2.
+    /// let mut data = [0u8; 32];
+    /// data[31] = 2;
+    /// assert!(Bool::abi_decode(&data)?);
+    /// assert!(Bool::abi_decode_validate(&data).is_err());
+    ///
+    /// // Trailing bytes pass validation but not strict decoding.
+    /// let mut data = Bool::abi_encode(&true);
+    /// data.push(0xff);
+    /// assert!(Bool::abi_decode_validate(&data).is_ok());
+    /// assert!(Bool::abi_decode_with_config(&data, AbiDecoderConfig::new().strict(true)).is_err());
+    /// # Ok::<(), alloy_sol_types::Error>(())
+    /// ```
     ///
     /// See the [`abi`] module for more information.
     #[inline]
@@ -297,8 +350,8 @@ pub trait SolType: Sized {
     /// Decodes this type's value from an ABI blob by interpreting it as
     /// function parameters, with validation.
     ///
-    /// This is the same as [`abi_decode_params`](Self::abi_decode_params), but performs
-    /// validation checks on the decoded token.
+    /// This is the same as [`abi_decode_params`](Self::abi_decode_params), but also validates the
+    /// decoded token. See [`abi_decode_validate`](Self::abi_decode_validate) for what is checked.
     ///
     /// See the [`abi`] module for more information.
     #[inline]
@@ -342,8 +395,9 @@ pub trait SolType: Sized {
     /// Decodes this type's value from an ABI blob by interpreting it as
     /// sequence, with validation.
     ///
-    /// This is the same as [`abi_decode_sequence`](Self::abi_decode_sequence), but performs
-    /// validation checks on the decoded token.
+    /// This is the same as [`abi_decode_sequence`](Self::abi_decode_sequence), but also validates
+    /// the decoded token. See [`abi_decode_validate`](Self::abi_decode_validate) for what is
+    /// checked.
     ///
     /// See the [`abi`] module for more information.
     #[inline]
