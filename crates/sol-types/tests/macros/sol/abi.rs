@@ -2,7 +2,8 @@ use alloy_json_abi::{
     Constructor, Error, EventParam, Fallback, Function, InternalType, Param, Receive,
     StateMutability,
 };
-use alloy_sol_types::{JsonAbiExt, sol};
+use alloy_primitives::U256;
+use alloy_sol_types::{JsonAbiExt, SolCall, sol};
 use pretty_assertions::assert_eq;
 use std::collections::BTreeMap;
 
@@ -26,6 +27,8 @@ fn renamed_items_and_parameters() {
 
         function use_struct(RustStruct InputStruct) returns (RustStruct OutputStruct);
 
+        function snake_case_fn(uint256 snake_case_param);
+
         #[sol(rename = "exactFunction", rename_all = "UPPERCASE")]
         function RustFunction(
             #[sol(rename = "exactInput")] uint256 FirstInput,
@@ -42,6 +45,12 @@ fn renamed_items_and_parameters() {
     assert_eq!(use_struct.outputs[0].name, "outputStruct");
     assert_eq!(use_struct.inputs[0].components[0].name, "some_field");
     assert_eq!(use_struct.inputs[0].components[1].name, "exactField");
+
+    let snake = snake_case_fnCall::abi();
+    assert_eq!(snake.name, "snakeCaseFn");
+    assert_eq!(snake.inputs[0].name, "snakeCaseParam");
+    assert_eq!(snake_case_fnCall::SIGNATURE, "snakeCaseFn(uint256)");
+    let _ = snake_case_fnCall { snake_case_param: U256::ZERO };
 
     let function = RustFunctionCall::abi();
     assert_eq!(function.name, "exactFunction");
