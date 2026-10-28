@@ -789,14 +789,15 @@ impl<'ast> ExpCtxt<'ast> {
         for param in params {
             param.ty.visit(|ty| {
                 if let Type::Custom(name) = ty
-                    && self.try_custom_type(name).is_none() {
-                        let note = (!errored).then(|| {
-                            errored = true;
-                            "Custom types must be declared inside of the same scope they are referenced in,\n\
-                             or \"imported\" as a UDT with `type ... is (...);`"
-                        });
-                        emit_error!(name.span(), "unresolved type"; help =? note);
-                    }
+                    && self.try_custom_type(name).is_none()
+                {
+                    let note = (!errored).then(|| {
+                        errored = true;
+                        "Custom types must be declared inside of the same scope they are referenced in,\n\
+                         or \"imported\" as a UDT with `type ... is (...);`"
+                    });
+                    emit_error!(name.span(), "unresolved type"; help =? note);
+                }
             });
         }
         Ok(())
