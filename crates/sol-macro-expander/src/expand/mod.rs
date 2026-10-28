@@ -765,11 +765,14 @@ impl<'ast> ExpCtxt<'ast> {
 
     /// Returns the Solidity name of the item `name` resolves to in `namespace`.
     fn custom_sol_name(&self, name: &SolPath, namespace: &Option<SolIdent>) -> Option<String> {
-        // The generated Rust code resolves a bare name to the item in `namespace` before a global
-        // one, unlike `resolve_entry`.
+        // The generated Rust code resolves a bare name to the type in `namespace` before a global
+        // one, unlike `resolve_entry`. Other items, such as functions, do not bind a type name.
         let local = (name.len() == 1)
             .then(|| self.all_items.get_entry_by_name_and_namespace(namespace, name.last()))
             .flatten()
+            .filter(|(_, item)| {
+                matches!(item, Item::Struct(_) | Item::Enum(_) | Item::Udt(_) | Item::Contract(_))
+            })
             .map(|(namespace, item)| (namespace, *item));
         let (namespace, item) = local.or_else(|| self.try_item_in_namespace(name, namespace))?;
         Some(self.sol_name_in_namespace(item.name()?, item.attrs()?, namespace))

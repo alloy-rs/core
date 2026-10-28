@@ -1269,6 +1269,30 @@ fn renamed_global_shadowed_by_local_struct() {
     assert_eq!(Outer::Wrapper::eip712_encode_type(), "Wrapper(Inner inner)Inner(bytes b)");
 }
 
+mod renamed_global_struct {
+    use alloy_sol_types::{SolStruct, sol};
+
+    sol! {
+        #[sol(rename = "Actual")]
+        struct Data {
+            uint256 x;
+        }
+
+        contract Outer {
+            function Data();
+
+            struct Wrapper {
+                Data data;
+            }
+        }
+    }
+
+    #[test]
+    fn not_shadowed_by_local_function() {
+        assert_eq!(Outer::Wrapper::eip712_encode_type(), "Wrapper(Actual data)Actual(uint256 x)");
+    }
+}
+
 #[test]
 fn contract_rename_all() {
     sol! {
