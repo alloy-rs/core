@@ -554,9 +554,6 @@ fn adjust_fb(mut word: B256, size: usize) -> B256 {
 
 #[cfg(all(test, not(miri)))] // doesn't run in isolation and would take too long
 mod tests {
-    // `is_multiple_of` is newer than the crate's MSRV.
-    #![allow(clippy::manual_is_multiple_of)]
-
     use super::*;
     use alloy_primitives::hex;
     #[cfg(feature = "eip712")]
@@ -572,7 +569,7 @@ mod tests {
         fn int_size(x: usize) {
             let sz = super::int_size(x);
             prop_assert!(sz > 0 && sz <= 256, "{sz}");
-            prop_assert!(sz % 8 == 0, "{sz}");
+            prop_assert!(sz.is_multiple_of(8), "{sz}");
         }
 
         #[test]
