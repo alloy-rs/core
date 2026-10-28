@@ -150,7 +150,7 @@ pub(crate) fn abi_decode(data: &[u8], tys: &[DynSolType]) -> Result<Vec<DynSolVa
     let mut values = Vec::with_capacity(tys.len());
     let mut decoder = Decoder::new(data);
     for ty in tys {
-        let value = ty.abi_decode_inner(&mut decoder, crate::DynToken::decode_single_populate)?;
+        let value = ty.abi_decode_inner(&mut decoder, None)?;
         values.push(value);
     }
     Ok(values)

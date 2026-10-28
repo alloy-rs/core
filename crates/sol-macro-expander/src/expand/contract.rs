@@ -213,13 +213,11 @@ pub(super) fn expand(cx: &mut ExpCtxt<'_>, contract: &ItemContract) -> Result<To
 
     let abi = abi.then(|| {
         if_json! {
-            use crate::verbatim::verbatim;
             use super::to_abi;
 
-            let crates = &cx.crates;
-            let constructor = verbatim(&constructor.map(|x| to_abi::constructor(x, cx)), crates);
-            let fallback = verbatim(&fallback.map(|x| to_abi::fallback(x, cx)), crates);
-            let receive = verbatim(&receive.map(|x| to_abi::receive(x, cx)), crates);
+            let constructor = to_abi::constructor(constructor, cx);
+            let fallback = to_abi::fallback(fallback, cx);
+            let receive = to_abi::receive(receive, cx);
             let functions_map = to_abi::functions_map(&functions, cx);
             let events_map = to_abi::events_map(&events, cx);
             let errors_map = to_abi::errors_map(&errors, cx);
@@ -757,11 +755,34 @@ impl CallLikeExpander<'_> {
                     selector: [u8; 4],
                     data: &[u8],
                 )-> alloy_sol_types::Result<Self> {
-                    static DECODE_SHIMS: &[fn(&[u8]) -> alloy_sol_types::Result<#name>] = &[
+                    Self::abi_decode_raw_with_config(
+                        selector,
+                        data,
+                        alloy_sol_types::abi::AbiDecoderConfig::default(),
+                    )
+                }
+
+                #[inline]
+                #[allow(non_snake_case)]
+                fn abi_decode_raw_with_config(
+                    selector: [u8; 4],
+                    data: &[u8],
+                    config: alloy_sol_types::abi::AbiDecoderConfig,
+                ) -> alloy_sol_types::Result<Self> {
+                    static DECODE_SHIMS: &[fn(
+                        &[u8],
+                        alloy_sol_types::abi::AbiDecoderConfig,
+                    ) -> alloy_sol_types::Result<#name>] = &[
                         #({
-                            fn #sorted_variants(data: &[u8]) -> alloy_sol_types::Result<#name> {
-                                <#sorted_types as alloy_sol_types::#trait_>::abi_decode_raw(data)
-                                    .map(#name::#sorted_variants)
+                            fn #sorted_variants(
+                                data: &[u8],
+                                config: alloy_sol_types::abi::AbiDecoderConfig,
+                            ) -> alloy_sol_types::Result<#name> {
+                                <#sorted_types as alloy_sol_types::#trait_>::abi_decode_raw_with_config(
+                                    data,
+                                    config,
+                                )
+                                .map(#name::#sorted_variants)
                             }
                             #sorted_variants
                         }),*
@@ -774,33 +795,7 @@ impl CallLikeExpander<'_> {
                         ));
                     };
                     // `SELECTORS` and `DECODE_SHIMS` have the same length and are sorted in the same order.
-                    DECODE_SHIMS[idx](data)
-                }
-
-                #[inline]
-                #[allow(non_snake_case)]
-                fn abi_decode_raw_validate(
-                    selector: [u8; 4],
-                    data: &[u8],
-                ) -> alloy_sol_types::Result<Self> {
-                    static DECODE_VALIDATE_SHIMS: &[fn(&[u8]) -> alloy_sol_types::Result<#name>] = &[
-                        #({
-                            fn #sorted_variants(data: &[u8]) -> alloy_sol_types::Result<#name> {
-                                <#sorted_types as alloy_sol_types::#trait_>::abi_decode_raw_validate(data)
-                                    .map(#name::#sorted_variants)
-                            }
-                            #sorted_variants
-                        }),*
-                    ];
-
-                    let Ok(idx) = Self::SELECTORS.binary_search(&selector) else {
-                        return Err(alloy_sol_types::Error::unknown_selector(
-                            <Self as alloy_sol_types::SolInterface>::NAME,
-                            selector,
-                        ));
-                    };
-                    // `SELECTORS` and `DECODE_VALIDATE_SHIMS` have the same length and are sorted in the same order.
-                    DECODE_VALIDATE_SHIMS[idx](data)
+                    DECODE_SHIMS[idx](data, config)
                 }
 
                 #[inline]
@@ -816,6 +811,14 @@ impl CallLikeExpander<'_> {
                     match self {#(
                         Self::#variants(inner) =>
                             <#types as alloy_sol_types::#trait_>::abi_encode_raw(inner, out),
+                    )*}
+                }
+
+                #[inline]
+                fn abi_encode(&self) -> alloy_sol_types::private::Vec<u8> {
+                    match self {#(
+                        Self::#variants(inner) =>
+                            <#types as alloy_sol_types::#trait_>::abi_encode(inner),
                     )*}
                 }
             }
@@ -840,6 +843,16 @@ impl CallLikeExpander<'_> {
 
         let e_name = |&e: &&ItemEvent| self.cx.overloaded_name(e.into());
         let err = quote! {
+            if topics
+                .len()
+                .checked_mul(alloy_sol_types::Word::len_bytes())
+                .and_then(|len| len.checked_add(data.len()))
+                .is_none_or(|len| len > config.get_memory_limit())
+            {
+                return alloy_sol_types::private::Err(alloy_sol_types::Error::MemoryLimitExceeded(
+                    config.get_memory_limit(),
+                ));
+            }
             alloy_sol_types::private::Err(alloy_sol_types::Error::InvalidLog {
                 name: <Self as alloy_sol_types::SolEventInterface>::NAME,
                 log: alloy_sol_types::private::Box::new(alloy_sol_types::private::LogData::new_unchecked(
@@ -850,37 +863,71 @@ impl CallLikeExpander<'_> {
         };
         let non_anon_impl = has_non_anon.then(|| {
             let variants = events.iter().filter(|e| !e.is_anonymous()).map(e_name);
-            let ret = has_anon.then(|| quote!(return));
-            let ret_err = (!has_anon).then_some(&err);
-            quote! {
+            if has_anon {
+                quote! {
+                    match topics.first().copied() {
+                        #(
+                            Some(<#variants as alloy_sol_types::#trait_>::SIGNATURE_HASH) => {
+                                record_result(<#variants as alloy_sol_types::#trait_>::decode_raw_log_with_config(topics, data, config)
+                                    .map(Self::#variants))?;
+                            }
+                        )*
+                        _ => {}
+                    }
+                }
+            } else { quote! {
                 match topics.first().copied() {
                     #(
                         Some(<#variants as alloy_sol_types::#trait_>::SIGNATURE_HASH) =>
-                            #ret <#variants as alloy_sol_types::#trait_>::decode_raw_log(topics, data)
+                            <#variants as alloy_sol_types::#trait_>::decode_raw_log_with_config(topics, data, config)
                                 .map(Self::#variants),
                     )*
-                    _ => { #ret_err }
+                    _ => { #err }
                 }
-            }
+            } }
         });
-        let anon_impl = has_anon.then(|| {
+        let decode_impl = if has_anon {
             let variants = events.iter().filter(|e| e.is_anonymous()).map(e_name);
             quote! {
-                #(
-                    if let Ok(res) = <#variants as alloy_sol_types::#trait_>::decode_raw_log(topics, data) {
-                        return Ok(Self::#variants(res));
+                let mut decoded = None;
+                let mut record_result = |result: alloy_sol_types::Result<Self>| -> alloy_sol_types::Result<()> {
+                    match result {
+                        Ok(candidate) => {
+                            if decoded.replace(candidate).is_some() {
+                                return Err(alloy_sol_types::Error::custom("ambiguous event log"));
+                            }
+                        }
+                        Err(err @ (
+                            alloy_sol_types::Error::MemoryLimitExceeded(_)
+                            | alloy_sol_types::Error::RecursionLimitExceeded(_)
+                            | alloy_sol_types::Error::Reserve(_)
+                        )) => {
+                            return Err(err);
+                        }
+                        Err(_) => {}
                     }
+                    Ok(())
+                };
+                #non_anon_impl
+                #(
+                    record_result(<#variants as alloy_sol_types::#trait_>::decode_raw_log_with_config(topics, data, config)
+                        .map(Self::#variants))?;
                 )*
+                if let Some(decoded) = decoded {
+                    return Ok(decoded);
+                }
                 #err
             }
-        });
-
+        } else {
+            quote! { #non_anon_impl }
+        };
         let into_impl = {
             let variants = events.iter().map(e_name);
             let v2 = variants.clone();
             quote! {
                 #[automatically_derived]
                 impl alloy_sol_types::private::IntoLogData for #name {
+                    #[inline]
                     fn to_log_data(&self) -> alloy_sol_types::private::LogData {
                         match self {#(
                             Self::#variants(inner) =>
@@ -888,6 +935,7 @@ impl CallLikeExpander<'_> {
                         )*}
                     }
 
+                    #[inline]
                     fn into_log_data(self) -> alloy_sol_types::private::LogData {
                         match self {#(
                             Self::#v2(inner) =>
@@ -907,8 +955,19 @@ impl CallLikeExpander<'_> {
                 const COUNT: usize = #count;
 
                 fn decode_raw_log(topics: &[alloy_sol_types::Word], data: &[u8]) -> alloy_sol_types::Result<Self> {
-                    #non_anon_impl
-                    #anon_impl
+                    <Self as alloy_sol_types::SolEventInterface>::decode_raw_log_with_config(
+                        topics,
+                        data,
+                        alloy_sol_types::abi::AbiDecoderConfig::default(),
+                    )
+                }
+
+                fn decode_raw_log_with_config(
+                    topics: &[alloy_sol_types::Word],
+                    data: &[u8],
+                    config: alloy_sol_types::abi::AbiDecoderConfig,
+                ) -> alloy_sol_types::Result<Self> {
+                    #decode_impl
                 }
             }
 

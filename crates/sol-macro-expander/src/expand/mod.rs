@@ -45,6 +45,13 @@ pub fn expand(ast: File) -> Result<TokenStream> {
     utils::pme_compat_result(|| ExpCtxt::new(&ast).expand())
 }
 
+/// Like [`expand`], for an AST generated from a JSON ABI by `SolInput::normalize_json`.
+///
+/// The generated Solidity does not preserve the ABI's `internalType`s, so `#[sol(abi)]` omits them.
+pub fn expand_json(ast: File) -> Result<TokenStream> {
+    utils::pme_compat_result(|| ExpCtxt { from_json: true, ..ExpCtxt::new(&ast) }.expand())
+}
+
 /// Expands a Rust type from a Solidity type.
 pub fn expand_type(ty: &Type, crates: &ExternCrates) -> TokenStream {
     utils::pme_compat(|| {
@@ -133,6 +140,9 @@ pub struct ExpCtxt<'ast> {
 
     /// Current namespace. Switched during AST traversal and expansion of different contracts.
     current_namespace: Option<SolIdent>,
+
+    /// Whether the AST was generated from a JSON ABI.
+    from_json: bool,
 }
 
 // expand
@@ -147,6 +157,7 @@ impl<'ast> ExpCtxt<'ast> {
             crates: ExternCrates::default(),
             ast,
             current_namespace: None,
+            from_json: false,
         }
     }
 

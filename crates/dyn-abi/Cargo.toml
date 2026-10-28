@@ -65,6 +65,7 @@ std = [
     "serde_json?/std",
 ]
 eip712 = [
+    "alloy-primitives/map",
     "alloy-sol-types/eip712-serde",
     "alloy-sol-type-parser/eip712",
     "dep:derive_more",
@@ -90,3 +91,9 @@ harness = false
 name = "types"
 path = "benches/types.rs"
 harness = false
+
+[[bench]]
+name = "eip712"
+path = "benches/eip712.rs"
+harness = false
+required-features = ["eip712"]

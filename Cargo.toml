@@ -3,7 +3,7 @@ members = ["crates/*", "tests/*"]
 resolver = "3"
 
 [workspace.package]
-version = "1.6.1"
+version = "1.7.3"
 edition = "2024"
 rust-version = "1.90"
 authors = ["Alloy Contributors"]
@@ -13,38 +13,38 @@ repository = "https://github.com/alloy-rs/core"
 exclude = ["tests"]
 
 [workspace.lints.clippy]
-dbg-macro = "warn"
-manual-string-new = "warn"
-uninlined-format-args = "warn"
-use-self = "warn"
-redundant-clone = "warn"
-missing-const-for-fn = "warn"
+dbg_macro = "warn"
+manual_string_new = "warn"
+uninlined_format_args = "warn"
+use_self = "warn"
+redundant_clone = "warn"
+missing_const_for_fn = "warn"
 
 [workspace.lints.rust]
-missing-copy-implementations = "warn"
-missing-debug-implementations = "warn"
-missing-docs = "warn"
-rust-2018-idioms = "warn"
-unreachable-pub = "warn"
-unused-must-use = "warn"
-redundant-lifetimes = "warn"
-unnameable-types = "warn"
+missing_copy_implementations = "warn"
+missing_debug_implementations = "warn"
+missing_docs = "warn"
+rust_2018_idioms = "warn"
+unreachable_pub = "warn"
+unused_must_use = "warn"
+redundant_lifetimes = "warn"
+unnameable_types = "warn"
 
 [workspace.lints.rustdoc]
 all = "warn"
 
 [workspace.dependencies]
 # workspace crates
-alloy-core = { version = "1.6.1", path = "crates/core", default-features = false }
-alloy-dyn-abi = { version = "1.6.1", path = "crates/dyn-abi", default-features = false }
-alloy-json-abi = { version = "1.6.1", path = "crates/json-abi", default-features = false }
-alloy-primitives = { version = "1.6.1", path = "crates/primitives", default-features = false }
-alloy-sol-macro = { version = "1.6.1", path = "crates/sol-macro", default-features = false }
-alloy-sol-macro-input = { version = "1.6.1", path = "crates/sol-macro-input", default-features = false }
-alloy-sol-macro-expander = { version = "1.6.1", path = "crates/sol-macro-expander", default-features = false }
-alloy-sol-type-parser = { version = "1.6.1", path = "crates/sol-type-parser", default-features = false }
-alloy-sol-types = { version = "1.6.1", path = "crates/sol-types", default-features = false }
-syn-solidity = { version = "1.6.1", path = "crates/syn-solidity", default-features = false }
+alloy-core = { version = "1.7.3", path = "crates/core", default-features = false }
+alloy-dyn-abi = { version = "1.7.3", path = "crates/dyn-abi", default-features = false }
+alloy-json-abi = { version = "1.7.3", path = "crates/json-abi", default-features = false }
+alloy-primitives = { version = "1.7.3", path = "crates/primitives", default-features = false }
+alloy-sol-macro = { version = "1.7.3", path = "crates/sol-macro", default-features = false }
+alloy-sol-macro-input = { version = "1.7.3", path = "crates/sol-macro-input", default-features = false }
+alloy-sol-macro-expander = { version = "1.7.3", path = "crates/sol-macro-expander", default-features = false }
+alloy-sol-type-parser = { version = "1.7.3", path = "crates/sol-type-parser", default-features = false }
+alloy-sol-types = { version = "1.7.3", path = "crates/sol-types", default-features = false }
+syn-solidity = { version = "1.7.3", path = "crates/syn-solidity", default-features = false }
 
 # borsh
 borsh = { version = "1.5", default-features = false }
@@ -110,6 +110,7 @@ fixed-cache = { version = "0.1.8", default-features = false }
 
 # sqlx support (optional, for DB integration)
 sqlx-core = { version = "0.8"}
+sqlx-postgres = { version = "0.8"}
 
 [patch.crates-io]
 # Fix Miri CI: https://github.com/rkyv/rkyv/commit/aea82f04757ed6a3674642f9e7f22b168ec7f955

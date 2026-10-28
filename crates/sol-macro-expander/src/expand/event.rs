@@ -223,10 +223,12 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, event: &ItemEvent) -> Result<TokenStream>
 
             #[automatically_derived]
             impl alloy_sol_types::private::IntoLogData for #name {
+                #[inline]
                 fn to_log_data(&self) -> alloy_sol_types::private::LogData {
                     From::from(self)
                 }
 
+                #[inline]
                 fn into_log_data(self) -> alloy_sol_types::private::LogData {
                     From::from(&self)
                 }

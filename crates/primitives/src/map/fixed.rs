@@ -179,7 +179,7 @@ mod tests {
     use super::*;
 
     fn hash_zero<const N: usize>() -> u64 {
-        FbBuildHasher::<N>::default().hash_one(&FixedBytes::<N>::ZERO)
+        FbBuildHasher::<N>::default().hash_one(FixedBytes::<N>::ZERO)
     }
 
     #[test]
