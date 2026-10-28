@@ -196,3 +196,24 @@ fn encode_type_prefers_local_struct_over_global() {
 
     assert_eq!(Outer::Wrapper::eip712_encode_type(), "Wrapper(Inner inner)Inner(bytes b)");
 }
+
+#[test]
+fn encode_type_sorts_by_type_name() {
+    sol! {
+        #[sol(rename = "A$B")]
+        struct Dollar {
+            uint256 a;
+        }
+
+        struct A {
+            uint256 b;
+        }
+
+        struct Root {
+            Dollar dollar;
+            A a;
+        }
+    }
+
+    assert_eq!(Root::eip712_encode_type(), "Root(A$B dollar,A a)A(uint256 b)A$B(uint256 a)");
+}

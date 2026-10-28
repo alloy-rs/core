@@ -340,7 +340,11 @@ fn encode_type_const(
     let mut stack = vec![(cx.current_namespace.clone(), name.clone())];
     let mut done = BTreeSet::new();
     collect_components(cx, fields, &cx.current_namespace, &mut stack, &mut done, &mut components)?;
-    Some(std::iter::once(root).chain(components.iter().map(String::as_str)).collect())
+    // Sorted by type name, which differs from sorting the whole definitions when a name contains
+    // `$`.
+    let mut components = components.iter().map(String::as_str).collect::<Vec<_>>();
+    components.sort_unstable_by_key(|s| (s.split('(').next(), *s));
+    Some(std::iter::once(root).chain(components).collect())
 }
 
 /// Adds the root types of all structs referenced by the substituted `fields`, which are resolved
