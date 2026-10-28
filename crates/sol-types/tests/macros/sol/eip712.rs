@@ -196,3 +196,19 @@ fn encode_type_prefers_local_struct_over_global() {
 
     assert_eq!(Outer::Wrapper::eip712_encode_type(), "Wrapper(Inner inner)Inner(bytes b)");
 }
+
+#[test]
+fn encode_type_unescapes_rust_keywords() {
+    sol! {
+        struct const {
+            uint256 ref;
+        }
+
+        struct Order {
+            const loop;
+            address fn;
+        }
+    }
+
+    assert_eq!(Order::eip712_encode_type(), "Order(const loop,address fn)const(uint256 ref)");
+}
