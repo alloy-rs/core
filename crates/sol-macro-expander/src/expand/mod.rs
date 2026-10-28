@@ -450,7 +450,7 @@ impl ExpCtxt<'_> {
                         overloads_map
                             .entry(namespace.clone())
                             .or_default()
-                            .insert(item.signature(this), new_name);
+                            .insert(item.overload_key(this), new_name);
                     }
                 }
             });
@@ -579,6 +579,11 @@ impl<'a> OverloadedItem<'a> {
         }
     }
 
+    /// Key in the overloads map: renamed items of different kinds can share a signature.
+    fn overload_key(self, cx: &ExpCtxt<'a>) -> String {
+        format!("{} {}", self.desc(), self.signature(cx))
+    }
+
     fn signature(self, cx: &ExpCtxt<'a>) -> String {
         match self {
             Self::Function(f) => cx.function_signature(f),
@@ -661,8 +666,8 @@ impl<'ast> ExpCtxt<'ast> {
     /// Use `.into()` to convert from `&ItemFunction` or `&ItemEvent`.
     fn overloaded_name(&self, item: OverloadedItem<'ast>) -> SolIdent {
         let original_ident = item.name().expect("item has no name");
-        let sig = item.signature(self);
-        match self.overloads.get(&self.current_namespace).and_then(|m| m.get(&sig)) {
+        let key = item.overload_key(self);
+        match self.overloads.get(&self.current_namespace).and_then(|m| m.get(&key)) {
             Some(name) => SolIdent::new_spanned(name, original_ident.span()),
             None => original_ident.clone(),
         }
@@ -742,7 +747,13 @@ impl<'ast> ExpCtxt<'ast> {
 
     /// Returns the Solidity name of the item `name` resolves to in `namespace`.
     fn custom_sol_name(&self, name: &SolPath, namespace: &Option<SolIdent>) -> Option<String> {
-        let (namespace, item) = self.try_item_in_namespace(name, namespace)?;
+        // The generated Rust code resolves a bare name to the item in `namespace` before a global
+        // one, unlike `resolve_entry`.
+        let local = (name.len() == 1)
+            .then(|| self.all_items.get_entry_by_name_and_namespace(namespace, name.last()))
+            .flatten()
+            .map(|(namespace, item)| (namespace, *item));
+        let (namespace, item) = local.or_else(|| self.try_item_in_namespace(name, namespace))?;
         Some(self.sol_name_in_namespace(item.name()?, item.attrs()?, namespace))
     }
 

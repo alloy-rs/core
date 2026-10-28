@@ -1232,6 +1232,44 @@ fn rename_and_rename_all() {
 }
 
 #[test]
+fn renamed_items_of_different_kinds_share_a_signature() {
+    sol! {
+        function f(uint256);
+        function f(string);
+        #[sol(rename = "f")]
+        event Renamed(uint256);
+        #[sol(rename = "f")]
+        error RenamedError(uint256);
+    }
+
+    assert_eq!(f_0Call::SIGNATURE, "f(uint256)");
+    assert_eq!(Renamed::SIGNATURE, "f(uint256)");
+    assert_eq!(RenamedError::SIGNATURE, "f(uint256)");
+}
+
+#[test]
+fn renamed_global_shadowed_by_local_struct() {
+    sol! {
+        #[sol(rename = "GlobalInner")]
+        struct Inner {
+            uint256 a;
+        }
+
+        contract Outer {
+            struct Inner {
+                bytes b;
+            }
+
+            struct Wrapper {
+                Inner inner;
+            }
+        }
+    }
+
+    assert_eq!(Outer::Wrapper::eip712_encode_type(), "Wrapper(Inner inner)Inner(bytes b)");
+}
+
+#[test]
 fn contract_rename_all() {
     sol! {
         #[sol(rename_all = "snake_case")]
