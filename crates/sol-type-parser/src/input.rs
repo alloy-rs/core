@@ -49,7 +49,7 @@ pub struct RecursionCheck {
     current: usize,
 }
 
-const LIMIT: usize = 80;
+pub(crate) const LIMIT: usize = 80;
 
 impl RecursionCheck {
     #[cfg(any())]

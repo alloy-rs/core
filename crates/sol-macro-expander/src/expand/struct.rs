@@ -2,10 +2,10 @@
 
 use super::{ExpCtxt, expand_fields, expand_from_into_tuples, expand_tokenize};
 use alloy_sol_macro_input::{ContainsSolAttrs, mk_doc};
-use ast::{Item, ItemStruct, Spanned, Type};
+use ast::{Item, ItemStruct, SolIdent, SolPath, Spanned, Type};
 use proc_macro2::TokenStream;
 use quote::quote;
-use std::{fmt::Write, num::NonZeroU16};
+use std::{collections::BTreeSet, fmt::Write, num::NonZeroU16};
 use syn::Result;
 
 /// Expands an [`ItemStruct`]:
@@ -36,7 +36,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
     let (field_types, field_names): (Vec<_>, Vec<_>) =
         fields.iter().map(|f| (cx.expand_type(&f.ty), f.name.as_ref().unwrap())).unzip();
 
-    let eip712_encode_type_fns = expand_encode_type_fns(cx, fields, &sol_name, &s.attrs);
+    let eip712_encode_type_fns = expand_encode_type_fns(cx, fields, name, &s.attrs);
 
     let tokenize_impl = expand_tokenize(fields, cx, super::FieldKind::Original);
 
@@ -95,9 +95,14 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
                         return size;
                     }
 
-                    // TODO: Avoid cloning
-                    let tuple = <UnderlyingRustTuple<'_> as ::core::convert::From<Self>>::from(self.clone());
-                    <UnderlyingSolTuple<'_> as alloy_sol_types::SolType>::abi_encoded_size(&tuple)
+                    let sum = 0usize #(
+                        + <#field_types as alloy_sol_types::SolType>::abi_encoded_size(&self.#field_names)
+                    )*;
+                    if <UnderlyingSolTuple<'_> as alloy_sol_types::SolType>::DYNAMIC {
+                        32 + sum
+                    } else {
+                        sum
+                    }
                 }
 
                 #[inline]
@@ -107,9 +112,9 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
 
                 #[inline]
                 fn stv_abi_encode_packed_to(&self, out: &mut alloy_sol_types::private::Vec<u8>) {
-                    // TODO: Avoid cloning
-                    let tuple = <UnderlyingRustTuple<'_> as ::core::convert::From<Self>>::from(self.clone());
-                    <UnderlyingSolTuple<'_> as alloy_sol_types::SolType>::abi_encode_packed_to(&tuple, out)
+                    #(
+                        <#field_types as alloy_sol_types::SolType>::abi_encode_packed_to(&self.#field_names, out);
+                    )*
                 }
 
                 #[inline]
@@ -118,9 +123,9 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
                         return size;
                     }
 
-                    // TODO: Avoid cloning
-                    let tuple = <UnderlyingRustTuple<'_> as ::core::convert::From<Self>>::from(self.clone());
-                    <UnderlyingSolTuple<'_> as alloy_sol_types::SolType>::abi_packed_encoded_size(&tuple)
+                    0usize #(
+                        + <#field_types as alloy_sol_types::SolType>::abi_packed_encoded_size(&self.#field_names)
+                    )*
                 }
             }
 
@@ -194,27 +199,12 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
 fn expand_encode_type_fns(
     cx: &ExpCtxt<'_>,
     fields: &ast::Parameters<syn::token::Semi>,
-    name: &str,
+    name: &SolIdent,
     attrs: &[syn::Attribute],
 ) -> TokenStream {
-    // account for UDVTs and enums which do not implement SolStruct
-    let mut fields = fields.clone();
-    fields.visit_types_mut(|ty| {
-        let Type::Custom(name) = ty else { return };
-        match cx.try_item(name) {
-            // keep as custom
-            Some(Item::Struct(_)) | None => {}
-            // convert to underlying
-            Some(Item::Contract(_)) => *ty = Type::Address(ty.span(), None),
-            Some(Item::Enum(_)) => *ty = Type::Uint(ty.span(), NonZeroU16::new(8)),
-            Some(Item::Udt(udt)) => *ty = udt.ty.clone(),
-            Some(item) => {
-                proc_macro_error3::abort!(item.span(), "Invalid type in struct field: {:?}", item)
-            }
-        }
-    });
+    let fields = substitute_non_structs(cx, fields, &cx.current_namespace);
 
-    let root = eip712_signature(cx, &fields, name, attrs);
+    let root = eip712_signature(cx, &fields, &cx.sol_name(name, attrs), attrs);
 
     let custom = fields.iter().filter(|f| f.ty.has_custom());
     let n_custom = custom.clone().count();
@@ -246,11 +236,17 @@ fn expand_encode_type_fns(
         quote! { alloy_sol_types::private::Vec::new() }
     };
 
-    let encode_type_impl_opt = (n_custom == 0).then(|| {
+    let encode_type_impl_opt = encode_type_const(cx, name, &root, &fields).map(|encode_type| {
+        let type_hash = crate::utils::keccak256(&encode_type);
         quote! {
             #[inline]
             fn eip712_encode_type() -> alloy_sol_types::private::Cow<'static, str> {
-                <Self as alloy_sol_types::SolStruct>::eip712_root_type()
+                alloy_sol_types::private::Cow::Borrowed(#encode_type)
+            }
+
+            #[inline]
+            fn eip712_type_hash(&self) -> alloy_sol_types::private::B256 {
+                alloy_sol_types::private::B256::new([#(#type_hash),*])
             }
         }
     });
@@ -322,4 +318,101 @@ fn fmt_eip712_type(cx: &ExpCtxt<'_>, ty: &Type, out: &mut String) {
         }
         ty => write!(out, "{ty}").unwrap(),
     }
+}
+
+/// Replaces UDVTs, enums and contracts, which do not implement `SolStruct`, with their underlying
+/// types, resolving names in `namespace`.
+fn substitute_non_structs(
+    cx: &ExpCtxt<'_>,
+    fields: &ast::Parameters<syn::token::Semi>,
+    namespace: &Option<SolIdent>,
+) -> ast::Parameters<syn::token::Semi> {
+    let mut fields = fields.clone();
+    fields.visit_types_mut(|ty| {
+        let Type::Custom(name) = ty else { return };
+        match cx.try_item_in_namespace(name, namespace).map(|(_, item)| item) {
+            // keep as custom
+            Some(Item::Struct(_)) | None => {}
+            // convert to underlying
+            Some(Item::Contract(_)) => *ty = Type::Address(ty.span(), None),
+            Some(Item::Enum(_)) => *ty = Type::Uint(ty.span(), NonZeroU16::new(8)),
+            Some(Item::Udt(udt)) => *ty = udt.ty.clone(),
+            Some(item) => {
+                proc_macro_error3::abort!(item.span(), "Invalid type in struct field: {:?}", item)
+            }
+        }
+    });
+    fields
+}
+
+/// Computes the full EIP-712 `encodeType` string of `name` at expansion time: the root type
+/// followed by the sorted, deduplicated root types of all transitively referenced structs.
+///
+/// Returns `None` if the type graph is cyclic or a custom type does not resolve to a struct.
+fn encode_type_const(
+    cx: &ExpCtxt<'_>,
+    name: &SolIdent,
+    root: &str,
+    fields: &ast::Parameters<syn::token::Semi>,
+) -> Option<String> {
+    let mut components = BTreeSet::new();
+    let mut stack = vec![(cx.current_namespace.clone(), name.clone())];
+    let mut done = BTreeSet::new();
+    collect_components(cx, fields, &cx.current_namespace, &mut stack, &mut done, &mut components)?;
+    Some(std::iter::once(root).chain(components.iter().map(String::as_str)).collect())
+}
+
+/// Adds the root types of all structs referenced by the substituted `fields`, which are resolved
+/// in `namespace`, to `components`.
+fn collect_components(
+    cx: &ExpCtxt<'_>,
+    fields: &ast::Parameters<syn::token::Semi>,
+    namespace: &Option<SolIdent>,
+    stack: &mut Vec<(Option<SolIdent>, SolIdent)>,
+    done: &mut BTreeSet<(Option<SolIdent>, SolIdent)>,
+    components: &mut BTreeSet<String>,
+) -> Option<()> {
+    let mut paths = Vec::<SolPath>::new();
+    for field in fields {
+        field.ty.visit(|ty| {
+            if let Type::Custom(path) = ty {
+                paths.push(path.clone());
+            }
+        });
+    }
+
+    for path in paths {
+        let (struct_namespace, Item::Struct(s)) = cx.try_item_in_namespace(&path, namespace)?
+        else {
+            return None;
+        };
+        // The generated Rust code resolves a bare name to the local item, which this lookup
+        // does not when a global item has the same name.
+        if path.len() == 1
+            && struct_namespace.is_none()
+            && namespace.is_some()
+            && cx.all_items.get_entry_by_name_and_namespace(namespace, path.last()).is_some()
+        {
+            return None;
+        }
+        let key = (struct_namespace.clone(), s.name.clone());
+        if stack.contains(&key) {
+            return None;
+        }
+        if !done.insert(key.clone()) {
+            continue;
+        }
+
+        let s_fields = substitute_non_structs(cx, &s.fields, struct_namespace);
+        components.insert(eip712_signature(
+            cx,
+            &s_fields,
+            &cx.sol_name(&s.name, &s.attrs),
+            &s.attrs,
+        ));
+        stack.push(key);
+        collect_components(cx, &s_fields, struct_namespace, stack, done, components)?;
+        stack.pop();
+    }
+    Some(())
 }

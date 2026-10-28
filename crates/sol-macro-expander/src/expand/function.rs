@@ -118,9 +118,6 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
 
     let alloy_sol_types = &cx.crates.sol_types;
 
-    let decode_sequence =
-        quote!(<Self::ReturnTuple<'_> as alloy_sol_types::SolType>::abi_decode_sequence(data));
-
     // Determine whether the return type should directly yield result or the <name>Return struct.
     let is_single_return = returns.len() == 1;
     let return_type =
@@ -142,17 +139,6 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
         quote! { (<#ty as alloy_sol_types::SolType>::tokenize(ret),) }
     } else {
         quote! { #return_name::_tokenize(ret) }
-    };
-    let decode_returns = if is_single_return {
-        let name = anon_name((0, returns[0].name.as_ref()));
-        quote! {
-            #decode_sequence.map(|r| {
-                let r: #return_name = r.into();
-                r.#name
-            })
-        }
-    } else {
-        quote!(#decode_sequence.map(Into::into))
     };
 
     let decode_sequence_with_config = quote!(
@@ -226,7 +212,10 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
 
                 #[inline]
                 fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
-                    #decode_returns
+                    Self::abi_decode_returns_with_config(
+                        data,
+                        alloy_sol_types::abi::AbiDecoderConfig::default(),
+                    )
                 }
 
                 #[inline]
@@ -235,16 +224,6 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
                     config: alloy_sol_types::abi::AbiDecoderConfig,
                 ) -> alloy_sol_types::Result<Self::Return> {
                     #decode_returns_with_config
-                }
-
-                #[inline]
-                // TODO: Deprecate in favor of a validating decoder configuration.
-                // #[deprecated(note = "use a validating decoder configuration")]
-                fn abi_decode_returns_validate(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
-                    Self::abi_decode_returns_with_config(
-                        data,
-                        alloy_sol_types::abi::AbiDecoderConfig::new().validate(true),
-                    )
                 }
             }
 

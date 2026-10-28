@@ -653,7 +653,7 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     #[inline]
     #[must_use]
     pub fn overflowing_shl(self, rhs: usize) -> (Self, bool) {
-        if rhs >= 256 { (Self::ZERO, true) } else { (Self(self.0 << rhs), false) }
+        if rhs >= BITS { (Self::ZERO, true) } else { (Self(self.0 << rhs), false) }
     }
 
     /// Checked shift left. Computes `self << rhs`, returning `None` if `rhs` is
@@ -683,7 +683,7 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     #[inline]
     #[must_use]
     pub fn overflowing_shr(self, rhs: usize) -> (Self, bool) {
-        if rhs >= 256 { (Self::ZERO, true) } else { (Self(self.0 >> rhs), false) }
+        if rhs >= BITS { (Self::ZERO, true) } else { (Self(self.0 >> rhs), false) }
     }
 
     /// Checked shift right. Computes `self >> rhs`, returning `None` if `rhs`
