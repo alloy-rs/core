@@ -7,10 +7,11 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-use crate::abi;
 use alloc::{borrow::Cow, boxed::Box, collections::TryReserveError, string::String};
 use alloy_primitives::{B256, LogData, hex};
-use core::fmt;
+use core::{cmp, fmt};
+
+const MAX_TYPE_CHECK_FAIL_DATA_LEN: usize = 128;
 
 /// ABI result type.
 pub type Result<T, E = Error> = core::result::Result<T, E>;
@@ -22,7 +23,7 @@ pub enum Error {
     TypeCheckFail {
         /// The Solidity type we failed to produce.
         expected_type: Cow<'static, str>,
-        /// Hex-encoded data.
+        /// Hex-encoded data, when available.
         data: String,
     },
 
@@ -101,7 +102,11 @@ impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::TypeCheckFail { expected_type, data } => {
-                write!(f, "type check failed for {expected_type:?} with data: {data}",)
+                write!(f, "type check failed for {expected_type:?}")?;
+                if !data.is_empty() {
+                    write!(f, " with data: {data}")?;
+                }
+                Ok(())
             }
             Self::Overrun
             | Self::BufferNotEmpty
@@ -163,13 +168,14 @@ impl Error {
 
     /// Instantiates a new [`Error::TypeCheckFail`] with the provided token.
     #[cold]
-    pub fn type_check_fail_token<T: crate::SolType>(token: &T::Token<'_>) -> Self {
-        Self::type_check_fail(&abi::encode(token), T::SOL_NAME)
+    pub fn type_check_fail_token<T: crate::SolType>(_token: &T::Token<'_>) -> Self {
+        Self::type_check_fail(&[], T::SOL_NAME)
     }
 
     /// Instantiates a new [`Error::TypeCheckFail`] with the provided data.
     #[cold]
     pub fn type_check_fail(data: &[u8], expected_type: impl Into<Cow<'static, str>>) -> Self {
+        let data = &data[..cmp::min(data.len(), MAX_TYPE_CHECK_FAIL_DATA_LEN)];
         Self::TypeCheckFail { expected_type: expected_type.into(), data: hex::encode(data) }
     }
 
@@ -201,5 +207,34 @@ impl From<TryReserveError> for Error {
     #[inline]
     fn from(value: TryReserveError) -> Self {
         Self::Reserve(value)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use alloc::string::ToString;
+
+    #[test]
+    fn type_check_fail_data_is_bounded() {
+        let error = Error::type_check_fail(&[0; MAX_TYPE_CHECK_FAIL_DATA_LEN + 1], "test");
+        let Error::TypeCheckFail { data, .. } = error else { unreachable!() };
+        assert_eq!(data.len(), MAX_TYPE_CHECK_FAIL_DATA_LEN * 2);
+    }
+
+    #[test]
+    fn type_check_fail_token_omits_token_data() {
+        let token = crate::abi::token::WordToken(crate::Word::ZERO);
+        let error = Error::type_check_fail_token::<crate::sol_data::Bool>(&token);
+        let Error::TypeCheckFail { data, .. } = error else { unreachable!() };
+        assert!(data.is_empty());
+    }
+
+    #[test]
+    fn empty_type_check_fail_data_is_not_displayed() {
+        assert_eq!(
+            Error::type_check_fail(&[], "test").to_string(),
+            "type check failed for \"test\""
+        );
     }
 }

@@ -1,5 +1,8 @@
 use alloy_primitives::{Address, B256, I256, U256, b256, bytes, hex, keccak256};
-use alloy_sol_types::{SolCall, SolError, SolEvent, SolStruct, SolType, sol};
+use alloy_sol_types::{
+    Error, SolCall, SolError, SolEvent, SolEventInterface, SolInterface, SolStruct, SolType,
+    abi::AbiDecoderConfig, sol,
+};
 use serde::Serialize;
 use serde_json::Value;
 
@@ -252,6 +255,62 @@ fn empty_call() {
     let depositCall {} = depositCall::abi_decode_raw(&[]).unwrap();
 
     assert!(depositCall::abi_encode_returns(&WETH::depositReturn {}).is_empty());
+}
+
+#[test]
+fn encode_appends_to_buffer() {
+    sol! {
+        function f(address[] a, bytes b);
+        error E(string s);
+        event V(uint256 indexed i, bytes b);
+    }
+
+    let call = fCall { a: vec![Address::repeat_byte(1); 3], b: vec![7; 40].into() };
+    let encoded = call.abi_encode();
+    assert_eq!(encoded.len(), 4 + call.abi_encoded_size());
+    let mut out = vec![0xaa; 5];
+    call.abi_encode_raw(&mut out);
+    assert_eq!(out[..5], [0xaa; 5]);
+    assert_eq!(out[5..], encoded[4..]);
+
+    let error = E { s: "hello".into() };
+    let encoded = error.abi_encode();
+    assert_eq!(encoded.len(), 4 + error.abi_encoded_size());
+    let mut out = vec![0xaa; 5];
+    error.abi_encode_raw(&mut out);
+    assert_eq!(out[..5], [0xaa; 5]);
+    assert_eq!(out[5..], encoded[4..]);
+
+    let event = V { i: U256::from(1), b: vec![7; 40].into() };
+    let data = <(alloy_sol_types::sol_data::Bytes,)>::abi_encode_sequence(&(event.b.clone(),));
+    assert_eq!(event.encode_data(), data);
+    let mut out = vec![0xaa; 5];
+    event.encode_data_to(&mut out);
+    assert_eq!(out[..5], [0xaa; 5]);
+    assert_eq!(out[5..], data);
+}
+
+#[test]
+fn interface_abi_encode_is_selector_and_raw() {
+    sol! {
+        interface I {
+            function g(address[] a, bytes b);
+            function h(uint256 x);
+            error F(string s);
+            error G(uint256 x);
+        }
+    }
+
+    fn check(interface: &impl SolInterface) {
+        let mut expected = interface.selector().to_vec();
+        interface.abi_encode_raw(&mut expected);
+        assert_eq!(interface.abi_encode(), expected);
+    }
+
+    check(&I::ICalls::g(I::gCall { a: vec![Address::repeat_byte(1); 3], b: vec![7; 40].into() }));
+    check(&I::ICalls::h(I::hCall { x: U256::from(1) }));
+    check(&I::IErrors::F(I::F { s: "hello".into() }));
+    check(&I::IErrors::G(I::G { x: U256::from(1) }));
 }
 
 #[test]
@@ -1289,6 +1348,178 @@ fn anonymous_event_decodes_indexed_and_data_fields() {
 }
 
 #[test]
+fn indexed_topics_respect_decoder_config() {
+    sol! {
+        event IndexedBool(bool indexed value) anonymous;
+        event IndexedAddress(address indexed value) anonymous;
+    }
+
+    let dirty_bool = B256::with_last_byte(2);
+    assert!(IndexedBool::decode_raw_log([dirty_bool], &[]).is_ok());
+    assert!(
+        IndexedBool::decode_raw_log_with_config(
+            [dirty_bool],
+            &[],
+            AbiDecoderConfig::new().validate(true),
+        )
+        .is_err()
+    );
+    assert!(
+        IndexedBool::decode_raw_log_with_config(
+            [dirty_bool],
+            &[],
+            AbiDecoderConfig::new().strict(true),
+        )
+        .is_err()
+    );
+
+    let dirty_address = B256::repeat_byte(0x11);
+    assert!(IndexedAddress::decode_raw_log([dirty_address], &[]).is_ok());
+    assert!(
+        IndexedAddress::decode_raw_log_with_config(
+            [dirty_address],
+            &[],
+            AbiDecoderConfig::new().strict(true),
+        )
+        .is_err()
+    );
+}
+
+#[test]
+fn event_interface_respects_decoder_config() {
+    sol! {
+        contract TopicConfig {
+            event Value(bool indexed value, bytes data);
+            event Anonymous(bytes data) anonymous;
+        }
+    }
+    use TopicConfig::*;
+
+    let event = Value { value: false, data: bytes!("11") };
+    let data = event.encode_data();
+    let topics = [Value::SIGNATURE_HASH, B256::ZERO];
+
+    assert!(TopicConfigEvents::decode_raw_log(&topics, &data).is_ok());
+    assert!(
+        TopicConfigEvents::decode_raw_log_with_config(
+            &[Value::SIGNATURE_HASH, B256::with_last_byte(2)],
+            &data,
+            AbiDecoderConfig::new().strict(true),
+        )
+        .is_err()
+    );
+
+    let mut trailing = data;
+    trailing.extend([0; 32]);
+    assert!(TopicConfigEvents::decode_raw_log(&topics, &trailing).is_ok());
+    assert!(
+        TopicConfigEvents::decode_raw_log_with_config(
+            &topics,
+            &trailing,
+            AbiDecoderConfig::new().strict(true),
+        )
+        .is_err()
+    );
+
+    let anonymous = Anonymous { data: bytes!("11") };
+    let Err(error) = TopicConfigEvents::decode_raw_log_with_config(
+        &[],
+        &anonymous.encode_data(),
+        AbiDecoderConfig::new().memory_limit(0),
+    ) else {
+        panic!("anonymous event should exceed the memory limit");
+    };
+    assert_eq!(error, Error::MemoryLimitExceeded(0));
+}
+
+#[test]
+fn anonymous_event_interface_requires_complete_disambiguation() {
+    sol! {
+        contract AnonymousCandidates {
+            event A(string data) anonymous;
+            event B(
+                uint256 a,
+                uint256 b,
+                uint256 c,
+                uint256 d,
+                uint256 e,
+                bytes data
+            ) anonymous;
+        }
+    }
+    use AnonymousCandidates::*;
+
+    let event = B {
+        a: U256::from(32),
+        b: U256::from(200),
+        c: U256::ZERO,
+        d: U256::ZERO,
+        e: U256::ZERO,
+        data: bytes![0x11; 64],
+    };
+    let data = event.encode_data();
+
+    let result = AnonymousCandidatesEvents::decode_raw_log_with_config(
+        &[],
+        &data,
+        AbiDecoderConfig::new().memory_limit(100),
+    );
+    assert!(matches!(result, Err(Error::MemoryLimitExceeded(100))));
+}
+
+#[test]
+fn event_interface_rejects_ambiguous_layouts() {
+    sol! {
+        contract AmbiguousEvents {
+            event First(uint256 value) anonymous;
+            event Second(uint256 value) anonymous;
+        }
+        contract UniqueEvents {
+            event Value(uint256 value) anonymous;
+            event Empty() anonymous;
+        }
+        contract MixedEvents {
+            event Value(uint256 value);
+            event Anonymous(bytes32 indexed tag, uint256 value) anonymous;
+        }
+    }
+    let data = alloy_sol_types::sol_data::Uint::<256>::abi_encode(&U256::from(42));
+    for strict in [false, true] {
+        let config = AbiDecoderConfig::new().strict(strict);
+        let result =
+            AmbiguousEvents::AmbiguousEventsEvents::decode_raw_log_with_config(&[], &data, config);
+        assert!(matches!(result, Err(Error::Other(message)) if message == "ambiguous event log"));
+        let result = MixedEvents::MixedEventsEvents::decode_raw_log_with_config(
+            &[MixedEvents::Value::SIGNATURE_HASH],
+            &data,
+            config,
+        );
+        assert!(matches!(result, Err(Error::Other(message)) if message == "ambiguous event log"));
+    }
+    // Strict decoding makes the two anonymous layouts disjoint.
+    let result = UniqueEvents::UniqueEventsEvents::decode_raw_log_with_config(
+        &[],
+        &data,
+        AbiDecoderConfig::new().strict(true),
+    );
+    assert!(matches!(result, Ok(UniqueEvents::UniqueEventsEvents::Value(_))));
+}
+
+#[test]
+fn event_interface_builder_name_does_not_shadow_decoding() {
+    sol! {
+        contract BuilderName {
+            event DecodeRawLogWithConfig();
+        }
+    }
+    use BuilderName::*;
+
+    assert!(
+        BuilderNameEvents::decode_raw_log(&[DecodeRawLogWithConfig::SIGNATURE_HASH], &[]).is_ok()
+    );
+}
+
+#[test]
 fn anonymous_event_rejects_topic_count_mismatch() {
     sol! {
         #[derive(Debug)]
@@ -1376,6 +1607,59 @@ fn bytes64() {
 
     let x = bytes64 { a: B256::ZERO, b: B256::ZERO };
     assert_eq!(bytes64::abi_encode_packed(&x), alloy_primitives::B512::ZERO.as_slice());
+}
+
+#[test]
+fn nested_dynamic_struct_sizes_and_packed() {
+    sol! {
+        struct Item {
+            address token;
+            uint256 amount;
+            bytes data;
+        }
+
+        struct Order {
+            address offerer;
+            uint256[] amounts;
+            Item[] items;
+            bytes signature;
+            string memo;
+        }
+    }
+
+    type OrderTuple = sol! { (address, uint256[], (address, uint256, bytes)[], bytes, string) };
+
+    let item = |i: u8| Item {
+        token: Address::with_last_byte(i),
+        amount: U256::from(i),
+        data: vec![i; i as usize * 7].into(),
+    };
+    let order = Order {
+        offerer: Address::with_last_byte(9),
+        amounts: vec![U256::from(1), U256::from(2), U256::from(3)],
+        items: vec![item(1), item(2), item(3)],
+        signature: vec![0xab; 65].into(),
+        memo: "hello world".into(),
+    };
+    let tuple = (
+        order.offerer,
+        order.amounts.clone(),
+        order.items.iter().map(|i| (i.token, i.amount, i.data.clone())).collect::<Vec<_>>(),
+        order.signature.clone(),
+        order.memo.clone(),
+    );
+
+    let size = Order::abi_encoded_size(&order);
+    assert_eq!(size, Order::abi_encode(&order).len());
+    assert_eq!(size, OrderTuple::abi_encoded_size(&tuple));
+
+    let packed = Order::abi_encode_packed(&order);
+    assert_eq!(packed, OrderTuple::abi_encode_packed(&tuple));
+    assert_eq!(Order::abi_packed_encoded_size(&order), packed.len());
+
+    let orders = vec![order.clone(), order];
+    type Orders = sol! { Order[] };
+    assert_eq!(Orders::abi_encoded_size(&orders), Orders::abi_encode(&orders).len());
 }
 
 #[test]

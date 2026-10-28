@@ -619,11 +619,51 @@ impl DynSolValue {
         }
     }
 
+    /// Returns whether this value is dynamic and the total number of words it uses in the ABI
+    /// blob, assuming it is not the top-level.
+    ///
+    /// Computes both in a single pass over the value.
+    fn dynamic_total_words(&self) -> (bool, usize) {
+        match self {
+            Self::Address(_)
+            | Self::Function(_)
+            | Self::Bool(_)
+            | Self::FixedBytes(..)
+            | Self::Int(..)
+            | Self::Uint(..) => (false, 1),
+
+            // 1 for the offset, 1 for the length, then the body padded to the next word.
+            Self::String(s) => (true, 2 + words_for_len(s.len())),
+            Self::Bytes(b) => (true, 2 + words_for_len(b.len())),
+
+            // 1 for the offset, 1 for the length. Then all words for all elements.
+            Self::Array(vals) => (true, 2 + Self::seq_total_words(vals).1),
+
+            // If dynamic, 1 for the offset. Then all words for all elements.
+            as_fixed_seq!(tuple) => {
+                let (dynamic, words) = Self::seq_total_words(tuple);
+                (dynamic, words + dynamic as usize)
+            }
+        }
+    }
+
+    /// Returns whether any of the values is dynamic and the sum of their total words.
+    fn seq_total_words(seq: &[Self]) -> (bool, usize) {
+        let mut any_dynamic = false;
+        let mut sum = 0;
+        for val in seq {
+            let (dynamic, words) = val.dynamic_total_words();
+            any_dynamic |= dynamic;
+            sum += words;
+        }
+        (any_dynamic, sum)
+    }
+
     /// Returns the total number of words this type uses in the ABI blob,
     /// assuming it is not the top-level
     #[inline]
     pub(crate) fn total_words(&self) -> usize {
-        self.head_words() + self.tail_words()
+        self.dynamic_total_words().1
     }
 
     /// Append this data to the head of an in-progress blob via the encoder.
@@ -715,7 +755,11 @@ impl DynSolValue {
             }
             Self::FixedArray(inner) | Self::Array(inner) => {
                 for val in inner {
-                    // Array elements are left-padded to 32 bytes.
+                    // Array elements are padded to 32 bytes like in the standard encoding.
+                    if let Some(word) = val.as_word() {
+                        buf.extend_from_slice(word.as_slice());
+                        continue;
+                    }
                     if let Some(padding_needed) = 32usize.checked_sub(val.abi_packed_encoded_size())
                     {
                         buf.extend(core::iter::repeat_n(0, padding_needed));
@@ -768,10 +812,75 @@ impl DynSolValue {
 
     /// Encode this data as a sequence.
     pub(crate) fn encode_seq(seq: &[Self]) -> Vec<u8> {
-        let sz = seq.iter().map(Self::total_words).sum();
-        let mut encoder = Encoder::with_capacity(sz);
-        Self::encode_seq_to(seq, &mut encoder);
-        encoder.into_bytes()
+        let mut buf = Vec::with_capacity(Self::seq_total_words(seq).1 * 32);
+        Self::encode_seq_into(seq, &mut buf);
+        buf
+    }
+
+    /// Encode this data as a sequence at the end of `buf`.
+    ///
+    /// Reserves the head, writes each element's tail while patching its offset into the head, and
+    /// inlines static elements, so no tail sizes are needed.
+    fn encode_seq_into(contents: &[Self], buf: &mut Vec<u8>) {
+        let base = buf.len();
+        let mut head = base;
+        buf.resize(base + contents.iter().map(Self::head_words).sum::<usize>() * 32, 0);
+
+        for t in contents {
+            if t.is_dynamic() {
+                let offset = buf.len() - base;
+                buf[head + 24..head + 32].copy_from_slice(&(offset as u64).to_be_bytes());
+                head += 32;
+                t.encode_tail_into(buf);
+            } else {
+                head = t.encode_static_into(buf, head);
+            }
+        }
+    }
+
+    /// Encode this dynamic value's tail at the end of `buf`.
+    fn encode_tail_into(&self, buf: &mut Vec<u8>) {
+        match self {
+            Self::String(string) => Self::encode_packed_seq_into(string.as_bytes(), buf),
+            Self::Bytes(bytes) => Self::encode_packed_seq_into(bytes, buf),
+            Self::Array(array) => {
+                Self::encode_len_into(array.len(), buf);
+                Self::encode_seq_into(array, buf);
+            }
+            as_fixed_seq!(s) => Self::encode_seq_into(s, buf),
+            _ => unreachable!("value is not dynamic"),
+        }
+    }
+
+    /// Encode this static value into the already reserved head of `buf` at `head`, returning the
+    /// position after it.
+    fn encode_static_into(&self, buf: &mut [u8], mut head: usize) -> usize {
+        match self.as_fixed_seq() {
+            Some(s) => {
+                for inner in s {
+                    head = inner.encode_static_into(buf, head);
+                }
+                head
+            }
+            None => {
+                let word = self.as_word().expect("static value is a word or fixed sequence");
+                buf[head..head + 32].copy_from_slice(word.as_slice());
+                head + 32
+            }
+        }
+    }
+
+    /// Encode a length as a word at the end of `buf`.
+    fn encode_len_into(len: usize, buf: &mut Vec<u8>) {
+        buf.extend_from_slice(&[0; 24]);
+        buf.extend_from_slice(&(len as u64).to_be_bytes());
+    }
+
+    /// Encode a length-prefixed byte string, padded to a multiple of 32 bytes, at the end of `buf`.
+    fn encode_packed_seq_into(data: &[u8], buf: &mut Vec<u8>) {
+        Self::encode_len_into(data.len(), buf);
+        buf.extend_from_slice(data);
+        buf.resize(buf.len() + next_multiple_of_32(data.len()) - data.len(), 0);
     }
 
     /// Encode this data as a sequence into the given encoder.
@@ -899,7 +1008,12 @@ impl DynSolValue {
 mod tests {
     use super::*;
     use alloc::string::ToString;
-    use alloy_sol_types::{EventTopic, sol_data};
+    use alloy_primitives::Bytes;
+    use alloy_sol_types::{
+        EventTopic, SolType,
+        abi::{Encoder, TokenSeq},
+        sol_data,
+    };
 
     fn uint(n: u64) -> DynSolValue {
         DynSolValue::Uint(U256::from(n), 256)
@@ -907,6 +1021,117 @@ mod tests {
 
     fn string(s: &str) -> DynSolValue {
         DynSolValue::String(s.into())
+    }
+
+    fn bytes(b: &[u8]) -> DynSolValue {
+        DynSolValue::Bytes(b.to_vec())
+    }
+
+    /// Checks that wrapping encoding produces the same bytes as the static encoding.
+    #[track_caller]
+    fn check_encoding<T: SolType>(rust: &T::RustType, value: DynSolValue) {
+        let expected = T::abi_encode(rust);
+        assert_eq!(value.abi_encode(), expected);
+        if !matches!(value, DynSolValue::Tuple(_)) {
+            assert_eq!(value.abi_encode_params(), expected);
+        }
+    }
+
+    /// Checks that all sequence encoding paths produce the same bytes as the static encoding.
+    #[track_caller]
+    fn check_params<T: SolType>(rust: &T::RustType, value: DynSolValue)
+    where
+        for<'a> T::Token<'a>: TokenSeq<'a>,
+    {
+        check_encoding::<T>(rust, value.clone());
+
+        let expected = T::abi_encode_params(rust);
+        assert_eq!(value.abi_encode_params(), expected);
+        assert_eq!(value.abi_encode_sequence().unwrap(), expected);
+
+        let seq = value.as_fixed_seq().unwrap();
+        let mut enc = Encoder::with_capacity(seq.iter().map(DynSolValue::total_words).sum());
+        DynSolValue::encode_seq_to(seq, &mut enc);
+        assert_eq!(enc.into_bytes(), expected);
+    }
+
+    #[test]
+    fn encode_nested_matches_static_encoding() {
+        use sol_data::{Array, Bytes as SolBytes, FixedArray, String as SolString, Uint};
+        type U = Uint<256>;
+        let u = U256::from;
+
+        // Dynamic tuples inside arrays, with empty strings, bytes and arrays.
+        type Elem = (U, SolString, SolBytes, Array<U>);
+        let elems = [
+            (u(1), String::new(), Bytes::new(), vec![]),
+            (u(2), "a".into(), Bytes::from(vec![7; 33]), vec![u(1), u(2), u(3)]),
+            (u(3), "x".repeat(64), Bytes::from(vec![9; 32]), vec![u(4)]),
+        ];
+        let elem = |e: &(U256, String, Bytes, Vec<U256>)| {
+            DynSolValue::Tuple(vec![
+                uint(e.0.to()),
+                string(&e.1),
+                bytes(&e.2),
+                DynSolValue::Array(e.3.iter().map(|n| uint(n.to())).collect()),
+            ])
+        };
+        for n in 0..=elems.len() {
+            let rust = elems[..n].to_vec();
+            let value = DynSolValue::Array(rust.iter().map(elem).collect());
+            check_encoding::<Array<Elem>>(&rust, value.clone());
+            check_params::<(Array<Elem>, U, SolString)>(
+                &(rust, u(5), String::new()),
+                DynSolValue::Tuple(vec![value, uint(5), string("")]),
+            );
+        }
+
+        // Arrays of arrays of dynamic tuples containing fixed arrays of dynamic types.
+        type Inner = (SolString, FixedArray<SolString, 2>, FixedArray<U, 2>);
+        let inner = |s: &str| -> (String, [String; 2], [U256; 2]) {
+            (s.into(), [String::new(), s.repeat(40)], [u(1), u(2)])
+        };
+        let dyn_inner = |t: &(String, [String; 2], [U256; 2])| {
+            DynSolValue::Tuple(vec![
+                string(&t.0),
+                DynSolValue::FixedArray(vec![string(&t.1[0]), string(&t.1[1])]),
+                DynSolValue::FixedArray(vec![uint(1), uint(2)]),
+            ])
+        };
+        let rust = vec![vec![inner("a"), inner("")], vec![], vec![inner("bc")]];
+        let value = DynSolValue::Array(
+            rust.iter().map(|v| DynSolValue::Array(v.iter().map(dyn_inner).collect())).collect(),
+        );
+        check_encoding::<Array<Array<Inner>>>(&rust, value.clone());
+        check_params::<(Array<Array<Inner>>,)>(&(rust,), DynSolValue::Tuple(vec![value]));
+
+        // Fixed arrays of dynamic and of static types, and static tuples inlined in the head.
+        check_encoding::<FixedArray<SolString, 3>>(
+            &[String::new(), "abc".into(), "d".repeat(100)],
+            DynSolValue::FixedArray(vec![string(""), string("abc"), string(&"d".repeat(100))]),
+        );
+        check_encoding::<FixedArray<U, 3>>(
+            &[u(1), u(2), u(3)],
+            DynSolValue::FixedArray(vec![uint(1), uint(2), uint(3)]),
+        );
+        check_params::<((U, U), SolString, FixedArray<U, 2>, (SolBytes, (U, U)))>(
+            &((u(1), u(2)), "s".into(), [u(3), u(4)], (Bytes::new(), (u(5), u(6)))),
+            DynSolValue::Tuple(vec![
+                DynSolValue::Tuple(vec![uint(1), uint(2)]),
+                string("s"),
+                DynSolValue::FixedArray(vec![uint(3), uint(4)]),
+                DynSolValue::Tuple(vec![bytes(b""), DynSolValue::Tuple(vec![uint(5), uint(6)])]),
+            ]),
+        );
+
+        // Empty values.
+        check_encoding::<SolString>(&String::new(), string(""));
+        check_encoding::<Array<U>>(&vec![], DynSolValue::Array(vec![]));
+        check_encoding::<Array<SolString>>(
+            &vec![String::new()],
+            DynSolValue::Array(vec![string("")]),
+        );
+        check_params::<()>(&(), DynSolValue::Tuple(vec![]));
     }
 
     #[test]

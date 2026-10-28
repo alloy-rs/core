@@ -10,7 +10,7 @@ use alloc::{
     string::{String, ToString},
     vec::Vec,
 };
-use parser::{Error as TypeParserError, TypeSpecifier};
+use parser::{Error as TypeParserError, RootType, TypeSpecifier};
 
 use super::Resolver;
 
@@ -59,7 +59,12 @@ impl<'a> PropDef<'a> {
         let input = input.trim();
         let (ty, name) =
             input.rsplit_once(' ').ok_or_else(|| Error::invalid_property_def(input))?;
-        Ok(PropDef { ty: TypeSpecifier::parse_eip712(ty.trim())?, name: name.trim() })
+        let name = name.trim();
+        // Checked here so that `to_owned` can't fail.
+        if !parser::is_valid_identifier(name) {
+            return Err(Error::invalid_property_def(input));
+        }
+        Ok(PropDef { ty: TypeSpecifier::parse_eip712(ty.trim())?, name })
     }
 }
 
@@ -91,6 +96,9 @@ impl<'a> ComponentType<'a> {
         let (name, props_str) = input
             .split_once('(')
             .ok_or_else(|| Error::TypeParser(TypeParserError::invalid_type_string(input)))?;
+        let type_name = name.trim();
+        // Checked here so that `to_owned` can't fail.
+        RootType::parse_eip712(type_name)?;
 
         let mut props = vec![];
         let mut depth = 1; // 1 to account for the ( in the split above
@@ -118,7 +126,7 @@ impl<'a> ComponentType<'a> {
             }
         }
 
-        Ok(Self { span: &input[..last + name.len() + 1], type_name: name.trim(), props })
+        Ok(Self { span: &input[..last + name.len() + 1], type_name, props })
     }
 
     /// Convert to an owned TypeDef.
@@ -242,6 +250,14 @@ mod tests {
     }
 
     #[test]
+    fn invalid_component_type_name() {
+        let input = "Foo bar(uint256 x)";
+        assert!(ComponentType::parse(input).is_err());
+        // Used to panic when converting the parsed component into a `TypeDef`.
+        assert!(EncodeType::parse(input).unwrap().canonicalize().is_err());
+    }
+
+    #[test]
     fn component_type_tolerates_whitespace_inside_parens() {
         let inputs = ["Foo(uint256 x)", "Foo(uint256 x )", "Foo( uint256 x)", "Foo( uint256 x )"];
         for input in inputs {
@@ -358,5 +374,12 @@ mod tests {
         let input = "Tree(Leaf root,Tree[] subtrees)Leaf(uint256 value)";
         let encoded = EncodeType::parse(input).unwrap();
         assert_eq!(encoded.canonicalize(), Ok(input.to_string()));
+    }
+
+    #[test]
+    fn invalid_prop_name() {
+        assert!(PropDef::parse("uint256 a-b").is_err());
+        // Must not panic when converting the parsed component into a `TypeDef`.
+        assert!(EncodeType::parse("Foo(uint256 a-b)").unwrap().canonicalize().is_err());
     }
 }

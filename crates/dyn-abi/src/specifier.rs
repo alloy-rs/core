@@ -232,6 +232,11 @@ deref_impls! {
     [T: ?Sized + Specifier<DynSolType>] alloc::boxed::Box<T>,
     [T: ?Sized + alloc::borrow::ToOwned + Specifier<DynSolType>] alloc::borrow::Cow<'_, T>,
     [T: ?Sized + Specifier<DynSolType>] alloc::rc::Rc<T>,
+}
+
+// `Arc` needs pointer-sized atomics
+#[cfg(target_has_atomic = "ptr")]
+deref_impls! {
     [T: ?Sized + Specifier<DynSolType>] alloc::sync::Arc<T>,
 }
 

@@ -235,6 +235,7 @@ macro_rules! wrap_fixed_bytes {
         $crate::impl_allocative!($name);
         $crate::impl_arbitrary!($name, $n);
         $crate::impl_rand!($name);
+        $crate::impl_postgres!($name, $n);
         $crate::impl_diesel!($name, $n);
         $crate::impl_sqlx!($name, $n);
 
@@ -818,6 +819,66 @@ macro_rules! impl_arbitrary {
 
 #[doc(hidden)]
 #[macro_export]
+#[cfg(feature = "postgres")]
+macro_rules! impl_postgres {
+    ($t:ty, $n:literal) => {
+        const _: () = {
+            use $crate::private::{
+                Box,
+                bytes::BytesMut,
+                postgres_types::{FromSql, IsNull, ToSql, Type},
+            };
+
+            impl ToSql for $t {
+                fn to_sql(
+                    &self,
+                    ty: &Type,
+                    out: &mut BytesMut,
+                ) -> Result<IsNull, Box<dyn $crate::private::core::error::Error + Sync + Send>>
+                {
+                    <$crate::FixedBytes<$n> as ToSql>::to_sql(&self.0, ty, out)
+                }
+
+                fn accepts(ty: &Type) -> bool {
+                    <$crate::FixedBytes<$n> as ToSql>::accepts(ty)
+                }
+
+                fn to_sql_checked(
+                    &self,
+                    ty: &Type,
+                    out: &mut BytesMut,
+                ) -> Result<IsNull, Box<dyn $crate::private::core::error::Error + Sync + Send>>
+                {
+                    $crate::private::postgres_types::__to_sql_checked(self, ty, out)
+                }
+            }
+
+            impl<'a> FromSql<'a> for $t {
+                fn from_sql(
+                    ty: &Type,
+                    raw: &'a [u8],
+                ) -> Result<Self, Box<dyn $crate::private::core::error::Error + Sync + Send>>
+                {
+                    <$crate::FixedBytes<$n> as FromSql>::from_sql(ty, raw).map(Self)
+                }
+
+                fn accepts(ty: &Type) -> bool {
+                    <$crate::FixedBytes<$n> as FromSql>::accepts(ty)
+                }
+            }
+        };
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+#[cfg(not(feature = "postgres"))]
+macro_rules! impl_postgres {
+    ($t:ty, $n:literal) => {};
+}
+
+#[doc(hidden)]
+#[macro_export]
 #[cfg(feature = "diesel")]
 macro_rules! impl_diesel {
     ($t:ty, $n:literal) => {
@@ -983,6 +1044,8 @@ macro_rules! impl_sqlx {
                     <$crate::FixedBytes<$n> as Decode<DB>>::decode(value).map(Self)
                 }
             }
+
+            $crate::impl_sqlx_postgres!($t, $n);
         };
     };
 }
@@ -991,6 +1054,26 @@ macro_rules! impl_sqlx {
 #[macro_export]
 #[cfg(not(feature = "sqlx"))]
 macro_rules! impl_sqlx {
+    ($t:ty, $n:literal) => {};
+}
+
+#[doc(hidden)]
+#[macro_export]
+#[cfg(feature = "sqlx-postgres")]
+macro_rules! impl_sqlx_postgres {
+    ($t:ty, $n:literal) => {
+        impl $crate::private::sqlx_postgres::PgHasArrayType for $t {
+            fn array_type_info() -> $crate::private::sqlx_postgres::PgTypeInfo {
+                <$crate::FixedBytes<$n> as $crate::private::sqlx_postgres::PgHasArrayType>::array_type_info()
+            }
+        }
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+#[cfg(not(feature = "sqlx-postgres"))]
+macro_rules! impl_sqlx_postgres {
     ($t:ty, $n:literal) => {};
 }
 

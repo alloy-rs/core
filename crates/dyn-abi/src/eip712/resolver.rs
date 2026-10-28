@@ -8,10 +8,13 @@ use alloc::{
     string::{String, ToString},
     vec::Vec,
 };
-use alloy_primitives::{B256, keccak256};
+use alloy_primitives::{
+    B256, keccak256,
+    map::{HashMap, HashSet},
+};
 use alloy_sol_types::SolStruct;
 use core::{cmp::Ordering, fmt};
-use parser::{RootType, TypeSpecifier, TypeStem};
+use parser::{RootType, TypeSpecifier, TypeStem, is_valid_identifier};
 use serde::{Deserialize, Deserializer, Serialize};
 
 /// An EIP-712 property definition.
@@ -38,7 +41,8 @@ impl<'de> Deserialize<'de> for PropertyDef {
 }
 
 impl PropertyDef {
-    /// Instantiate a new name-type pair.
+    /// Instantiate a new name-type pair, checking that the type name is a valid
+    /// EIP-712 type and the name a valid Solidity identifier.
     #[inline]
     pub fn new<T, N>(type_name: T, name: N) -> Result<Self>
     where
@@ -47,11 +51,17 @@ impl PropertyDef {
     {
         let type_name = type_name.into();
         TypeSpecifier::parse_eip712(type_name.as_str())?;
+        let name = name.into();
+        // Names are written verbatim into `encodeType`, so separators in a name
+        // could make two different types encode to the same string.
+        if !is_valid_identifier(&name) {
+            return Err(Error::invalid_property_def(&alloc::format!("{type_name} {name}")));
+        }
         Ok(Self::new_unchecked(type_name, name))
     }
 
     /// Instantiate a new name-type pair, without checking that the type name
-    /// is a valid root type.
+    /// is a valid root type or that the name is a valid identifier.
     #[inline]
     pub fn new_unchecked<T, N>(type_name: T, name: N) -> Self
     where
@@ -201,9 +211,41 @@ struct DfsContext<'a> {
     stack: BTreeSet<&'a str>,
 }
 
+const MAX_TYPE_DEPTH: usize = 80;
+
+fn check_type_depth(depth: usize) -> Result<()> {
+    if depth >= MAX_TYPE_DEPTH {
+        return Err(alloy_sol_types::Error::RecursionLimitExceeded(MAX_TYPE_DEPTH).into());
+    }
+    Ok(())
+}
+
+const MAX_RESOLVED_TYPE_NODES: usize = 1024;
+
+/// Cheap necessary condition for a parsed root type name to be a basic Solidity
+/// type, so that struct names can skip the (allocating) basic type check.
+fn may_be_basic_type(name: &str) -> bool {
+    matches!(name, "address" | "bool" | "string" | "function")
+        || name.starts_with("bytes")
+        || name.starts_with("int")
+        || name.starts_with("uint")
+}
+
+/// Type hashes by struct name, computed once per hashing call.
+type TypeHashes<'a> = HashMap<&'a str, B256>;
+
+fn charge_type_nodes(remaining: &mut usize, nodes: usize) -> Result<()> {
+    *remaining = remaining
+        .checked_sub(nodes)
+        .ok_or_else(|| Error::custom("EIP-712 type expansion limit exceeded"))?;
+    Ok(())
+}
+
 /// A dependency graph built from the `Eip712Types` object. This is used to
 /// safely resolve JSON into a [`crate::DynSolType`] by detecting cycles in the
 /// type graph and traversing the dep graph.
+///
+/// Traversal and resolved types are limited to 80 levels of nesting.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Resolver {
     // INVARIANT: if a type name is in `nodes`, then it is also in `edges`.
@@ -270,7 +312,7 @@ impl Resolver {
     /// used by [`Resolver::resolve`], because [`crate::DynSolType`] cannot
     /// represent recursive types as concrete values.
     fn detect_cycle(&self, type_name: &str) -> Result<()> {
-        match self.detect_cycle_inner(type_name, &mut DfsContext::default(), false) {
+        match self.detect_cycle_inner(type_name, &mut DfsContext::default(), false)? {
             true => Err(Error::circular_dependency(type_name)),
             false => Ok(()),
         }
@@ -291,7 +333,7 @@ impl Resolver {
     ///
     /// [EIP-712]: https://eips.ethereum.org/EIPS/eip-712
     fn detect_cycle_permissive(&self, type_name: &str) -> Result<()> {
-        match self.detect_cycle_inner(type_name, &mut DfsContext::default(), true) {
+        match self.detect_cycle_inner(type_name, &mut DfsContext::default(), true)? {
             true => Err(Error::circular_dependency(type_name)),
             false => Ok(()),
         }
@@ -302,16 +344,17 @@ impl Resolver {
         type_name: &str,
         context: &mut DfsContext<'a>,
         allow_self_refs: bool,
-    ) -> bool {
-        let Some(ty) = self.nodes.get(type_name) else { return false };
+    ) -> Result<bool> {
+        let Some(ty) = self.nodes.get(type_name) else { return Ok(false) };
 
         // Detect cycle.
         if context.stack.contains(type_name) {
-            return true;
+            return Ok(true);
         }
+        check_type_depth(context.stack.len())?;
         // Mark as visited.
         if !context.visited.insert(ty) {
-            return false;
+            return Ok(false);
         }
 
         let edges = self.edges(ty);
@@ -323,14 +366,14 @@ impl Resolver {
                 if allow_self_refs && edge == type_name {
                     continue;
                 }
-                if self.detect_cycle_inner(edge, context, allow_self_refs) {
-                    return true;
+                if self.detect_cycle_inner(edge, context, allow_self_refs)? {
+                    return Ok(true);
                 }
             }
             context.stack.remove(type_name);
         }
 
-        false
+        Ok(false)
     }
 
     /// Ingest types from an EIP-712 `encodeType`.
@@ -374,8 +417,11 @@ impl Resolver {
     fn linearize_into<'a>(
         &'a self,
         resolution: &mut Vec<&'a TypeDef>,
+        seen: &mut HashSet<&'a str>,
         root_type: &str,
+        depth: usize,
     ) -> Result<()> {
+        check_type_depth(depth)?;
         let this_type = match self.nodes.get(root_type) {
             Some(ty) => ty,
             None if RootType::parse_eip712(root_type)
@@ -385,10 +431,10 @@ impl Resolver {
             }
             None => return Err(Error::missing_type(root_type)),
         };
-        if !resolution.contains(&this_type) {
+        if seen.insert(&this_type.type_name) {
             resolution.push(this_type);
             for edge in self.edges(this_type) {
-                self.linearize_into(resolution, edge)?;
+                self.linearize_into(resolution, seen, edge, depth + 1)?;
             }
         }
 
@@ -402,25 +448,40 @@ impl Resolver {
     pub fn linearize(&self, type_name: &str) -> Result<Vec<&TypeDef>> {
         self.detect_cycle_permissive(type_name)?;
         let mut resolution = vec![];
-        self.linearize_into(&mut resolution, type_name)?;
+        let mut seen = HashSet::default();
+        self.linearize_into(&mut resolution, &mut seen, type_name, 0)?;
         Ok(resolution)
     }
 
     /// Resolve a typename into a [`crate::DynSolType`] or return an error if
     /// the type is missing, or contains a circular dependency.
+    ///
+    /// The expanded type is limited to 1024 nodes, including array wrappers and
+    /// repeated references to the same named type.
     pub fn resolve(&self, type_name: &str) -> Result<DynSolType> {
         self.detect_cycle(type_name)?;
-        self.resolve_unchecked(&TypeSpecifier::parse_eip712(type_name)?)
+        let mut remaining = MAX_RESOLVED_TYPE_NODES;
+        self.resolve_unchecked(&TypeSpecifier::parse_eip712(type_name)?, 0, &mut remaining)
     }
 
     /// Resolve a type into a [`crate::DynSolType`] without checking for cycles.
-    fn resolve_unchecked(&self, type_spec: &TypeSpecifier<'_>) -> Result<DynSolType> {
+    fn resolve_unchecked(
+        &self,
+        type_spec: &TypeSpecifier<'_>,
+        depth: usize,
+        remaining: &mut usize,
+    ) -> Result<DynSolType> {
+        let depth = depth.saturating_add(type_spec.sizes.len());
+        check_type_depth(depth)?;
+        // Charge before allocating the node or any of its array wrappers.
+        charge_type_nodes(remaining, 1)?;
+        charge_type_nodes(remaining, type_spec.sizes.len())?;
         let ty = match &type_spec.stem {
-            TypeStem::Root(root) => self.resolve_root_type(*root),
+            TypeStem::Root(root) => self.resolve_root_type(*root, depth, remaining),
             TypeStem::Tuple(tuple) => tuple
                 .types
                 .iter()
-                .map(|ty| self.resolve_unchecked(ty))
+                .map(|ty| self.resolve_unchecked(ty, depth + 1, remaining))
                 .collect::<Result<_, _>>()
                 .map(DynSolType::Tuple),
         }?;
@@ -429,8 +490,15 @@ impl Resolver {
 
     /// Resolves a root Solidity type into either a basic type or a custom
     /// struct.
-    fn resolve_root_type(&self, root_type: RootType<'_>) -> Result<DynSolType> {
-        if let Ok(ty) = root_type.resolve() {
+    fn resolve_root_type(
+        &self,
+        root_type: RootType<'_>,
+        depth: usize,
+        remaining: &mut usize,
+    ) -> Result<DynSolType> {
+        if let Some(ty) =
+            may_be_basic_type(root_type.span()).then(|| root_type.resolve().ok()).flatten()
+        {
             return Ok(ty);
         }
 
@@ -439,11 +507,18 @@ impl Resolver {
             .get(root_type.span())
             .ok_or_else(|| Error::missing_type(root_type.span()))?;
 
-        let prop_names: Vec<_> = ty.prop_names().map(str::to_string).collect();
+        // Every property needs at least one node. Reject oversized structs before
+        // collecting their fields or copying property names.
+        if ty.props.len() > *remaining {
+            return Err(Error::custom("EIP-712 type expansion limit exceeded"));
+        }
         let tuple: Vec<_> = ty
             .prop_types()
-            .map(|ty| self.resolve_unchecked(&TypeSpecifier::parse_eip712(ty)?))
+            .map(|ty| {
+                self.resolve_unchecked(&TypeSpecifier::parse_eip712(ty)?, depth + 1, remaining)
+            })
             .collect::<Result<_, _>>()?;
+        let prop_names: Vec<_> = ty.prop_names().map(str::to_string).collect();
 
         Ok(DynSolType::CustomStruct { name: ty.type_name.clone(), prop_names, tuple })
     }
@@ -482,9 +557,10 @@ impl Resolver {
             DynSolValue::CustomStruct { tuple: inner, .. }
             | DynSolValue::Array(inner)
             | DynSolValue::FixedArray(inner) => {
+                let type_hashes = &mut TypeHashes::default();
                 let mut bytes = Vec::with_capacity(inner.len() * 32);
                 for v in inner {
-                    bytes.extend(self.eip712_data_word(v)?.as_slice());
+                    bytes.extend(self.data_word(v, type_hashes)?.as_slice());
                 }
                 Some(bytes)
             }
@@ -498,6 +574,14 @@ impl Resolver {
     /// rules. Atomic types are encoded as-is, while non-atomic types are
     /// encoded as their `encodeData` hash.
     pub fn eip712_data_word(&self, value: &DynSolValue) -> Result<B256> {
+        self.data_word(value, &mut TypeHashes::default())
+    }
+
+    fn data_word<'a>(
+        &self,
+        value: &'a DynSolValue,
+        type_hashes: &mut TypeHashes<'a>,
+    ) -> Result<B256> {
         if let Some(word) = value.as_word() {
             return Ok(word);
         }
@@ -505,21 +589,35 @@ impl Resolver {
         let mut bytes;
         let to_hash = match value {
             DynSolValue::CustomStruct { name, tuple, .. } => {
-                bytes = self.type_hash(name)?.to_vec();
+                let type_hash = match type_hashes.get(name.as_str()) {
+                    Some(type_hash) => *type_hash,
+                    None => {
+                        let type_hash = self.type_hash(name)?;
+                        type_hashes.insert(name, type_hash);
+                        type_hash
+                    }
+                };
+                bytes = Vec::with_capacity((tuple.len() + 1) * 32);
+                bytes.extend_from_slice(type_hash.as_slice());
                 for v in tuple {
-                    bytes.extend(self.eip712_data_word(v)?.as_slice());
+                    bytes.extend(self.data_word(v, type_hashes)?.as_slice());
                 }
                 &bytes[..]
             }
             DynSolValue::Array(inner) | DynSolValue::FixedArray(inner) => {
                 bytes = Vec::with_capacity(inner.len() * 32);
                 for v in inner {
-                    bytes.extend(self.eip712_data_word(v)?);
+                    bytes.extend(self.data_word(v, type_hashes)?);
                 }
                 &bytes[..]
             }
             DynSolValue::Bytes(buf) => buf,
             DynSolValue::String(s) => s.as_bytes(),
+            // EIP-712 has no tuple type, but the resolver accepts tuple property
+            // types like `(uint256,uint256)`.
+            DynSolValue::Tuple(_) => {
+                return Err(Error::custom("EIP-712 does not support tuple types"));
+            }
             _ => unreachable!("all types are words or covered in the match"),
         };
         Ok(keccak256(to_hash))
@@ -569,6 +667,81 @@ mod tests {
     use serde_json::json;
 
     #[test]
+    fn property_names_must_be_identifiers() {
+        assert!(PropertyDef::new("uint256", "nonce").is_ok());
+        for name in ["", "a b", "a-b", "1a", "to,uint256 ignored"] {
+            assert!(PropertyDef::new("uint256", name).is_err(), "{name:?}");
+        }
+
+        // Both used to encode as `Transfer(address to,uint256 ignored,uint256 nonce)`.
+        for (first, second) in [("to,uint256 ignored", "nonce"), ("to", "ignored,uint256 nonce")] {
+            let types = json!({
+                "Transfer": [{ "type": "address", "name": first }, { "type": "uint256", "name": second }]
+            });
+            assert!(serde_json::from_value::<Eip712Types>(types).is_err());
+        }
+    }
+
+    #[test]
+    fn tuple_property_errors() {
+        let mut graph = Resolver::default();
+        graph.ingest_string("Foo((uint256,uint256) a)").unwrap();
+        let value = graph.resolve("Foo").unwrap().coerce_json(&json!({ "a": [1, 2] })).unwrap();
+        let expected = Error::custom("EIP-712 does not support tuple types");
+        // Both used to panic on the tuple.
+        assert_eq!(graph.encode_data(&value).unwrap_err(), expected);
+        let array = DynSolValue::Array(vec![DynSolValue::Tuple(vec![true.into()])]);
+        assert_eq!(graph.eip712_data_word(&array).unwrap_err(), expected);
+    }
+
+    #[test]
+    fn shared_expansion_budget() {
+        let mut graph = Resolver::default();
+        graph.ingest(
+            TypeDef::new("Leaf", vec![PropertyDef::new("uint256", "value").unwrap()]).unwrap(),
+        );
+        graph.ingest(
+            TypeDef::new(
+                "Pair",
+                vec![
+                    PropertyDef::new("Leaf", "left").unwrap(),
+                    PropertyDef::new("Leaf", "right").unwrap(),
+                ],
+            )
+            .unwrap(),
+        );
+
+        // Pair + two independent Leaf structs + their uint256 fields.
+        let spec = TypeSpecifier::parse_eip712("Pair").unwrap();
+        assert!(graph.resolve_unchecked(&spec, 0, &mut 5).is_ok());
+        assert_eq!(
+            graph.resolve_unchecked(&spec, 0, &mut 4).unwrap_err(),
+            Error::custom("EIP-712 type expansion limit exceeded"),
+        );
+        let spec = TypeSpecifier::parse_eip712("Pair[2][]").unwrap();
+        assert!(graph.resolve_unchecked(&spec, 0, &mut 7).is_ok());
+        assert!(graph.resolve_unchecked(&spec, 0, &mut 6).is_err());
+        assert!(graph.resolve("Pair").is_ok());
+    }
+
+    #[test]
+    fn public_expansion_budget_boundary() {
+        let mut graph = Resolver::default();
+        let props: Vec<_> = (0..MAX_RESOLVED_TYPE_NODES - 1)
+            .map(|i| PropertyDef::new("uint256", format!("field{i}")).unwrap())
+            .collect();
+        graph.ingest(TypeDef::new("Record", props.clone()).unwrap());
+        assert!(graph.resolve("Record").is_ok());
+        let mut props = props;
+        props.push(PropertyDef::new("uint256", "extra").unwrap());
+        graph.ingest(TypeDef::new("Record", props).unwrap());
+        assert_eq!(
+            graph.resolve("Record").unwrap_err(),
+            Error::custom("EIP-712 type expansion limit exceeded")
+        );
+    }
+
+    #[test]
     fn it_detects_cycles() {
         let mut graph = Resolver::default();
         graph.ingest(TypeDef::new_unchecked(
@@ -584,7 +757,39 @@ mod tests {
             vec![PropertyDef::new_unchecked("A", "myA")],
         ));
 
-        assert!(graph.detect_cycle_inner("A", &mut DfsContext::default(), false));
+        assert!(graph.detect_cycle_inner("A", &mut DfsContext::default(), false).unwrap());
+    }
+
+    #[test]
+    fn type_depth_limits() {
+        fn chain(len: usize) -> Resolver {
+            let mut graph = Resolver::default();
+            for i in 0..len {
+                let next = if i + 1 == len { "uint256".into() } else { format!("T{}", i + 1) };
+                graph.ingest(
+                    TypeDef::new(format!("T{i}"), vec![PropertyDef::new(next, "value").unwrap()])
+                        .unwrap(),
+                );
+            }
+            graph
+        }
+
+        let graph = chain(MAX_TYPE_DEPTH - 1);
+        assert!(graph.resolve("T0").is_ok());
+        assert!(graph.encode_type("T0").is_ok());
+        assert!(graph.type_hash("T0").is_ok());
+
+        let graph = chain(MAX_TYPE_DEPTH + 1);
+        let expected = Error::from(alloy_sol_types::Error::RecursionLimitExceeded(MAX_TYPE_DEPTH));
+        assert_eq!(graph.resolve("T0").unwrap_err(), expected);
+        assert_eq!(graph.linearize("T0").unwrap_err(), expected);
+        assert_eq!(graph.encode_type("T0").unwrap_err(), expected);
+        assert_eq!(graph.type_hash("T0").unwrap_err(), expected);
+
+        // Array wrappers contribute to the resolved value's depth as well.
+        let graph = chain(2);
+        let ty = format!("T0{}", "[]".repeat(MAX_TYPE_DEPTH - 2));
+        assert_eq!(graph.resolve(&ty).unwrap_err(), expected);
     }
 
     #[test]
@@ -613,6 +818,30 @@ mod tests {
             graph.encode_type("A").unwrap(),
             "A(C myC,B myB)B(C myC)C(uint256 myUint,uint256 myUint2)"
         );
+    }
+
+    #[test]
+    fn linearizes_wide_type_graph() {
+        // Keep interpreted runs small while checking the same traversal and deduplication behavior.
+        const DEPENDENCIES: usize = if cfg!(miri) { 32 } else { 2048 };
+        let mut graph = Resolver::default();
+        let mut props = Vec::with_capacity(DEPENDENCIES + 1);
+        for i in 0..DEPENDENCIES {
+            let name = format!("T{i}");
+            graph.ingest(TypeDef::new(name.clone(), Vec::new()).unwrap());
+            props.push(PropertyDef::new(name, format!("field{i}")).unwrap());
+        }
+        // A repeated dependency must appear only once in the linearized output.
+        props.push(PropertyDef::new("T0", "again").unwrap());
+        graph.ingest(TypeDef::new("Root", props).unwrap());
+
+        let defs = graph.linearize("Root").unwrap();
+        assert_eq!(defs.len(), DEPENDENCIES + 1);
+        assert_eq!(defs[0].type_name(), "Root");
+        for (i, def) in defs[1..].iter().enumerate() {
+            assert_eq!(def.type_name(), format!("T{i}"));
+        }
+        assert!(graph.encode_type("Root").is_ok());
     }
 
     #[test]
@@ -649,6 +878,36 @@ mod tests {
         assert_eq!(graph.resolve("A"), Ok(a));
         assert_eq!(graph.resolve("B"), Ok(b));
         assert_eq!(graph.resolve("C"), Ok(c));
+    }
+
+    #[test]
+    fn basic_types_take_precedence_over_structs() {
+        let mut graph = Resolver::default();
+        for name in ["uint256", "bytesFoo", "intern", "Person"] {
+            let props = vec![PropertyDef::new_unchecked("bool", "flag")];
+            graph.ingest(TypeDef::new_unchecked(name.to_string(), props));
+        }
+
+        assert_eq!(graph.resolve("uint256"), Ok(DynSolType::Uint(256)));
+        for name in ["bytesFoo", "intern", "Person"] {
+            let ty = DynSolType::CustomStruct {
+                name: name.to_string(),
+                prop_names: vec!["flag".to_string()],
+                tuple: vec![DynSolType::Bool],
+            };
+            assert_eq!(graph.resolve(name), Ok(ty), "{name}");
+        }
+    }
+
+    #[test]
+    fn enum_property_types_encode_as_uint8() {
+        let mut graph = Resolver::default();
+        graph.ingest(TypeDef::new_unchecked(
+            "Foo".to_string(),
+            vec![PropertyDef::new_unchecked("Contract.Enum", "x")],
+        ));
+        assert_eq!(graph.encode_type("Foo").unwrap(), "Foo(Contract.Enum x)");
+        assert_eq!(graph.linearize("Foo").unwrap().len(), 1);
     }
 
     #[test]

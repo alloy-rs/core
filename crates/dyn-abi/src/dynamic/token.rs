@@ -1,11 +1,9 @@
-use crate::{Decoder, DynSolValue, Error, Result, Word};
-use alloc::{borrow::Cow, boxed::Box, vec::Vec};
-use alloy_primitives::try_vec;
-use alloy_sol_types::abi::token::{PackedSeqToken, Token, WordToken};
+use crate::{DynSolValue, Word};
+use alloc::{borrow::Cow, boxed::Box};
 
 /// A dynamic token.
 ///
-/// Equivalent to an enum over all types implementing [`Token`].
+/// Equivalent to an enum over all types implementing [`Token`](alloy_sol_types::abi::token::Token).
 // NOTE: do not derive `Hash` for this type. The derived version is not
 // compatible with the current `PartialEq` implementation. If manually
 // implementing `Hash`, ignore the `template` prop in the `DynSeq` variant
@@ -20,9 +18,7 @@ pub enum DynToken<'a> {
         /// The contents of the dynamic sequence.
         contents: Cow<'a, [Self]>,
         /// The type template of the dynamic sequence.
-        /// This is used only when decoding. It indicates what the token type
-        /// of the sequence is. During tokenization of data, the type of the
-        /// contents is known, so this is not needed.
+        /// Unused; always `None` for tokens created by this crate.
         #[doc(hidden)]
         template: Option<Box<Self>>,
     },
@@ -135,97 +131,5 @@ impl<'a> DynToken<'a> {
             Self::FixedSeq(inner, _) => inner.iter().any(Self::is_dynamic),
             Self::DynSeq { .. } | Self::PackedSeq(_) => true,
         }
-    }
-
-    /// Decodes from a decoder, populating the structure with the decoded data.
-    #[inline]
-    pub(crate) fn decode_populate(&mut self, dec: &mut Decoder<'a, '_>) -> Result<()> {
-        match self {
-            Self::Word(w) => *w = WordToken::decode_from(dec)?.0,
-            Self::FixedSeq(..) => {
-                if self.is_dynamic() {
-                    let mut child = dec.take_indirection()?;
-                    self.decode_sequence_populate(&mut child)?;
-                } else {
-                    let offset = {
-                        let mut child = dec.raw_child()?;
-                        self.decode_sequence_populate(&mut child)?;
-                        dec.offset_from_child(&child)
-                    };
-                    dec.set_offset(offset);
-                }
-            }
-            Self::DynSeq { contents, template } => {
-                let mut child = dec.take_indirection()?;
-                let size = child.take_offset()?;
-                if size == 0 {
-                    // should already be empty from `empty_dyn_token`
-                    debug_assert!(contents.is_empty());
-                    return Ok(());
-                }
-
-                // This expect is safe because this is only invoked after
-                // `empty_dyn_token()` which always sets template
-                let template = template.take().expect("no template for dynamic sequence");
-                let minimum_words = template.minimum_words();
-                if minimum_words == 0 {
-                    // Arrays of zero-sized elements can encode an attacker-controlled length
-                    // without corresponding element data. Preserve the empty representation used
-                    // by zero-sized top-level arrays instead of allocating `size` elements.
-                    debug_assert!(contents.is_empty());
-                    return Ok(());
-                }
-
-                // This appears to be an unclarity in the Solidity spec. The
-                // spec specifies that offsets are relative to the beginning of
-                // `enc(X)`. But known-good test vectors have it relative to the
-                // word AFTER the array size
-                let mut child = child.raw_child()?;
-
-                let required_words =
-                    minimum_words.checked_mul(size).ok_or(alloy_sol_types::Error::Overrun)?;
-                if child.remaining_words() < required_words {
-                    return Err(alloy_sol_types::Error::Overrun.into());
-                }
-
-                let mut new_tokens = if size == 1 {
-                    // re-use the box allocation
-                    unsafe { Vec::from_raw_parts(Box::into_raw(template), 1, 1) }
-                } else {
-                    child.reserve_elements::<Self>(size)?;
-                    try_vec![*template; size]?
-                };
-
-                for t in &mut new_tokens {
-                    t.decode_populate(&mut child)?;
-                }
-
-                *contents = new_tokens.into();
-            }
-            Self::PackedSeq(buf) => *buf = PackedSeqToken::decode_from(dec)?.0,
-        }
-        Ok(())
-    }
-
-    /// Decode a sequence from the decoder, populating the data by consuming
-    /// decoder words.
-    #[inline]
-    pub(crate) fn decode_sequence_populate(&mut self, dec: &mut Decoder<'a, '_>) -> Result<()> {
-        match self {
-            Self::FixedSeq(buf, size) => {
-                buf.to_mut().iter_mut().take(*size).try_for_each(|item| item.decode_populate(dec))
-            }
-            Self::DynSeq { .. } => self.decode_populate(dec),
-            _ => Err(Error::custom("Called decode_sequence_populate on non-sequence token")),
-        }
-    }
-
-    /// Decode a single item of this type, as a sequence of length 1.
-    #[inline]
-    pub(crate) fn decode_single_populate(&mut self, dec: &mut Decoder<'a, '_>) -> Result<()> {
-        // This is what
-        // `Self::FixedSeq(vec![self.clone()], 1).decode_populate()`
-        // would do, so we skip the allocation.
-        self.decode_populate(dec)
     }
 }
