@@ -67,6 +67,41 @@ fn renamed_items_and_parameters() {
     assert_eq!(error.inputs[0].name, "exactErrorInput");
 }
 
+mod rename_namespace {
+    use alloy_sol_types::{JsonAbiExt, SolStruct, sol};
+    use pretty_assertions::assert_eq;
+
+    sol! {
+        #![sol(abi)]
+
+        struct Global {
+            uint256 my_field;
+        }
+
+        #[sol(rename_all = "camelCase")]
+        contract Scoped {
+            struct Local {
+                Global the_global;
+            }
+
+            function use_local(Local the_local, Global other_global);
+        }
+    }
+
+    #[test]
+    fn rename_all_in_declaring_namespace() {
+        assert_eq!(Global::eip712_encode_type(), "Global(uint256 my_field)");
+        assert_eq!(
+            Scoped::Local::eip712_encode_type(),
+            "local(Global theGlobal)Global(uint256 my_field)"
+        );
+
+        let function = Scoped::use_localCall::abi();
+        assert_eq!(function.inputs[0].components[0].components[0].name, "my_field");
+        assert_eq!(function.inputs[1].components[0].name, "my_field");
+    }
+}
+
 #[test]
 fn equal_abis() {
     let contract = Contract::abi::contract();

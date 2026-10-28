@@ -122,7 +122,7 @@ impl ToAbi for ast::ItemFunction {
 
     fn to_dyn_abi(&self, cx: &ExpCtxt<'_>) -> Self::DynAbi {
         Function {
-            name: cx.function_sol_name(self),
+            name: cx.sol_name(self.name(), &self.attrs),
             inputs: params_to_dyn_abi(&self.parameters, &cx.current_namespace, cx, &self.attrs),
             outputs: self
                 .returns
@@ -139,7 +139,7 @@ impl ToAbi for ast::ItemError {
 
     fn to_dyn_abi(&self, cx: &ExpCtxt<'_>) -> Self::DynAbi {
         Error {
-            name: cx.error_sol_name(self),
+            name: cx.sol_name(&self.name, &self.attrs),
             inputs: params_to_dyn_abi(&self.parameters, &cx.current_namespace, cx, &self.attrs),
         }
     }
@@ -150,7 +150,7 @@ impl ToAbi for ast::ItemEvent {
 
     fn to_dyn_abi(&self, cx: &ExpCtxt<'_>) -> Self::DynAbi {
         Event {
-            name: cx.event_sol_name(self),
+            name: cx.sol_name(&self.name, &self.attrs),
             inputs: self
                 .parameters
                 .iter()
@@ -170,8 +170,10 @@ fn params_to_dyn_abi<P>(
     params
         .iter()
         .map(|param| {
-            let name =
-                param.name.as_ref().map(|name| cx.child_sol_name(name, &param.attrs, parent_attrs));
+            let name = param
+                .name
+                .as_ref()
+                .map(|name| cx.child_sol_name(name, &param.attrs, parent_attrs, namespace));
             ty_to_param(name, &param.ty, namespace, cx)
         })
         .collect()
@@ -182,7 +184,10 @@ fn event_param_to_dyn_abi(
     cx: &ExpCtxt<'_>,
     parent_attrs: &[syn::Attribute],
 ) -> EventParam {
-    let name = param.name.as_ref().map(|name| cx.child_sol_name(name, &param.attrs, parent_attrs));
+    let name = param
+        .name
+        .as_ref()
+        .map(|name| cx.child_sol_name(name, &param.attrs, parent_attrs, &cx.current_namespace));
     let Param { ty, name, components, internal_type } =
         ty_to_param(name, &param.ty, &cx.current_namespace, cx);
     EventParam { ty, name, indexed: param.is_indexed(), internal_type, components }
@@ -221,7 +226,14 @@ fn ty_to_param(
             let (_, item) =
                 cx.all_items.get_entry_by_name_and_namespace(item_namespace, path.last()).unwrap();
             // Canonical names of types declared in a contract are qualified by the contract name.
-            let mut canonical = path.last().as_string();
+            let mut canonical = match item {
+                ast::Item::Contract(_) => path.last().as_string(),
+                item => cx.sol_name_in_namespace(
+                    path.last(),
+                    item.attrs().map_or(&[], Vec::as_slice),
+                    item_namespace,
+                ),
+            };
             if let Some(contract) = item_namespace {
                 canonical = format!("{}.{canonical}", contract.as_string());
             }

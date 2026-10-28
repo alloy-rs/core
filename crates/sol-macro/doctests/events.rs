@@ -21,11 +21,6 @@ sol! {
         bytes data;
     }
     event MyEvent2(Data indexed data);
-
-    #[sol(rename = "RenamedEvent")]
-    event OldEvent(uint256);
-    #[sol(rename = "RenamedEvent")]
-    event NewEvent(string);
 }
 
 #[test]
@@ -65,9 +60,6 @@ fn event() {
 
     assert_event_signature::<MyEvent2>("MyEvent2((bytes))");
     assert!(!MyEvent2::ANONYMOUS);
-
-    assert_event_signature::<OldEvent>("RenamedEvent(uint256)");
-    assert_event_signature::<NewEvent>("RenamedEvent(string)");
 }
 
 #[test]

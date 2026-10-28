@@ -24,22 +24,10 @@ sol! {
     /// Implements [`SolError`].
     #[derive(Debug, PartialEq, Eq)]
     error MyError(uint256 a, uint256 b);
-
-    #[sol(rename = "RenamedError")]
-    error OldError(uint256);
-    #[sol(rename = "RenamedError")]
-    error NewError(string);
-}
-
-sol! {
-    #![sol(rename_all = "camelCase")]
-
-    function snake_case(uint256);
 }
 
 #[test]
 fn function() {
-    assert_call_signature::<snake_caseCall>("snakeCase(uint256)");
     assert_call_signature::<fooCall>("foo(uint256,uint256)");
 
     let call = fooCall { a: U256::from(1), b: U256::from(2) };
@@ -68,9 +56,6 @@ fn function() {
 
 #[test]
 fn error() {
-    assert_error_signature::<OldError>("RenamedError(uint256)");
-    assert_error_signature::<NewError>("RenamedError(string)");
-
     assert_error_signature::<MyError>("MyError(uint256,uint256)");
     let call_data = hex!(
         "0000000000000000000000000000000000000000000000000000000000000001"

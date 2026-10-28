@@ -111,12 +111,13 @@ use syn::parse_macro_input;
 /// literals are also supported, such as `concat!` and `env!`.
 ///
 /// List of all `#[sol(...)]` supported values:
-/// - `rename = <string literal>`: overrides the Solidity name while preserving the parsed Rust
-///   identifier. This can disambiguate overloads with semantic Rust names and preserve ABI names
-///   that are not valid Rust identifiers.
-/// - `rename_all = <casing>`: applies a casing convention to child Solidity names. Supported
-///   casings are `camelCase`, `kebab-case`, `PascalCase`, `SCREAMING_SNAKE_CASE`, `snake_case`,
-///   `lowercase`, `UPPERCASE`, and `verbatim`.
+/// - `rename = <string literal>`: overrides the Solidity name of an item, parameter or field,
+///   keeping the parsed Rust identifier. Not inherited by child items.
+/// - `rename_all = <casing>`: applies a casing convention to the Solidity names of the annotated
+///   item's children, or of all items when set on the file or a contract. Types and events are
+///   renamed too, which changes their selectors and EIP-712 names. An explicit `rename` wins.
+///   Supported casings are `camelCase`, `kebab-case`, `PascalCase`, `SCREAMING_SNAKE_CASE`,
+///   `snake_case`, `lowercase`, `UPPERCASE`, and `verbatim`.
 /// - `rpc [ = <bool = false>]` (contracts and alike only): generates a structs with methods to
 ///   construct `eth_call`s to an on-chain contract through Ethereum JSON RPC, similar to the
 ///   default behavior of [`abigen`]. This makes use of the [`alloy-contract`] crate.

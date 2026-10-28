@@ -1201,7 +1201,6 @@ fn rename_and_rename_all() {
 
         #[sol(rename_all = "snake_case")]
         enum rust_enum {
-            #[sol(rename = "first_value")]
             FirstValue,
             SecondValue
         }

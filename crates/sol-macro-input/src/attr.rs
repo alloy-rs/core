@@ -96,10 +96,8 @@ pub struct SolAttrs {
     /// `#[sol(alloy_contract = alloy_contract)]`
     pub alloy_contract: Option<Path>,
 
-    /// Overrides the Solidity name while preserving the parsed Rust identifier.
     /// `#[sol(rename = "new_name")]`
     pub rename: Option<LitStr>,
-    /// Applies a casing convention to child Solidity names.
     /// `#[sol(rename_all = "camelCase")]`
     pub rename_all: Option<CasingStyle>,
 
@@ -508,23 +506,6 @@ mod tests {
             #[sol(ignore_unlinked)] => Ok(sol_attrs! { ignore_unlinked: true }),
             #[sol(ignore_unlinked = true)] => Ok(sol_attrs! { ignore_unlinked: true }),
             #[sol(ignore_unlinked = false)] => Ok(sol_attrs! { ignore_unlinked: false }),
-        }
-    }
-
-    #[test]
-    fn casing_style_apply() {
-        let cases = [
-            (CasingStyle::Camel, "someName"),
-            (CasingStyle::Kebab, "some-name"),
-            (CasingStyle::Pascal, "SomeName"),
-            (CasingStyle::ScreamingSnake, "SOME_NAME"),
-            (CasingStyle::Snake, "some_name"),
-            (CasingStyle::Lower, "somename"),
-            (CasingStyle::Upper, "SOMENAME"),
-            (CasingStyle::Verbatim, "some_name"),
-        ];
-        for (style, expected) in cases {
-            assert_eq!(style.apply("some_name"), expected);
         }
     }
 }

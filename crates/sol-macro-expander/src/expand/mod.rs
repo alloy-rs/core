@@ -135,7 +135,10 @@ pub struct ExpCtxt<'ast> {
     overloads: IndexMap<Option<SolIdent>, IndexMap<String, String>>,
 
     attrs: SolAttrs,
-    root_attrs: SolAttrs,
+    /// `rename_all` styles by namespace; the `None` key is the file-level style.
+    rename_all: HashMap<Option<SolIdent>, CasingStyle>,
+    /// Invalid `#[sol(..)]` attributes on parameters and fields, which are not parsed elsewhere.
+    attr_errors: Vec<syn::Error>,
     crates: ExternCrates,
     ast: &'ast File,
 
@@ -155,7 +158,8 @@ impl<'ast> ExpCtxt<'ast> {
             overloaded_items: Default::default(),
             overloads: IndexMap::new(),
             attrs: SolAttrs::default(),
-            root_attrs: SolAttrs::default(),
+            rename_all: HashMap::new(),
+            attr_errors: Vec::new(),
             crates: ExternCrates::default(),
             ast,
             current_namespace: None,
@@ -186,7 +190,7 @@ impl<'ast> ExpCtxt<'ast> {
 
         self.visit_file(self.ast);
 
-        if let Err(e) = self.validate_item_attributes() {
+        if let Err(e) = utils::combine_errors(std::mem::take(&mut self.attr_errors)) {
             tokens.extend(e.into_compile_error());
             abort = true;
         }
@@ -235,7 +239,9 @@ impl<'ast> ExpCtxt<'ast> {
 impl ExpCtxt<'_> {
     fn parse_file_attributes(&mut self) -> Result<()> {
         let (attrs, others) = self.ast.split_attrs()?;
-        self.root_attrs = attrs.clone();
+        if let Some(style) = attrs.rename_all {
+            self.rename_all.insert(None, style);
+        }
         self.attrs = attrs;
         self.crates.fill(&self.attrs);
 
@@ -243,51 +249,10 @@ impl ExpCtxt<'_> {
         utils::combine_errors(errs)
     }
 
-    fn validate_item_attributes(&self) -> Result<()> {
-        fn validate_params<P>(params: &Parameters<P>) -> Result<()> {
-            for param in params {
-                SolAttrs::parse(&param.attrs)?;
-            }
-            Ok(())
+    fn validate_attrs(&mut self, attrs: &[Attribute]) {
+        if let Err(e) = SolAttrs::parse(attrs) {
+            self.attr_errors.push(e);
         }
-
-        fn validate_item(item: &Item) -> Result<()> {
-            if let Some(attrs) = item.attrs() {
-                SolAttrs::parse(attrs)?;
-            }
-            match item {
-                Item::Contract(contract) => {
-                    for item in &contract.body {
-                        validate_item(item)?;
-                    }
-                }
-                Item::Enum(enumm) => {
-                    for variant in &enumm.variants {
-                        SolAttrs::parse(&variant.attrs)?;
-                    }
-                }
-                Item::Error(error) => validate_params(&error.parameters)?,
-                Item::Event(event) => {
-                    for param in &event.parameters {
-                        SolAttrs::parse(&param.attrs)?;
-                    }
-                }
-                Item::Function(function) => {
-                    validate_params(&function.parameters)?;
-                    if let Some(returns) = &function.returns {
-                        validate_params(&returns.returns)?;
-                    }
-                }
-                Item::Struct(strukt) => validate_params(&strukt.fields)?,
-                _ => {}
-            }
-            Ok(())
-        }
-
-        for item in &self.ast.items {
-            validate_item(item)?;
-        }
-        Ok(())
     }
 
     fn mk_types_map(&mut self) {
@@ -443,6 +408,7 @@ impl ExpCtxt<'_> {
                 let overloaded_items = this.overloaded_items.0.get(namespace).unwrap();
                 let all_orig_names: Vec<_> =
                     overloaded_items.values().flatten().filter_map(|f| f.name()).collect();
+
                 for functions in overloaded_items.values().filter(|fs| fs.len() >= 2) {
                     // check for same parameters
                     for (i, &a) in functions.iter().enumerate() {
@@ -502,12 +468,20 @@ impl<'ast> Visit<'ast> for ExpCtxt<'ast> {
         }
 
         if let Item::Contract(contract) = item {
+            if let Some(style) = sol_attrs(&contract.attrs).rename_all {
+                self.rename_all.insert(Some(contract.name.clone()), style);
+            }
             self.with_namespace(Some(contract.name.clone()), |this| {
                 ast::visit::visit_item(this, item);
             });
         } else {
             ast::visit::visit_item(self, item);
         }
+    }
+
+    fn visit_variable_declaration(&mut self, var: &'ast VariableDeclaration) {
+        self.validate_attrs(&var.attrs);
+        ast::visit::visit_variable_declaration(self, var);
     }
 
     fn visit_item_function(&mut self, function: &'ast ItemFunction) {
@@ -523,6 +497,9 @@ impl<'ast> Visit<'ast> for ExpCtxt<'ast> {
         self.overloaded_items
             .get_or_insert_default(self.current_namespace.clone(), event.name.clone())
             .push(OverloadedItem::Event(event));
+        for param in &event.parameters {
+            self.validate_attrs(&param.attrs);
+        }
         ast::visit::visit_item_event(self, event);
     }
 
@@ -532,6 +509,11 @@ impl<'ast> Visit<'ast> for ExpCtxt<'ast> {
             .push(OverloadedItem::Error(error));
         ast::visit::visit_item_error(self, error);
     }
+}
+
+/// Parses the `#[sol(..)]` attributes, ignoring errors, which are reported by the item's expansion.
+fn sol_attrs(attrs: &[Attribute]) -> SolAttrs {
+    SolAttrs::parse(attrs).map(|(attrs, _)| attrs).unwrap_or_default()
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -708,24 +690,23 @@ impl<'ast> ExpCtxt<'ast> {
         Ident::new(&new_ident, function_name.span())
     }
 
-    /// Returns the `rename_all` style inherited by items in the current namespace.
-    fn scope_rename_all(&self) -> Option<CasingStyle> {
-        self.rename_all_for_namespace(&self.current_namespace)
+    /// Returns the `rename_all` style for items declared in `namespace`.
+    fn rename_all(&self, namespace: &Option<SolIdent>) -> Option<CasingStyle> {
+        self.rename_all.get(namespace).or_else(|| self.rename_all.get(&None)).copied()
     }
 
-    fn rename_all_for_namespace(&self, namespace: &Option<SolIdent>) -> Option<CasingStyle> {
-        let root = self.root_attrs.rename_all;
-        let Some(namespace) = namespace.as_ref() else { return root };
-        self.ast
-            .items
-            .iter()
-            .find_map(|item| match item {
-                Item::Contract(contract) if contract.name == *namespace => {
-                    SolAttrs::parse(&contract.attrs).ok().and_then(|(attrs, _)| attrs.rename_all)
-                }
-                _ => None,
-            })
-            .or(root)
+    fn sol_name_with_style(
+        name: &SolIdent,
+        attrs: &[Attribute],
+        rename_all: Option<CasingStyle>,
+    ) -> String {
+        if let Some(rename) = sol_attrs(attrs).rename {
+            rename.value()
+        } else if let Some(rename_all) = rename_all {
+            rename_all.apply(&name.as_string())
+        } else {
+            name.as_string()
+        }
     }
 
     fn sol_name_in_namespace(
@@ -734,14 +715,7 @@ impl<'ast> ExpCtxt<'ast> {
         attrs: &[Attribute],
         namespace: &Option<SolIdent>,
     ) -> String {
-        let attrs = SolAttrs::parse(attrs).ok().map(|(attrs, _)| attrs).unwrap_or_default();
-        if let Some(rename) = attrs.rename {
-            rename.value()
-        } else if let Some(rename_all) = self.rename_all_for_namespace(namespace) {
-            rename_all.apply(&name.as_string())
-        } else {
-            name.as_string()
-        }
+        Self::sol_name_with_style(name, attrs, self.rename_all(namespace))
     }
 
     /// Returns the Solidity name for a Rust item name and its local attributes.
@@ -749,45 +723,27 @@ impl<'ast> ExpCtxt<'ast> {
         self.sol_name_in_namespace(name, attrs, &self.current_namespace)
     }
 
-    /// Returns the Solidity name for a child such as a parameter or struct field.
+    /// Returns the Solidity name for a child such as a parameter or struct field, whose parent is
+    /// declared in `namespace`.
     fn child_sol_name(
         &self,
         name: &SolIdent,
         attrs: &[Attribute],
         parent_attrs: &[Attribute],
+        namespace: &Option<SolIdent>,
     ) -> String {
-        let attrs = SolAttrs::parse(attrs).ok().map(|(attrs, _)| attrs).unwrap_or_default();
-        if let Some(rename) = attrs.rename {
-            return rename.value();
-        }
-        let parent = SolAttrs::parse(parent_attrs)
-            .ok()
-            .and_then(|(attrs, _)| attrs.rename_all)
-            .or_else(|| self.scope_rename_all());
-        parent.map_or_else(|| name.as_string(), |style| style.apply(&name.as_string()))
+        let rename_all = sol_attrs(parent_attrs).rename_all.or_else(|| self.rename_all(namespace));
+        Self::sol_name_with_style(name, attrs, rename_all)
     }
 
-    fn function_sol_name(&self, function: &ItemFunction) -> String {
-        self.sol_name(function.name(), &function.attrs)
-    }
-
-    fn error_sol_name(&self, error: &ItemError) -> String {
-        self.sol_name(&error.name, &error.attrs)
-    }
-
-    fn event_sol_name(&self, event: &ItemEvent) -> String {
-        self.sol_name(&event.name, &event.attrs)
-    }
-
-    fn custom_sol_name(&self, name: &SolPath) -> Option<String> {
-        let (namespace, item) = self.try_item_in_namespace(name, &self.current_namespace)?;
-        let ident = item.name()?;
-        let attrs = item.attrs()?;
-        Some(self.sol_name_in_namespace(ident, attrs, namespace))
+    /// Returns the Solidity name of the item `name` resolves to in `namespace`.
+    fn custom_sol_name(&self, name: &SolPath, namespace: &Option<SolIdent>) -> Option<String> {
+        let (namespace, item) = self.try_item_in_namespace(name, namespace)?;
+        Some(self.sol_name_in_namespace(item.name()?, item.attrs()?, namespace))
     }
 
     fn function_signature(&self, function: &ItemFunction) -> String {
-        self.signature(self.function_sol_name(function), &function.parameters)
+        self.signature(self.sol_name(function.name(), &function.attrs), &function.parameters)
     }
 
     fn function_selector(&self, function: &ItemFunction) -> ExprArray<u8> {
@@ -795,7 +751,7 @@ impl<'ast> ExpCtxt<'ast> {
     }
 
     fn error_signature(&self, error: &ItemError) -> String {
-        self.signature(self.error_sol_name(error), &error.parameters)
+        self.signature(self.sol_name(&error.name, &error.attrs), &error.parameters)
     }
 
     fn error_selector(&self, error: &ItemError) -> ExprArray<u8> {
@@ -803,7 +759,7 @@ impl<'ast> ExpCtxt<'ast> {
     }
 
     fn event_signature(&self, event: &ItemEvent) -> String {
-        self.signature(self.event_sol_name(event), &event.params())
+        self.signature(self.sol_name(&event.name, &event.attrs), &event.params())
     }
 
     fn event_selector(&self, event: &ItemEvent) -> ExprArray<u8> {

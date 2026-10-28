@@ -202,7 +202,6 @@ impl JsonAbi {
                 if its.is_empty() {
                     continue;
                 }
-                out.push_rename_attr(name);
                 out.push_str("library ");
                 out.push_ident(name);
                 out.push_str(" {\n");
@@ -217,11 +216,9 @@ impl JsonAbi {
             }
         }
 
-        let root_name = String::from(out.name);
-        out.push_rename_attr(&root_name);
         out.push_str("interface ");
-        if !root_name.is_empty() {
-            out.push_ident(&root_name);
+        if !out.name.is_empty() {
+            out.push_ident(out.name);
             out.push(' ');
         }
         out.push('{');
@@ -476,7 +473,6 @@ impl ToSol for It<'_, '_> {
                     if i > 0 {
                         out.push_str(", ");
                     }
-                    out.push_rename_attr(variant);
                     out.push_ident(variant);
                 }
                 out.push_str(" }");
@@ -737,9 +733,7 @@ fn param(
     components: &[Param],
     out: &mut SolPrinter<'_>,
 ) {
-    if !name.is_empty() {
-        out.push_rename_attr(name);
-    }
+    out.push_rename_attr(name);
     let mut contract_name = None::<&str>;
     let mut type_name = type_name;
     let storage;

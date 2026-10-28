@@ -36,7 +36,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
     let (field_types, field_names): (Vec<_>, Vec<_>) =
         fields.iter().map(|f| (cx.expand_type(&f.ty), f.name.as_ref().unwrap())).unzip();
 
-    let eip712_encode_type_fns = expand_encode_type_fns(cx, fields, name, &s.attrs);
+    let eip712_encode_type_fns = expand_encode_type_fns(cx, s);
 
     let tokenize_impl = expand_tokenize(fields, cx, super::FieldKind::Original);
 
@@ -196,15 +196,11 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
     Ok(tokens)
 }
 
-fn expand_encode_type_fns(
-    cx: &ExpCtxt<'_>,
-    fields: &ast::Parameters<syn::token::Semi>,
-    name: &SolIdent,
-    attrs: &[syn::Attribute],
-) -> TokenStream {
-    let fields = substitute_non_structs(cx, fields, &cx.current_namespace);
+fn expand_encode_type_fns(cx: &ExpCtxt<'_>, s: &ItemStruct) -> TokenStream {
+    let name = &s.name;
+    let fields = substitute_non_structs(cx, &s.fields, &cx.current_namespace);
 
-    let root = eip712_signature(cx, &fields, &cx.sol_name(name, attrs), attrs);
+    let root = eip712_signature(cx, s, &fields, &cx.current_namespace);
 
     let custom = fields.iter().filter(|f| f.ty.has_custom());
     let n_custom = custom.clone().count();
@@ -266,55 +262,41 @@ fn expand_encode_type_fns(
     }
 }
 
+/// Returns the EIP-712 signature of `s` with Solidity names, resolving names in `namespace`.
 fn eip712_signature(
     cx: &ExpCtxt<'_>,
+    s: &ItemStruct,
     fields: &ast::Parameters<syn::token::Semi>,
-    name: &str,
-    attrs: &[syn::Attribute],
+    namespace: &Option<SolIdent>,
 ) -> String {
-    let mut out = String::with_capacity(name.len() + 2 + fields.len() * 32);
-    out.push_str(name);
-    out.push('(');
-    for (i, field) in fields.iter().enumerate() {
-        if i > 0 {
-            out.push(',');
+    let fields = fields.iter().map(|field| {
+        let mut out = String::new();
+        fmt_eip712_type(cx, &field.ty, namespace, &mut out);
+        if let Some(name) = &field.name {
+            write!(out, " {}", cx.child_sol_name(name, &field.attrs, &s.attrs, namespace)).unwrap();
         }
-        fmt_eip712_type(cx, &field.ty, &mut out);
-        if let Some(field_name) = &field.name {
-            out.push(' ');
-            out.push_str(&cx.child_sol_name(field_name, &field.attrs, attrs));
-        }
-    }
-    out.push(')');
-    out
+        out
+    });
+    format!(
+        "{}({})",
+        cx.sol_name_in_namespace(&s.name, &s.attrs, namespace),
+        fields.collect::<Vec<_>>().join(",")
+    )
 }
 
-fn fmt_eip712_type(cx: &ExpCtxt<'_>, ty: &Type, out: &mut String) {
+fn fmt_eip712_type(cx: &ExpCtxt<'_>, ty: &Type, namespace: &Option<SolIdent>, out: &mut String) {
     match ty {
-        Type::Custom(name) => {
-            if let Some(name) = cx.custom_sol_name(name) {
-                out.push_str(&name);
-            } else {
-                write!(out, "{}", name.last()).unwrap();
-            }
-        }
+        Type::Custom(name) => match cx.custom_sol_name(name, namespace) {
+            Some(name) => out.push_str(&name),
+            None => write!(out, "{}", name.last()).unwrap(),
+        },
         Type::Array(array) => {
-            fmt_eip712_type(cx, &array.ty, out);
+            fmt_eip712_type(cx, &array.ty, namespace, out);
             out.push('[');
             if let Some(size) = array.size_lit() {
                 out.push_str(size.base10_digits());
             }
             out.push(']');
-        }
-        Type::Tuple(tuple) => {
-            out.push('(');
-            for (i, ty) in tuple.types.iter().enumerate() {
-                if i > 0 {
-                    out.push(',');
-                }
-                fmt_eip712_type(cx, ty, out);
-            }
-            out.push(')');
         }
         ty => write!(out, "{ty}").unwrap(),
     }
@@ -404,12 +386,7 @@ fn collect_components(
         }
 
         let s_fields = substitute_non_structs(cx, &s.fields, struct_namespace);
-        components.insert(eip712_signature(
-            cx,
-            &s_fields,
-            &cx.sol_name(&s.name, &s.attrs),
-            &s.attrs,
-        ));
+        components.insert(eip712_signature(cx, s, &s_fields, struct_namespace));
         stack.push(key);
         collect_components(cx, &s_fields, struct_namespace, stack, done, components)?;
         stack.pop();
