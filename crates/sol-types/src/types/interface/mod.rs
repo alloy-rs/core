@@ -80,7 +80,7 @@ pub trait SolInterface: Sized {
     ///
     /// This is the same as [`abi_decode_raw`](Self::abi_decode_raw), but also validates the
     /// decoded variant's data. See
-    /// [`SolType::abi_decode_validate`](crate::SolType::abi_decode_validate) for what is checked.
+    /// [`AbiDecoderConfig::validate`] for what is checked.
     /// An unknown selector is rejected either way.
     // TODO: Deprecate in favor of a validating decoder configuration.
     // #[deprecated(note = "use a validating decoder configuration")]
@@ -134,7 +134,7 @@ pub trait SolInterface: Sized {
     /// ABI-decodes the given data into one of the variants of `self`, with validation.
     ///
     /// This is the same as [`abi_decode`](Self::abi_decode), but also validates the decoded
-    /// variant's data. See [`SolType::abi_decode_validate`](crate::SolType::abi_decode_validate)
+    /// variant's data. See [`AbiDecoderConfig::validate`]
     /// for what is checked. An unknown selector is rejected either way.
     #[inline]
     // TODO: Deprecate in favor of a validating decoder configuration.

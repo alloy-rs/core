@@ -202,7 +202,7 @@ pub trait SolEvent: Sized {
     /// ABI-decodes the dynamic data of this event from the given buffer, with validation.
     ///
     /// This is the same as [`abi_decode_data`](Self::abi_decode_data), but also validates the
-    /// decoded data. See [`SolType::abi_decode_validate`] for
+    /// decoded data. See [`AbiDecoderConfig::validate`] for
     /// what is checked.
     #[inline]
     // TODO: Deprecate in favor of a validating decoder configuration.
@@ -243,7 +243,7 @@ pub trait SolEvent: Sized {
     ///
     /// This is the same as [`decode_raw_log`](Self::decode_raw_log), but also validates the
     /// decoded topics and data. See
-    /// [`SolType::abi_decode_validate`] for what is checked.
+    /// [`AbiDecoderConfig::validate`] for what is checked.
     // TODO: Deprecate in favor of a validating decoder configuration.
     // #[deprecated(note = "use a validating decoder configuration")]
     fn decode_raw_log_validate<I, D>(topics: I, data: &[u8]) -> Result<Self>
