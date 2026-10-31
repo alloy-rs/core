@@ -52,6 +52,9 @@ macro_rules! fb_alias_maps {
 
 fb_alias_maps!(Selector<4>, Address<20>, B256<32>, U256<32>);
 
+#[cfg(alloy_fixed_hash)]
+type FbBuildHasherInner = foldhash::fast::FixedState;
+#[cfg(not(alloy_fixed_hash))]
 type FbBuildHasherInner = foldhash::fast::RandomState;
 type FbHasherInner = foldhash::fast::FoldHasher<'static>;
 
