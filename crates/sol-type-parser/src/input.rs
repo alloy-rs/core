@@ -47,6 +47,9 @@ pub fn check_recursion<'a, O>(
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct RecursionCheck {
     current: usize,
+    /// Whether tuple members may be followed by a name, as in `tuple(address who, uint256
+    /// amount)`. Set while parsing a parameter, so bare type strings stay strict.
+    component_names: bool,
 }
 
 pub(crate) const LIMIT: usize = 80;
@@ -71,5 +74,16 @@ impl RecursionCheck {
 
     const fn exit(&mut self) {
         self.current -= 1;
+    }
+
+    /// Sets whether tuple members may be named, returning the previous value.
+    pub(crate) const fn set_component_names(&mut self, allowed: bool) -> bool {
+        let previous = self.component_names;
+        self.component_names = allowed;
+        previous
+    }
+
+    pub(crate) const fn component_names(&self) -> bool {
+        self.component_names
     }
 }
