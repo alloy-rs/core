@@ -82,6 +82,7 @@ eip712 = ["alloy-sol-types?/eip712-serde", "alloy-dyn-abi?/eip712"]
 more-tuple-impls = ["alloy-sol-types/more-tuple-impls"]
 
 postgres = ["std", "alloy-primitives/postgres"]
+utoipa = ["std", "alloy-primitives/utoipa"]
 arbitrary = [
     "std",
     "alloy-primitives/arbitrary",

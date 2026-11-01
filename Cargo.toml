@@ -56,6 +56,10 @@ serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
 # schemars
 schemars = { version = "1", default-features = false }
 
+# utoipa
+# `default-features = false` does not compile: utoipa 6.0.0 requires its `macros` feature.
+utoipa = "6"
+
 # rkyv
 rkyv = "0.8"
 

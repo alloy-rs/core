@@ -69,6 +69,9 @@ serde = { workspace = true, optional = true, features = ["derive"] }
 # schemars
 schemars = { workspace = true, optional = true, default-features = false }
 
+# utoipa
+utoipa = { workspace = true, optional = true }
+
 # rkyv
 rkyv = { workspace = true, optional = true }
 
@@ -192,6 +195,7 @@ serde = [
     "rand?/serde",
 ]
 schemars = ["dep:schemars"]
+utoipa = ["std", "dep:utoipa"]
 borsh = ["dep:borsh", "ruint/borsh"]
 
 allocative = ["dep:allocative"]
