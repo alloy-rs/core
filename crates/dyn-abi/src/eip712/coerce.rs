@@ -10,7 +10,7 @@ use alloy_primitives::{Address, Function, I256, U256, hex};
 ///
 /// Every coerced struct owns a copy of its metadata, so without a limit a long type name and a
 /// long array of small structs would multiply into a very large allocation. Each struct is also
-/// charged for its fixed-size [`DynSolValue`].
+/// charged for its fixed-size [`DynSolValue`]s and [`String`] headers.
 const MAX_COERCED_METADATA_BYTES: usize = 16 * 1024 * 1024;
 
 impl DynSolType {
@@ -186,7 +186,8 @@ pub(crate) fn custom_struct(
     budget: &mut usize,
 ) -> Result<DynSolValue> {
     if let Some(map) = value.as_object() {
-        let metadata_len = size_of::<DynSolValue>()
+        let metadata_len = (1 + prop_names.len()) * size_of::<DynSolValue>()
+            + size_of_val(prop_names)
             + name.len()
             + prop_names.iter().map(String::len).sum::<usize>();
         *budget = budget
@@ -366,6 +367,34 @@ mod tests {
         let over_limit = json!(vec![json!({ "flag": true }); 300]);
         assert_eq!(
             ty.coerce_json(&over_limit),
+            Err(Error::custom("EIP-712 struct metadata limit exceeded"))
+        );
+    }
+
+    #[test]
+    fn struct_metadata_budget_is_shared_across_containers() {
+        let prop_names: Vec<_> = (0..1000).map(|i| format!("p{i}")).collect();
+        let ty = DynSolType::Tuple(vec![
+            DynSolType::FixedArray(
+                Box::new(DynSolType::CustomStruct {
+                    name: "S".to_string(),
+                    prop_names: prop_names.clone(),
+                    tuple: vec![DynSolType::Bool; 1000],
+                }),
+                2,
+            );
+            2
+        ]);
+        let s: serde_json::Map<_, _> =
+            prop_names.iter().map(|p| (p.clone(), json!(true))).collect();
+        let pair = json!([s, s]);
+
+        assert!(ty.coerce_json(&json!([pair, pair])).is_ok());
+
+        let big = DynSolType::Array(Box::new(ty));
+        let value = json!(vec![json!([pair, pair]); 200]);
+        assert_eq!(
+            big.coerce_json(&value),
             Err(Error::custom("EIP-712 struct metadata limit exceeded"))
         );
     }
