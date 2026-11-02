@@ -1,7 +1,7 @@
 //! Functions which generate Rust code from the Solidity AST.
 
 use crate::utils::{self, ExprArray};
-use alloy_sol_macro_input::{ContainsSolAttrs, SolAttrs};
+use alloy_sol_macro_input::{CasingStyle, ContainsSolAttrs, SolAttrs, derives_mapped};
 use ast::{
     EventParameter, File, Item, ItemError, ItemEvent, ItemFunction, Parameters, SolIdent, SolPath,
     Spanned, Type, VariableDeclaration, Visit, VisitMut, visit_mut,
@@ -135,6 +135,10 @@ pub struct ExpCtxt<'ast> {
     overloads: IndexMap<Option<SolIdent>, IndexMap<String, String>>,
 
     attrs: SolAttrs,
+    /// `rename_all` styles by namespace; the `None` key is the file-level style.
+    rename_all: HashMap<Option<SolIdent>, CasingStyle>,
+    /// Invalid `#[sol(..)]` attributes on parameters and fields, which are not parsed elsewhere.
+    attr_errors: Vec<syn::Error>,
     crates: ExternCrates,
     ast: &'ast File,
 
@@ -154,6 +158,8 @@ impl<'ast> ExpCtxt<'ast> {
             overloaded_items: Default::default(),
             overloads: IndexMap::new(),
             attrs: SolAttrs::default(),
+            rename_all: HashMap::new(),
+            attr_errors: Vec::new(),
             crates: ExternCrates::default(),
             ast,
             current_namespace: None,
@@ -179,11 +185,17 @@ impl<'ast> ExpCtxt<'ast> {
 
         if let Err(e) = self.parse_file_attributes() {
             tokens.extend(e.into_compile_error());
+            abort = true;
         }
 
         self.visit_file(self.ast);
 
-        if !self.all_items.0.is_empty() {
+        if let Err(e) = utils::combine_errors(std::mem::take(&mut self.attr_errors)) {
+            tokens.extend(e.into_compile_error());
+            abort = true;
+        }
+
+        if !abort && !self.all_items.0.is_empty() {
             self.resolve_custom_types();
             // Selector collisions requires resolved types.
             if self.mk_overloads_map().is_err() || self.check_selector_collisions().is_err() {
@@ -227,11 +239,20 @@ impl<'ast> ExpCtxt<'ast> {
 impl ExpCtxt<'_> {
     fn parse_file_attributes(&mut self) -> Result<()> {
         let (attrs, others) = self.ast.split_attrs()?;
+        if let Some(style) = attrs.rename_all {
+            self.rename_all.insert(None, style);
+        }
         self.attrs = attrs;
         self.crates.fill(&self.attrs);
 
         let errs = others.iter().map(|attr| Error::new_spanned(attr, "unexpected attribute"));
         utils::combine_errors(errs)
+    }
+
+    fn validate_attrs(&mut self, attrs: &[Attribute]) {
+        if let Err(e) = SolAttrs::parse(attrs) {
+            self.attr_errors.push(e);
+        }
     }
 
     fn mk_types_map(&mut self) {
@@ -303,15 +324,16 @@ impl ExpCtxt<'_> {
         }
     }
 
-    /// Checks for function and error selector collisions in the resolved items.
+    /// Checks for function, error and event selector collisions in the resolved items.
+    ///
+    /// Overloads share a Rust name, so this checks every overloaded item and not only the last
+    /// item of each name.
     fn check_selector_collisions(&mut self) -> std::result::Result<(), ()> {
         #[derive(Clone, Copy)]
         enum SelectorKind {
             Function,
             Error,
-            // We can ignore events since their selectors are 32 bytes which are unlikely to
-            // collide.
-            // Event,
+            Event,
         }
 
         impl fmt::Display for SelectorKind {
@@ -319,7 +341,7 @@ impl ExpCtxt<'_> {
                 match self {
                     Self::Function => "function",
                     Self::Error => "error",
-                    // Self::Event => "event",
+                    Self::Event => "event",
                 }
                 .fmt(f)
             }
@@ -328,45 +350,66 @@ impl ExpCtxt<'_> {
         let mut result = Ok(());
 
         let mut selectors = vec![HashMap::new(); 3];
-        for (namespace, items) in &self.all_items.clone().0 {
+        for (namespace, items) in &self.overloaded_items.clone().0 {
             self.with_namespace(namespace.clone(), |this| {
                 selectors.iter_mut().for_each(|s| s.clear());
-                for (_, &item) in items {
+
+                let mut candidates = Vec::new();
+                for &item in items.values().flatten() {
                     let (kind, selector) = match item {
-                        Item::Function(function) => {
+                        OverloadedItem::Function(function) => {
                             (SelectorKind::Function, this.function_selector(function))
                         }
-                        Item::Error(error) => (SelectorKind::Error, this.error_selector(error)),
-                        // Item::Event(event) => (SelectorKind::Event, this.event_selector(event)),
-                        _ => continue,
+                        OverloadedItem::Error(error) => {
+                            (SelectorKind::Error, this.error_selector(error))
+                        }
+                        OverloadedItem::Event(event) => {
+                            (SelectorKind::Event, this.event_selector(event))
+                        }
                     };
-                    let selector: [u8; 4] = selector.array.try_into().unwrap();
+                    candidates.push((kind, selector.array, item.span(), item.name().unwrap()));
+                }
+                // Public state variable getters are functions too.
+                for item in this.all_items.0.get(namespace).into_iter().flat_map(|m| m.values()) {
+                    let Item::Variable(var_def) = item else { continue };
+                    let Ok(Some(getter)) = var_def::var_as_function(this, var_def) else {
+                        continue;
+                    };
+                    let selector = this.function_selector(&getter).array;
+                    candidates.push((
+                        SelectorKind::Function,
+                        selector,
+                        var_def.span(),
+                        &var_def.name,
+                    ));
+                }
+
+                for (kind, selector, span, name) in candidates {
                     // 0x00000000 or 0xffffffff are reserved for custom errors.
                     if matches!(kind, SelectorKind::Error)
                         && (selector == [0, 0, 0, 0] || selector == [0xff, 0xff, 0xff, 0xff])
                     {
                         emit_error!(
-                            item.span(),
+                            span,
                             "{kind} selector `{}` is reserved",
-                            hex::encode_prefixed(selector),
+                            hex::encode_prefixed(&selector),
                         );
                         result = Err(());
                         continue;
                     }
                     match selectors[kind as usize].entry(selector) {
                         std::collections::hash_map::Entry::Vacant(entry) => {
-                            entry.insert(item);
+                            entry.insert((span, name));
                         }
                         std::collections::hash_map::Entry::Occupied(entry) => {
                             result = Err(());
-                            let other = *entry.get();
+                            let &(other_span, other_name) = entry.get();
                             emit_error!(
-                                item.span(),
-                                "{kind} selector `{}` collides with `{}`",
-                                hex::encode_prefixed(selector),
-                                other.name().unwrap();
+                                span,
+                                "{kind} selector `{}` collides with `{other_name}`",
+                                hex::encode_prefixed(entry.key());
 
-                                note = other.span() => "other declaration is here";
+                                note = other_span => "other declaration is here";
                             );
                         }
                     }
@@ -425,7 +468,7 @@ impl ExpCtxt<'_> {
                         overloads_map
                             .entry(namespace.clone())
                             .or_default()
-                            .insert(item.signature(this), new_name);
+                            .insert(item.overload_key(this), new_name);
                     }
                 }
             });
@@ -447,12 +490,20 @@ impl<'ast> Visit<'ast> for ExpCtxt<'ast> {
         }
 
         if let Item::Contract(contract) = item {
+            if let Some(style) = sol_attrs(&contract.attrs).rename_all {
+                self.rename_all.insert(Some(contract.name.clone()), style);
+            }
             self.with_namespace(Some(contract.name.clone()), |this| {
                 ast::visit::visit_item(this, item);
             });
         } else {
             ast::visit::visit_item(self, item);
         }
+    }
+
+    fn visit_variable_declaration(&mut self, var: &'ast VariableDeclaration) {
+        self.validate_attrs(&var.attrs);
+        ast::visit::visit_variable_declaration(self, var);
     }
 
     fn visit_item_function(&mut self, function: &'ast ItemFunction) {
@@ -468,6 +519,9 @@ impl<'ast> Visit<'ast> for ExpCtxt<'ast> {
         self.overloaded_items
             .get_or_insert_default(self.current_namespace.clone(), event.name.clone())
             .push(OverloadedItem::Event(event));
+        for param in &event.parameters {
+            self.validate_attrs(&param.attrs);
+        }
         ast::visit::visit_item_event(self, event);
     }
 
@@ -477,6 +531,11 @@ impl<'ast> Visit<'ast> for ExpCtxt<'ast> {
             .push(OverloadedItem::Error(error));
         ast::visit::visit_item_error(self, error);
     }
+}
+
+/// Parses the `#[sol(..)]` attributes, ignoring errors, which are reported by the item's expansion.
+fn sol_attrs(attrs: &[Attribute]) -> SolAttrs {
+    SolAttrs::parse(attrs).map(|(attrs, _)| attrs).unwrap_or_default()
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -536,6 +595,11 @@ impl<'a> OverloadedItem<'a> {
             Self::Event(e) => e.span(),
             Self::Error(e) => e.span(),
         }
+    }
+
+    /// Key in the overloads map: renamed items of different kinds can share a signature.
+    fn overload_key(self, cx: &ExpCtxt<'a>) -> String {
+        format!("{} {}", self.desc(), self.signature(cx))
     }
 
     fn signature(self, cx: &ExpCtxt<'a>) -> String {
@@ -620,8 +684,8 @@ impl<'ast> ExpCtxt<'ast> {
     /// Use `.into()` to convert from `&ItemFunction` or `&ItemEvent`.
     fn overloaded_name(&self, item: OverloadedItem<'ast>) -> SolIdent {
         let original_ident = item.name().expect("item has no name");
-        let sig = item.signature(self);
-        match self.overloads.get(&self.current_namespace).and_then(|m| m.get(&sig)) {
+        let key = item.overload_key(self);
+        match self.overloads.get(&self.current_namespace).and_then(|m| m.get(&key)) {
             Some(name) => SolIdent::new_spanned(name, original_ident.span()),
             None => original_ident.clone(),
         }
@@ -653,8 +717,69 @@ impl<'ast> ExpCtxt<'ast> {
         Ident::new(&new_ident, function_name.span())
     }
 
+    /// Returns the `rename_all` style for items declared in `namespace`.
+    fn rename_all(&self, namespace: &Option<SolIdent>) -> Option<CasingStyle> {
+        self.rename_all.get(namespace).or_else(|| self.rename_all.get(&None)).copied()
+    }
+
+    fn sol_name_with_style(
+        name: &SolIdent,
+        attrs: &[Attribute],
+        rename_all: Option<CasingStyle>,
+    ) -> String {
+        if let Some(rename) = sol_attrs(attrs).rename {
+            rename.value()
+        } else if let Some(rename_all) = rename_all {
+            rename_all.apply(&name.as_string())
+        } else {
+            name.as_string()
+        }
+    }
+
+    fn sol_name_in_namespace(
+        &self,
+        name: &SolIdent,
+        attrs: &[Attribute],
+        namespace: &Option<SolIdent>,
+    ) -> String {
+        Self::sol_name_with_style(name, attrs, self.rename_all(namespace))
+    }
+
+    /// Returns the Solidity name for a Rust item name and its local attributes.
+    fn sol_name(&self, name: &SolIdent, attrs: &[Attribute]) -> String {
+        self.sol_name_in_namespace(name, attrs, &self.current_namespace)
+    }
+
+    /// Returns the Solidity name for a child such as a parameter or struct field, whose parent is
+    /// declared in `namespace`.
+    fn child_sol_name(
+        &self,
+        name: &SolIdent,
+        attrs: &[Attribute],
+        parent_attrs: &[Attribute],
+        namespace: &Option<SolIdent>,
+    ) -> String {
+        let rename_all = sol_attrs(parent_attrs).rename_all.or_else(|| self.rename_all(namespace));
+        Self::sol_name_with_style(name, attrs, rename_all)
+    }
+
+    /// Returns the Solidity name of the item `name` resolves to in `namespace`.
+    fn custom_sol_name(&self, name: &SolPath, namespace: &Option<SolIdent>) -> Option<String> {
+        // The generated Rust code resolves a bare name to the type in `namespace` before a global
+        // one, unlike `resolve_entry`. Other items, such as functions, do not bind a type name.
+        let local = (name.len() == 1)
+            .then(|| self.all_items.get_entry_by_name_and_namespace(namespace, name.last()))
+            .flatten()
+            .filter(|(_, item)| {
+                matches!(item, Item::Struct(_) | Item::Enum(_) | Item::Udt(_) | Item::Contract(_))
+            })
+            .map(|(namespace, item)| (namespace, *item));
+        let (namespace, item) = local.or_else(|| self.try_item_in_namespace(name, namespace))?;
+        Some(self.sol_name_in_namespace(item.name()?, item.attrs()?, namespace))
+    }
+
     fn function_signature(&self, function: &ItemFunction) -> String {
-        self.signature(function.name().as_string(), &function.parameters)
+        self.signature(self.sol_name(function.name(), &function.attrs), &function.parameters)
     }
 
     fn function_selector(&self, function: &ItemFunction) -> ExprArray<u8> {
@@ -662,7 +787,7 @@ impl<'ast> ExpCtxt<'ast> {
     }
 
     fn error_signature(&self, error: &ItemError) -> String {
-        self.signature(error.name.as_string(), &error.parameters)
+        self.signature(self.sol_name(&error.name, &error.attrs), &error.parameters)
     }
 
     fn error_selector(&self, error: &ItemError) -> ExprArray<u8> {
@@ -670,7 +795,7 @@ impl<'ast> ExpCtxt<'ast> {
     }
 
     fn event_signature(&self, event: &ItemEvent) -> String {
-        self.signature(event.name.as_string(), &event.params())
+        self.signature(self.sol_name(&event.name, &event.attrs), &event.params())
     }
 
     fn event_selector(&self, event: &ItemEvent) -> ExprArray<u8> {
@@ -839,17 +964,34 @@ impl ExternCrates {
 
 // helper functions
 
+/// Returns whether the attributes derive `Serialize` or `Deserialize`.
+fn derives_serde(attrs: &[Attribute]) -> bool {
+    derives_mapped(attrs).any(|path| {
+        path.segments.last().is_some_and(|s| s.ident == "Serialize" || s.ident == "Deserialize")
+    })
+}
+
 /// Expands a list of parameters into a list of struct fields.
+///
+/// If `serde_parent_attrs` is set, fields whose Solidity name differs from their Rust name get a
+/// `#[serde(rename)]` with the Solidity name. These are the attributes of the parent item, which
+/// derives serde.
 fn expand_fields<'a, P>(
     params: &'a Parameters<P>,
     cx: &'a ExpCtxt<'_>,
+    serde_parent_attrs: Option<&'a [Attribute]>,
 ) -> impl Iterator<Item = TokenStream> + 'a {
-    params.iter().enumerate().map(|(i, var)| {
+    params.iter().enumerate().map(move |(i, var)| {
         let name = anon_name((i, var.name.as_ref()));
         let ty = cx.expand_rust_type(&var.ty);
-        let attrs = &var.attrs;
+        let attrs = var.attrs.iter().filter(|attr| !attr.path().is_ident("sol"));
+        let serde_rename = var.name.as_ref().zip(serde_parent_attrs).and_then(|(name, parent)| {
+            let sol_name = cx.child_sol_name(name, &var.attrs, parent, &cx.current_namespace);
+            (sol_name != name.as_string()).then(|| quote!(#[serde(rename = #sol_name)]))
+        });
         quote! {
             #(#attrs)*
+            #serde_rename
             #[allow(missing_docs)]
             pub #name: #ty
         }

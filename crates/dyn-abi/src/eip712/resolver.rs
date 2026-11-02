@@ -536,7 +536,10 @@ impl Resolver {
             return Err(Error::missing_type(name));
         }
         let mut encoded = defs.into_iter().map(|x| x.eip712_encode_type()).collect::<Vec<_>>();
-        encoded[1..].sort_unstable();
+        // Sort by type name, which differs from sorting the whole definitions when a name contains
+        // `$`.
+        encoded[1..]
+            .sort_unstable_by(|a, b| (a.split('(').next(), a).cmp(&(b.split('(').next(), b)));
 
         let mut output = String::new();
         for ty in encoded {
@@ -970,6 +973,32 @@ mod tests {
         let mut graph = Resolver::default();
         graph.ingest_sol_struct::<MyStruct>();
         assert_eq!(graph.encode_type("MyStruct").unwrap(), MyStruct::eip712_encode_type());
+    }
+
+    #[test]
+    fn encode_type_sorts_by_type_name() {
+        sol!(
+            #[sol(rename = "A$B")]
+            struct Dollar {
+                uint256 a;
+            }
+
+            struct A {
+                uint256 b;
+            }
+
+            struct Root {
+                Dollar dollar;
+                A a;
+            }
+        );
+
+        let mut graph = Resolver::default();
+        graph.ingest_sol_struct::<Root>();
+        assert_eq!(
+            graph.encode_type("Root").unwrap(),
+            "Root(A$B dollar,A a)A(uint256 b)A$B(uint256 a)"
+        );
     }
 
     #[test]

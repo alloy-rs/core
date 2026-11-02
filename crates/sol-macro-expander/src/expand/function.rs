@@ -57,8 +57,8 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
     let call_name = cx.call_name(function);
     let return_name = cx.return_name(function);
 
-    let call_fields = expand_fields(parameters, cx);
-    let return_fields = expand_fields(returns, cx);
+    let call_fields = expand_fields(parameters, cx, None);
+    let return_fields = expand_fields(returns, cx, None);
 
     let call_tuple = expand_tuple_types(parameters.types(), cx).0;
     let return_tuple = expand_tuple_types(returns.types(), cx).0;
@@ -242,7 +242,7 @@ fn expand_constructor(cx: &ExpCtxt<'_>, constructor: &ItemFunction) -> Result<To
     let alloy_sol_types = &cx.crates.sol_types;
 
     let call_name = format_ident!("constructorCall").with_span(constructor.kind.span());
-    let call_fields = expand_fields(parameters, cx);
+    let call_fields = expand_fields(parameters, cx, None);
     let call_tuple = expand_tuple_types(parameters.types(), cx).0;
     let converts = expand_from_into_tuples(&call_name, parameters, cx, FieldKind::Original);
     let tokenize_impl = expand_tokenize(parameters, cx, FieldKind::Original);
