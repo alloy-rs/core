@@ -373,28 +373,26 @@ mod tests {
 
     #[test]
     fn struct_metadata_budget_is_shared_across_containers() {
-        let prop_names: Vec<_> = (0..1000).map(|i| format!("p{i}")).collect();
-        let ty = DynSolType::Tuple(vec![
-            DynSolType::FixedArray(
-                Box::new(DynSolType::CustomStruct {
-                    name: "S".to_string(),
-                    prop_names: prop_names.clone(),
-                    tuple: vec![DynSolType::Bool; 1000],
-                }),
-                2,
-            );
-            2
-        ]);
+        let prop_names: Vec<_> = (0..100).map(|i| format!("p{i}")).collect();
+        let strukt = DynSolType::CustomStruct {
+            name: "S".to_string(),
+            prop_names: prop_names.clone(),
+            tuple: vec![DynSolType::Bool; prop_names.len()],
+        };
+        let ty = DynSolType::Tuple(vec![DynSolType::FixedArray(Box::new(strukt), 2); 2]);
         let s: serde_json::Map<_, _> =
             prop_names.iter().map(|p| (p.clone(), json!(true))).collect();
         let pair = json!([s, s]);
+        let value = json!([pair, pair]);
 
-        assert!(ty.coerce_json(&json!([pair, pair])).is_ok());
-
-        let big = DynSolType::Array(Box::new(ty));
-        let value = json!(vec![json!([pair, pair]); 200]);
+        // Each struct is charged for its name, property names, and fixed-size headers.
+        let per_struct = 101 * size_of::<DynSolValue>()
+            + 100 * size_of::<String>()
+            + 1
+            + prop_names.iter().map(String::len).sum::<usize>();
+        assert!(ty.coerce_json_with_budget(&value, &mut (4 * per_struct)).is_ok());
         assert_eq!(
-            big.coerce_json(&value),
+            ty.coerce_json_with_budget(&value, &mut (4 * per_struct - 1)),
             Err(Error::custom("EIP-712 struct metadata limit exceeded"))
         );
     }
