@@ -3,6 +3,9 @@ use alloc::vec::Vec;
 use core::fmt;
 use serde::de::{self, Visitor};
 
+/// Maximum number of bytes to preallocate from an untrusted `SeqAccess::size_hint`.
+const MAX_PREALLOC: usize = 1024 * 1024;
+
 impl serde::Serialize for Bytes {
     #[inline]
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
@@ -35,7 +38,8 @@ impl<'de> serde::Deserialize<'de> for Bytes {
             }
 
             fn visit_seq<A: de::SeqAccess<'de>>(self, mut seq: A) -> Result<Self::Value, A::Error> {
-                let mut bytes = Vec::with_capacity(seq.size_hint().unwrap_or(0));
+                // Cap the preallocation like serde does, since the hint is untrusted.
+                let mut bytes = Vec::with_capacity(seq.size_hint().unwrap_or(0).min(MAX_PREALLOC));
 
                 while let Some(byte) = seq.next_element()? {
                     bytes.push(byte);
@@ -91,6 +95,33 @@ mod tests {
             serde_json::from_value::<TestCase>(json).unwrap().variable,
             Bytes::from_static(&[0, 1, 2, 3, 4])
         );
+    }
+
+    #[test]
+    fn serde_seq_size_hint_is_capped() {
+        struct HugeHint(u8);
+
+        impl<'de> de::SeqAccess<'de> for HugeHint {
+            type Error = de::value::Error;
+
+            fn next_element_seed<T: de::DeserializeSeed<'de>>(
+                &mut self,
+                seed: T,
+            ) -> Result<Option<T::Value>, Self::Error> {
+                if self.0 == 0 {
+                    return Ok(None);
+                }
+                self.0 -= 1;
+                seed.deserialize(de::value::U8Deserializer::new(self.0)).map(Some)
+            }
+
+            fn size_hint(&self) -> Option<usize> {
+                Some(usize::MAX)
+            }
+        }
+
+        let bytes = Bytes::deserialize(de::value::SeqAccessDeserializer::new(HugeHint(3))).unwrap();
+        assert_eq!(bytes, Bytes::from_static(&[2, 1, 0]));
     }
 
     #[test]
