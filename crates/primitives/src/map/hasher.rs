@@ -36,7 +36,7 @@ pub use rapidhash;
 
 // Default hasher.
 cfg_if! {
-    if #[cfg(all(feature = "map-foldhash", alloy_fixed_hash))] {
+    if #[cfg(alloy_fixed_hash)] {
         type DefaultHashBuilderInner = foldhash::fast::FixedState;
     } else if #[cfg(feature = "map-foldhash")] {
         type DefaultHashBuilderInner = foldhash::fast::RandomState;

@@ -20,8 +20,9 @@
 //!
 //! Building with `--cfg alloy_fixed_hash` (for example through `RUSTFLAGS`) replaces foldhash's
 //! randomly seeded state with a fixed seed, in both [`DefaultHashBuilder`] and [`FbBuildHasher`],
-//! so that hashing and iteration order are identical across runs and processes. This is meant for
-//! fuzzing and deterministic testing, as it removes HashDoS resistance.
+//! so that hashing and iteration order are identical across runs and processes. It takes precedence
+//! over the "map-*" hasher features. This is meant for fuzzing and deterministic testing, as it
+//! removes HashDoS resistance.
 //!
 //! Note that using the types provided in this module may require using different APIs than the
 //! standard library as they might not be generic over the hasher state, such as using
