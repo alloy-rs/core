@@ -1,13 +1,15 @@
 use crate::{
-    Error, Input, Result, RootType, TypeStem, is_valid_identifier, new_input,
+    Error, Input, Result, RootType, TypeStem,
+    ident::identifier_parser,
+    is_valid_identifier, new_input,
     utils::{spanned, str_parser},
 };
 use alloc::vec::Vec;
 use core::num::NonZeroUsize;
 use winnow::{
     ModalResult, Parser,
-    ascii::digit0,
-    combinator::{cut_err, delimited, repeat, trace},
+    ascii::{digit0, space1},
+    combinator::{cut_err, delimited, opt, repeat, trace},
     error::{ErrMode, FromExternalError},
 };
 
@@ -102,6 +104,10 @@ impl<'a> TypeSpecifier<'a> {
             "TypeSpecifier",
             spanned(|input: &mut Input<'a>| {
                 let stem = TypeStem::parser(input)?;
+                if matches!(&stem, TypeStem::Root(root) if root.span() == "address") {
+                    // `address payable` has the same ABI type as `address`.
+                    opt(payable_parser).parse_next(input)?;
+                }
                 let sizes = if input.starts_with('[') {
                     repeat(
                         1..=crate::input::LIMIT,
@@ -188,6 +194,11 @@ impl<'a> TypeSpecifier<'a> {
     pub fn is_array(&self) -> bool {
         !self.sizes.is_empty()
     }
+}
+
+/// Parses ` payable` after `address`, as in `address payable` or `address payable[]`.
+fn payable_parser(input: &mut Input<'_>) -> ModalResult<()> {
+    (space1, identifier_parser.verify(|ident: &str| ident == "payable")).void().parse_next(input)
 }
 
 /// Returns whether the nesting depth of the type is at most [`LIMIT`](crate::input::LIMIT).
@@ -407,5 +418,20 @@ mod test {
     fn parse_type_specifier_colon() {
         // This is an invalid type specifier, as it contains a colon
         let _spec = TypeSpecifier::parse("Test:Message").unwrap_err();
+    }
+
+    #[test]
+    fn parse_address_payable() {
+        let ty = TypeSpecifier::parse("address payable").unwrap();
+        assert_eq!(ty.stem.span(), "address");
+        assert!(ty.sizes.is_empty());
+
+        let ty = TypeSpecifier::parse("address  payable[2][]").unwrap();
+        assert_eq!(ty.stem.span(), "address");
+        assert_eq!(ty.sizes, vec![NonZeroUsize::new(2), None]);
+
+        TypeSpecifier::parse("address payablex").unwrap_err();
+        TypeSpecifier::parse("uint256 payable").unwrap_err();
+        TypeSpecifier::parse("address payable payable").unwrap_err();
     }
 }
