@@ -9,13 +9,14 @@ use alloy_primitives::{Address, Function, I256, U256, hex};
 /// [`DynSolType::coerce_json`] call may copy into the resulting [`DynSolValue`]s.
 ///
 /// Every coerced struct owns a copy of its metadata, so without a limit a long type name and a
-/// long array of small structs would multiply into a very large allocation.
+/// long array of small structs would multiply into a very large allocation. Each struct is also
+/// charged for its fixed-size [`DynSolValue`].
 const MAX_COERCED_METADATA_BYTES: usize = 16 * 1024 * 1024;
 
 impl DynSolType {
     /// Coerce a [`serde_json::Value`] to a [`DynSolValue`] via this type.
     ///
-    /// The struct names and property names copied into the output are limited to 16 MiB in total.
+    /// Returns an error if the struct metadata copied into the output exceeds the limit.
     pub fn coerce_json(&self, value: &serde_json::Value) -> Result<DynSolValue> {
         let mut budget = MAX_COERCED_METADATA_BYTES;
         self.coerce_json_with_budget(value, &mut budget)
@@ -185,7 +186,9 @@ pub(crate) fn custom_struct(
     budget: &mut usize,
 ) -> Result<DynSolValue> {
     if let Some(map) = value.as_object() {
-        let metadata_len = name.len() + prop_names.iter().map(String::len).sum::<usize>();
+        let metadata_len = size_of::<DynSolValue>()
+            + name.len()
+            + prop_names.iter().map(String::len).sum::<usize>();
         *budget = budget
             .checked_sub(metadata_len)
             .ok_or_else(|| Error::custom("EIP-712 struct metadata limit exceeded"))?;
