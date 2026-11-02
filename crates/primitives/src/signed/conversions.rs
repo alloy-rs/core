@@ -35,16 +35,21 @@ impl<const BITS: usize, const LIMBS: usize, const BITS_SRC: usize, const LIMBS_S
     #[inline]
     fn uint_try_from(value: Signed<BITS_SRC, LIMBS_SRC>) -> Result<Self, ToUintError<Self>> {
         let (sign, abs) = value.into_sign_and_abs();
-        let resized = Self::from_raw(Uint::<BITS, LIMBS>::uint_try_from(abs).map_err(signed_err)?);
-        if resized.is_negative() {
-            return Err(ToUintError::ValueNegative(BITS, resized));
-        }
-        Ok(match sign {
-            Sign::Negative => {
-                resized.checked_neg().ok_or(ToUintError::ValueTooLarge(BITS, resized))?
+        let abs = Uint::<BITS, LIMBS>::uint_try_from(abs).map_err(signed_err)?;
+        let resized = Self::from_raw(abs);
+        match sign {
+            // A magnitude of 2^(target bits - 1) has the sign bit set but is the target's `MIN`,
+            // so build negatives from sign and magnitude instead of checking `is_negative()`.
+            Sign::Negative => Self::checked_from_sign_and_abs(Sign::Negative, abs)
+                .ok_or(ToUintError::ValueTooLarge(BITS, resized)),
+            Sign::Positive => {
+                if resized.is_negative() {
+                    Err(ToUintError::ValueNegative(BITS, resized))
+                } else {
+                    Ok(resized)
+                }
             }
-            Sign::Positive => resized,
-        })
+        }
     }
 }
 
@@ -58,24 +63,26 @@ impl<const BITS: usize, const LIMBS: usize, const BITS_TARGET: usize, const LIMB
     ) -> Result<Signed<BITS_TARGET, LIMBS_TARGET>, FromUintError<Signed<BITS_TARGET, LIMBS_TARGET>>>
     {
         let (sign, abs) = self.into_sign_and_abs();
-        let resized = Signed::<BITS_TARGET, LIMBS_TARGET>::from_raw(
+        let abs: Uint<BITS_TARGET, LIMBS_TARGET> =
             Uint::uint_try_to(&abs).map_err(|e| match e {
                 FromUintError::Overflow(b, t, v) => {
                     FromUintError::Overflow(b, Signed(t), Signed(v))
                 }
-            })?,
-        );
-        if resized.is_negative() {
-            return Err(FromUintError::Overflow(BITS_TARGET, resized, Signed::MAX));
+            })?;
+        let resized = Signed::<BITS_TARGET, LIMBS_TARGET>::from_raw(abs);
+        match sign {
+            // A magnitude of 2^(target bits - 1) has the sign bit set but is the target's `MIN`,
+            // so build negatives from sign and magnitude instead of checking `is_negative()`.
+            Sign::Negative => Signed::checked_from_sign_and_abs(Sign::Negative, abs)
+                .ok_or(FromUintError::Overflow(BITS_TARGET, resized, Signed::MAX)),
+            Sign::Positive => {
+                if resized.is_negative() {
+                    Err(FromUintError::Overflow(BITS_TARGET, resized, Signed::MAX))
+                } else {
+                    Ok(resized)
+                }
+            }
         }
-        Ok(match sign {
-            Sign::Negative => resized.checked_neg().ok_or(FromUintError::Overflow(
-                BITS_TARGET,
-                resized,
-                Signed::MAX,
-            ))?,
-            Sign::Positive => resized,
-        })
     }
 }
 
