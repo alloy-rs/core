@@ -103,6 +103,7 @@ impl<'a> ComponentType<'a> {
         let mut props = vec![];
         let mut depth = 1; // 1 to account for the ( in the split above
         let mut last = 0;
+        let mut closed = false;
 
         for (i, c) in props_str.char_indices() {
             match c {
@@ -115,6 +116,7 @@ impl<'a> ComponentType<'a> {
                             props.push(candidate.try_into()?);
                         }
                         last = i + c.len_utf8();
+                        closed = true;
                         break;
                     }
                 }
@@ -124,6 +126,11 @@ impl<'a> ComponentType<'a> {
                 }
                 _ => {}
             }
+        }
+
+        // An unterminated property list would otherwise parse as a type with fewer properties.
+        if !closed {
+            return Err(Error::TypeParser(TypeParserError::invalid_type_string(input)));
         }
 
         Ok(Self { span: &input[..last + name.len() + 1], type_name, props })
@@ -157,7 +164,10 @@ impl<'a> EncodeType<'a> {
         let mut types = vec![];
         let mut remaining = input;
 
-        while let Ok(t) = ComponentType::parse(remaining) {
+        // Every non-whitespace part of the input must be a component type, so that malformed
+        // input is reported instead of being dropped.
+        while !remaining.trim_start().is_empty() {
+            let t = ComponentType::parse(remaining)?;
             remaining = &remaining[t.span.len()..];
             types.push(t);
         }
@@ -254,7 +264,7 @@ mod tests {
         let input = "Foo bar(uint256 x)";
         assert!(ComponentType::parse(input).is_err());
         // Used to panic when converting the parsed component into a `TypeDef`.
-        assert!(EncodeType::parse(input).unwrap().canonicalize().is_err());
+        assert!(EncodeType::parse(input).is_err());
     }
 
     #[test]
@@ -377,9 +387,31 @@ mod tests {
     }
 
     #[test]
+    fn malformed_encode_type_is_rejected() {
+        for input in [
+            "Mail(string a",
+            "Mail(Person p)Person(address w",
+            "Mail(string a)garbage",
+            "Mail(string a) Person",
+        ] {
+            assert!(EncodeType::parse(input).is_err(), "{input:?} should not parse");
+        }
+        assert!(ComponentType::parse("Mail(string a").is_err());
+    }
+
+    #[test]
+    fn encode_type_allows_surrounding_whitespace() {
+        assert_eq!(EncodeType::parse("").unwrap().types, vec![]);
+        assert_eq!(
+            EncodeType::parse("  Mail(string a)\n ").unwrap().canonicalize().unwrap(),
+            "Mail(string a)"
+        );
+    }
+
+    #[test]
     fn invalid_prop_name() {
         assert!(PropDef::parse("uint256 a-b").is_err());
         // Must not panic when converting the parsed component into a `TypeDef`.
-        assert!(EncodeType::parse("Foo(uint256 a-b)").unwrap().canonicalize().is_err());
+        assert!(EncodeType::parse("Foo(uint256 a-b)").is_err());
     }
 }

@@ -148,7 +148,7 @@ pub trait SolValue: SolTypeValue<Self::SolType> {
 
     /// ABI-decode this type from the given data, with validation.
     ///
-    /// See [`SolType::abi_decode_validate`] for more information.
+    /// See [`AbiDecoderConfig::validate`] for more information.
     // TODO: Deprecate in favor of a validating decoder configuration.
     // #[deprecated(note = "use a validating decoder configuration")]
     fn abi_decode_validate(data: &[u8]) -> Result<Self>

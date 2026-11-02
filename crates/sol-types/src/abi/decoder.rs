@@ -136,11 +136,66 @@ impl AbiDecoderConfig {
 
     /// Enables or disables decoded token validation before detokenization.
     ///
-    /// When enabled, high-level ABI decode helpers call the target Solidity
-    /// type's token validator before converting the token into the returned
-    /// Rust value. This rejects dirty bool bytes, invalid strings, and other
-    /// token values that can be decoded from ABI words but do not satisfy the
-    /// target type's validity rules.
+    /// When enabled, the typed decoders, such as
+    /// [`SolType::abi_decode_with_config`](crate::SolType::abi_decode_with_config) and
+    /// [`SolValue::abi_decode_with_config`](crate::SolValue::abi_decode_with_config), call
+    /// [`SolType::type_check`](crate::SolType::type_check) on the decoded token before converting
+    /// it into the returned Rust value. A failed check returns an error,
+    /// usually [`Error::TypeCheckFail`]. The `*_validate` decode methods, such as
+    /// [`SolType::abi_decode_validate`](crate::SolType::abi_decode_validate), are the same as the
+    /// plain methods with this option enabled. This section describes `alloy-sol-types`; dynamic
+    /// decoding in `alloy-dyn-abi` is not covered.
+    ///
+    /// # What is checked
+    ///
+    /// Each decoded value must be valid for its type. This applies to array elements, tuple
+    /// fields, and struct fields as well:
+    ///
+    /// | Type | Rejected |
+    /// | --- | --- |
+    /// | `bool` | any word other than `0` and `1`; without validation, any non-zero word is `true` |
+    /// | `address` | non-zero bytes above the low 20 |
+    /// | `function` | non-zero bytes after the first 24 |
+    /// | `uintN` | non-zero bytes above the low `N / 8` |
+    /// | `intN` | upper bytes that are not the sign extension of the low `N / 8` bytes |
+    /// | `bytesN` | non-zero bytes after the first `N` |
+    /// | `string` | invalid UTF-8; without validation, invalid sequences become `U+FFFD` |
+    /// | `enum` | non-zero bytes above the low byte, and values that are not a variant |
+    /// | user-defined value type | whatever its underlying type rejects, plus any `#[sol(type_check = ...)]` function |
+    ///
+    /// `uint256` and `int256` accept every word, and `bytes` accepts any contents.
+    ///
+    /// # What is not checked
+    ///
+    /// Validation checks values, not layout. Offsets and lengths must still point inside the
+    /// input, as in every decode. Beyond that, validation accepts:
+    ///
+    /// - bytes after the end of the encoding;
+    /// - non-zero or missing padding after the contents of `bytes` and `string`;
+    /// - gaps, overlaps, and reordering between dynamic data areas.
+    ///
+    /// [`strict`](Self::strict) rejects all of these and implies validation. Setting
+    /// [`validate_allow_trailing_bytes`](Self::validate_allow_trailing_bytes) as well accepts
+    /// trailing bytes again and keeps every other strict check.
+    ///
+    /// ```
+    /// use alloy_sol_types::{SolType, abi::AbiDecoderConfig, sol_data::Bool};
+    ///
+    /// // A `bool` word holding 2.
+    /// let mut data = [0u8; 32];
+    /// data[31] = 2;
+    /// assert!(Bool::abi_decode(&data)?);
+    /// let validate = AbiDecoderConfig::new().validate(true);
+    /// assert!(Bool::abi_decode_with_config(&data, validate).is_err());
+    ///
+    /// // Trailing bytes pass validation but not strict decoding.
+    /// let mut data = Bool::abi_encode(&true);
+    /// data.push(0xff);
+    /// assert!(Bool::abi_decode_with_config(&data, validate).is_ok());
+    /// let strict = AbiDecoderConfig::new().strict(true);
+    /// assert!(Bool::abi_decode_with_config(&data, strict).is_err());
+    /// # Ok::<(), alloy_sol_types::Error>(())
+    /// ```
     #[inline]
     pub const fn validate(mut self, validate: bool) -> Self {
         self.validate = validate;
