@@ -736,14 +736,14 @@ mod tests {
 
         // Pair + two independent Leaf structs + their uint256 fields.
         let spec = TypeSpecifier::parse_eip712("Pair").unwrap();
-        assert!(graph.resolve_unchecked(&spec, 0, &mut 5, &mut usize::MAX).is_ok());
+        assert!(graph.resolve_unchecked(&spec, 0, &mut 5, &mut 1_000_000).is_ok());
         assert_eq!(
-            graph.resolve_unchecked(&spec, 0, &mut 4, &mut usize::MAX).unwrap_err(),
+            graph.resolve_unchecked(&spec, 0, &mut 4, &mut 1_000_000).unwrap_err(),
             Error::custom("EIP-712 type expansion limit exceeded"),
         );
         let spec = TypeSpecifier::parse_eip712("Pair[2][]").unwrap();
-        assert!(graph.resolve_unchecked(&spec, 0, &mut 7, &mut usize::MAX).is_ok());
-        assert!(graph.resolve_unchecked(&spec, 0, &mut 6, &mut usize::MAX).is_err());
+        assert!(graph.resolve_unchecked(&spec, 0, &mut 7, &mut 1_000_000).is_ok());
+        assert!(graph.resolve_unchecked(&spec, 0, &mut 6, &mut 1_000_000).is_err());
         assert!(graph.resolve("Pair").is_ok());
     }
 
