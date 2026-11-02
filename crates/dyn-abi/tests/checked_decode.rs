@@ -1,7 +1,10 @@
 //! Public decoder coverage for comparison-mutated arguments.
 
-use alloy_dyn_abi::{DynSolValue, JsonAbiExt};
-use alloy_json_abi::Function;
+use alloy_dyn_abi::{
+    DynSolCall, DynSolType, DynSolValue, ErrorExt, EventExt, FunctionExt, JsonAbiExt,
+};
+use alloy_json_abi::{Error, Event, EventParam, Function};
+use alloy_primitives::{B256, LogData, U256};
 use alloy_sol_types::abi::AbiDecoderConfig;
 
 #[test]
@@ -67,4 +70,112 @@ fn malformed_data_wins_over_invalid_words() {
         function.abi_decode_input_with_config(&data, config).unwrap_err(),
         alloy_sol_types::Error::Overrun.into()
     );
+}
+
+/// A `bool` word that is not 0 or 1.
+const fn dirty_bool() -> [u8; 32] {
+    let mut word = [0u8; 32];
+    word[31] = 2;
+    word
+}
+
+#[test]
+fn type_decoders_validate_words() {
+    let config = AbiDecoderConfig::new().validate_words(true);
+    let data = dirty_bool();
+
+    let ty = DynSolType::Bool;
+    assert_eq!(ty.abi_decode(&data), Ok(DynSolValue::Bool(true)));
+    assert_eq!(
+        ty.abi_decode_with_config(&data, config).unwrap_err(),
+        alloy_sol_types::Error::type_check_fail(&data, "bool").into()
+    );
+    assert_eq!(ty.abi_decode_params(&data), Ok(DynSolValue::Bool(true)));
+    assert!(ty.abi_decode_params_with_config(&data, config).is_err());
+
+    let ty = DynSolType::Tuple(vec![DynSolType::Bool]);
+    assert_eq!(
+        ty.abi_decode_sequence(&data),
+        Ok(DynSolValue::Tuple(vec![DynSolValue::Bool(true)]))
+    );
+    assert!(ty.abi_decode_sequence_with_config(&data, config).is_err());
+    assert!(ty.abi_decode_params_with_config(&data, config).is_err());
+
+    // Nested words, and padding of other word types.
+    let ty = DynSolType::Array(Box::new(DynSolType::Uint(8)));
+    let mut data = DynSolValue::Array(vec![DynSolValue::Uint(U256::from(1), 8)]).abi_encode();
+    assert!(ty.abi_decode_with_config(&data, config).is_ok());
+    data[2 * 32] = 1;
+    assert!(ty.abi_decode(&data).is_ok());
+    assert!(ty.abi_decode_with_config(&data, config).is_err());
+
+    // Canonical data is unaffected, and strict decoding is unsupported.
+    let mut data = dirty_bool();
+    data[31] = 1;
+    let ty = DynSolType::Bool;
+    assert_eq!(ty.abi_decode_with_config(&data, config), Ok(DynSolValue::Bool(true)));
+    assert!(ty.abi_decode_with_config(&data, AbiDecoderConfig::new().strict(true)).is_err());
+}
+
+#[test]
+fn call_decoders_validate_words() {
+    let config = AbiDecoderConfig::new().validate_words(true);
+    let data = dirty_bool();
+
+    let function = Function::parse("f() returns (bool)").unwrap();
+    assert_eq!(function.abi_decode_output(&data).unwrap(), vec![DynSolValue::Bool(true)]);
+    assert!(function.abi_decode_output_with_config(&data, config).is_err());
+
+    let call = DynSolCall::new(
+        Default::default(),
+        vec![DynSolType::Bool],
+        None,
+        vec![DynSolType::Bool].into(),
+    );
+    assert!(call.abi_decode_input(&data).is_ok());
+    assert!(call.abi_decode_input_with_config(&data, config).is_err());
+    assert!(call.abi_decode_output(&data).is_ok());
+    assert!(call.abi_decode_output_with_config(&data, config).is_err());
+}
+
+#[test]
+fn error_decoder_validates_words() {
+    let config = AbiDecoderConfig::new().validate_words(true);
+    let error = Error::parse("E(bool)").unwrap();
+    let mut data = error.selector().to_vec();
+    data.extend_from_slice(&dirty_bool());
+
+    assert_eq!(error.decode_error(&data).unwrap().body, vec![DynSolValue::Bool(true)]);
+    assert!(error.decode_error_with_config(&data, config).is_err());
+}
+
+#[test]
+fn event_decoder_validates_words() {
+    let config = AbiDecoderConfig::new().validate_words(true);
+    let event = Event {
+        name: "E".into(),
+        inputs: vec![
+            EventParam { ty: "bool".into(), indexed: true, ..Default::default() },
+            EventParam { ty: "bool".into(), indexed: false, ..Default::default() },
+        ],
+        anonymous: false,
+    };
+    let clean = B256::with_last_byte(1);
+    let dirty = B256::with_last_byte(2);
+
+    // Dirty body.
+    let topics = [event.selector(), clean];
+    let decoded = event.decode_log_parts(topics, &dirty.0).unwrap();
+    assert_eq!(decoded.body, vec![DynSolValue::Bool(true)]);
+    assert!(event.decode_log_parts_with_config(topics, &dirty.0, config).is_err());
+
+    // Dirty indexed topic.
+    let topics = [event.selector(), dirty];
+    let decoded = event.decode_log_parts(topics, &clean.0).unwrap();
+    assert_eq!(decoded.indexed, vec![DynSolValue::Bool(true)]);
+    assert!(event.decode_log_parts_with_config(topics, &clean.0, config).is_err());
+
+    let log = LogData::new_unchecked(topics.to_vec(), clean.0.into());
+    assert!(event.decode_log(&log).is_ok());
+    assert!(event.decode_log_with_config(&log, config).is_err());
 }

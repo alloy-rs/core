@@ -2,6 +2,7 @@ use crate::{DecodedEvent, DynSolEvent, DynSolType, Error, Result, Specifier};
 use alloc::vec::Vec;
 use alloy_json_abi::Event;
 use alloy_primitives::{B256, LogData};
+use alloy_sol_types::abi::AbiDecoderConfig;
 
 #[allow(unknown_lints, unnameable_types)]
 mod sealed {
@@ -53,7 +54,25 @@ pub trait EventExt: Sealed {
     ///
     /// This function will return an error if the decoded data does not match
     /// the expected input types.
+    #[inline]
     fn decode_log_parts<I>(&self, topics: I, data: &[u8]) -> Result<DecodedEvent>
+    where
+        I: IntoIterator<Item = B256>,
+    {
+        self.decode_log_parts_with_config(topics, data, AbiDecoderConfig::new())
+    }
+
+    /// Decodes the given log info according to this item's input types, with the given decoder
+    /// configuration.
+    ///
+    /// The validation options also apply to indexed topics of word types. Strict decoding is not
+    /// supported.
+    fn decode_log_parts_with_config<I>(
+        &self,
+        topics: I,
+        data: &[u8],
+        config: AbiDecoderConfig,
+    ) -> Result<DecodedEvent>
     where
         I: IntoIterator<Item = B256>;
 
@@ -62,16 +81,34 @@ pub trait EventExt: Sealed {
     /// See [`decode_log`](EventExt::decode_log).
     #[inline]
     fn decode_log(&self, log: &LogData) -> Result<DecodedEvent> {
-        self.decode_log_parts(log.topics().iter().copied(), &log.data)
+        self.decode_log_with_config(log, AbiDecoderConfig::new())
+    }
+
+    /// Decodes the given log object according to this item's input types, with the given decoder
+    /// configuration.
+    ///
+    /// See [`decode_log_parts_with_config`](EventExt::decode_log_parts_with_config).
+    #[inline]
+    fn decode_log_with_config(
+        &self,
+        log: &LogData,
+        config: AbiDecoderConfig,
+    ) -> Result<DecodedEvent> {
+        self.decode_log_parts_with_config(log.topics().iter().copied(), &log.data, config)
     }
 }
 
 impl EventExt for Event {
-    fn decode_log_parts<I>(&self, topics: I, data: &[u8]) -> Result<DecodedEvent>
+    fn decode_log_parts_with_config<I>(
+        &self,
+        topics: I,
+        data: &[u8],
+        config: AbiDecoderConfig,
+    ) -> Result<DecodedEvent>
     where
         I: IntoIterator<Item = B256>,
     {
-        self.resolve()?.decode_log_parts(topics, data)
+        self.resolve()?.decode_log_parts_with_config(topics, data, config)
     }
 }
 

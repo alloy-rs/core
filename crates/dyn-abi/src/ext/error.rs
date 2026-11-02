@@ -2,6 +2,7 @@ use crate::{DynSolError, Specifier};
 use alloc::vec::Vec;
 use alloy_json_abi::Error;
 use alloy_primitives::{Selector, keccak256};
+use alloy_sol_types::abi::AbiDecoderConfig;
 
 #[allow(unknown_lints, unnameable_types)]
 mod sealed {
@@ -27,11 +28,27 @@ impl Specifier<DynSolError> for Error {
 /// Provides error encoding and decoding for the [`Error`] type.
 pub trait ErrorExt: Sealed {
     /// Decode the error from the given data.
-    fn decode_error(&self, data: &[u8]) -> crate::Result<crate::DecodedError>;
+    #[inline]
+    fn decode_error(&self, data: &[u8]) -> crate::Result<crate::DecodedError> {
+        self.decode_error_with_config(data, AbiDecoderConfig::new())
+    }
+
+    /// Decode the error from the given data, with the given decoder configuration.
+    ///
+    /// Strict decoding is not supported.
+    fn decode_error_with_config(
+        &self,
+        data: &[u8],
+        config: AbiDecoderConfig,
+    ) -> crate::Result<crate::DecodedError>;
 }
 
 impl ErrorExt for alloy_json_abi::Error {
-    fn decode_error(&self, data: &[u8]) -> crate::Result<crate::DecodedError> {
-        self.resolve()?.decode_error(data)
+    fn decode_error_with_config(
+        &self,
+        data: &[u8],
+        config: AbiDecoderConfig,
+    ) -> crate::Result<crate::DecodedError> {
+        self.resolve()?.decode_error_with_config(data, config)
     }
 }
