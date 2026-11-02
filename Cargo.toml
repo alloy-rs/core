@@ -29,6 +29,7 @@ unreachable_pub = "warn"
 unused_must_use = "warn"
 redundant_lifetimes = "warn"
 unnameable_types = "warn"
+unexpected_cfgs = { level = "warn", check-cfg = ["cfg(alloy_fixed_hash)"] }
 
 [workspace.lints.rustdoc]
 all = "warn"
