@@ -5,9 +5,27 @@ use alloc::{
 };
 use alloy_primitives::{Address, Function, I256, U256, hex};
 
+/// Maximum number of bytes of struct metadata (struct names and property names) that one
+/// [`DynSolType::coerce_json`] call may copy into the resulting [`DynSolValue`]s.
+///
+/// Every coerced struct owns a copy of its metadata, so without a limit a long type name and a
+/// long array of small structs would multiply into a very large allocation.
+const MAX_COERCED_METADATA_BYTES: usize = 16 * 1024 * 1024;
+
 impl DynSolType {
     /// Coerce a [`serde_json::Value`] to a [`DynSolValue`] via this type.
+    ///
+    /// The struct names and property names copied into the output are limited to 16 MiB in total.
     pub fn coerce_json(&self, value: &serde_json::Value) -> Result<DynSolValue> {
+        let mut budget = MAX_COERCED_METADATA_BYTES;
+        self.coerce_json_with_budget(value, &mut budget)
+    }
+
+    fn coerce_json_with_budget(
+        &self,
+        value: &serde_json::Value,
+        budget: &mut usize,
+    ) -> Result<DynSolValue> {
         let err = || Error::eip712_coerce(self, value);
         match self {
             Self::Bool
@@ -19,20 +37,20 @@ impl DynSolType {
             | Self::String
             | Self::Bytes => self.coerce_json_simple(value).ok_or_else(err),
 
-            Self::Array(inner) => array(inner, value)
+            Self::Array(inner) => array(inner, value, budget)
                 .ok_or_else(err)
                 .and_then(core::convert::identity)
                 .map(DynSolValue::Array),
-            Self::FixedArray(inner, n) => fixed_array(inner, *n, value)
+            Self::FixedArray(inner, n) => fixed_array(inner, *n, value, budget)
                 .ok_or_else(err)
                 .and_then(core::convert::identity)
                 .map(DynSolValue::FixedArray),
-            Self::Tuple(inner) => tuple(inner, value)
+            Self::Tuple(inner) => tuple(inner, value, budget)
                 .ok_or_else(err)
                 .and_then(core::convert::identity)
                 .map(DynSolValue::Tuple),
             Self::CustomStruct { name, prop_names, tuple } => {
-                custom_struct(name, prop_names, tuple, value)
+                custom_struct(name, prop_names, tuple, value, budget)
             }
         }
     }
@@ -117,18 +135,30 @@ fn bytes(value: &serde_json::Value) -> Option<Vec<u8>> {
     Some(vec)
 }
 
-fn tuple(inner: &[DynSolType], value: &serde_json::Value) -> Option<Result<Vec<DynSolValue>>> {
+fn tuple(
+    inner: &[DynSolType],
+    value: &serde_json::Value,
+    budget: &mut usize,
+) -> Option<Result<Vec<DynSolValue>>> {
     if let Some(arr) = value.as_array() {
         if inner.len() == arr.len() {
-            return Some(core::iter::zip(arr, inner).map(|(v, t)| t.coerce_json(v)).collect());
+            return Some(
+                core::iter::zip(arr, inner)
+                    .map(|(v, t)| t.coerce_json_with_budget(v, budget))
+                    .collect(),
+            );
         }
     }
     None
 }
 
-fn array(inner: &DynSolType, value: &serde_json::Value) -> Option<Result<Vec<DynSolValue>>> {
+fn array(
+    inner: &DynSolType,
+    value: &serde_json::Value,
+    budget: &mut usize,
+) -> Option<Result<Vec<DynSolValue>>> {
     if let Some(arr) = value.as_array() {
-        return Some(arr.iter().map(|v| inner.coerce_json(v)).collect());
+        return Some(arr.iter().map(|v| inner.coerce_json_with_budget(v, budget)).collect());
     }
     None
 }
@@ -137,10 +167,11 @@ fn fixed_array(
     inner: &DynSolType,
     n: usize,
     value: &serde_json::Value,
+    budget: &mut usize,
 ) -> Option<Result<Vec<DynSolValue>>> {
     if let Some(arr) = value.as_array() {
         if arr.len() == n {
-            return Some(arr.iter().map(|v| inner.coerce_json(v)).collect());
+            return Some(arr.iter().map(|v| inner.coerce_json_with_budget(v, budget)).collect());
         }
     }
     None
@@ -151,12 +182,17 @@ pub(crate) fn custom_struct(
     prop_names: &[String],
     inner: &[DynSolType],
     value: &serde_json::Value,
+    budget: &mut usize,
 ) -> Result<DynSolValue> {
     if let Some(map) = value.as_object() {
+        let metadata_len = name.len() + prop_names.iter().map(String::len).sum::<usize>();
+        *budget = budget
+            .checked_sub(metadata_len)
+            .ok_or_else(|| Error::custom("EIP-712 struct metadata limit exceeded"))?;
         let mut tuple = vec![];
         for (name, ty) in core::iter::zip(prop_names, inner) {
             if let Some(v) = map.get(name) {
-                tuple.push(ty.coerce_json(v)?);
+                tuple.push(ty.coerce_json_with_budget(v, budget)?);
             } else {
                 return Err(Error::eip712_coerce(
                     &DynSolType::CustomStruct {
@@ -310,6 +346,24 @@ mod tests {
                     .into()
                 ]
             })
+        );
+    }
+
+    #[test]
+    fn struct_metadata_copies_are_limited() {
+        let ty = DynSolType::Array(Box::new(DynSolType::CustomStruct {
+            name: "A".repeat(64 * 1024),
+            prop_names: vec!["flag".to_string()],
+            tuple: vec![DynSolType::Bool],
+        }));
+
+        let within_limit = json!(vec![json!({ "flag": true }); 200]);
+        assert!(ty.coerce_json(&within_limit).is_ok());
+
+        let over_limit = json!(vec![json!({ "flag": true }); 300]);
+        assert_eq!(
+            ty.coerce_json(&over_limit),
+            Err(Error::custom("EIP-712 struct metadata limit exceeded"))
         );
     }
 }
