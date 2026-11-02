@@ -38,7 +38,6 @@ impl<'de> serde::Deserialize<'de> for Bytes {
             }
 
             fn visit_seq<A: de::SeqAccess<'de>>(self, mut seq: A) -> Result<Self::Value, A::Error> {
-                // Cap the preallocation like serde does, since the hint is untrusted.
                 let mut bytes = Vec::with_capacity(seq.size_hint().unwrap_or(0).min(MAX_PREALLOC));
 
                 while let Some(byte) = seq.next_element()? {
