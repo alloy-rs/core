@@ -971,6 +971,39 @@ mod tests {
         );
     }
 
+    #[test]
+    fn parse_modifiers_any_order() {
+        let expected = Function {
+            name: "f".into(),
+            inputs: vec![param2("address", "a")],
+            outputs: vec![param2("uint256", "")],
+            state_mutability: StateMutability::Pure,
+        };
+        for s in [
+            "function f(address a) public pure returns (uint256)",
+            "function f(address a) pure public returns (uint256)",
+            "function f(address a) external pure virtual override returns (uint256)",
+            "function f(address payable a) public pure override(A, B) returns (uint256)",
+        ] {
+            let f = Function::parse(s).unwrap();
+            assert_eq!(f, expected, "{s}");
+            assert_eq!(f.signature(), "f(address)");
+            // Round-trip: the normalized signatures parse back to the same function.
+            assert_eq!(Function::parse(&f.full_signature()).unwrap(), expected);
+            assert_eq!(
+                Function::parse(&f.signature_with_outputs()).unwrap().selector(),
+                f.selector()
+            );
+        }
+
+        let e = Event::parse("event E(address payable indexed a, address payable[] b)").unwrap();
+        assert_eq!(e.signature(), "E(address,address[])");
+        assert_eq!(Event::parse(&e.full_signature()).unwrap(), e);
+
+        let err = Error::parse("error E(address payable a)").unwrap();
+        assert_eq!(err.signature(), "E(address)");
+    }
+
     // https://github.com/alloy-rs/core/issues/702
     #[test]
     #[cfg_attr(miri, ignore = "takes too long")]

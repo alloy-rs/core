@@ -9,8 +9,8 @@ use core::{slice, str};
 use winnow::{
     ModalParser, ModalResult, Parser,
     ascii::space0,
-    combinator::{alt, cut_err, opt, preceded, separated, terminated, trace},
-    error::{ContextError, ParserError, StrContext, StrContextValue},
+    combinator::{cut_err, fail, opt, preceded, separated, terminated, trace},
+    error::{ContextError, ErrMode, ParserError, StrContext, StrContextValue},
     stream::{Accumulate, AsChar, Stream},
 };
 
@@ -130,10 +130,8 @@ pub fn parse_signature<'a, const OUT: bool, F: Fn(ParameterSpecifier<'a>) -> T, 
             RootType::parser,
             // inputs
             preceded(space0, params()),
-            // visibility
-            opt(preceded(space0, alt(("internal", "external", "private", "public")))),
-            // state mutability
-            opt(preceded(space0, alt(("pure", "view", "payable")))),
+            // visibility, state mutability, `virtual` and `override`, in any order
+            modifiers_parser,
             // outputs
             move |i: &mut _| {
                 if OUT {
@@ -148,13 +146,123 @@ pub fn parse_signature<'a, const OUT: bool, F: Fn(ParameterSpecifier<'a>) -> T, 
             preceded(space0, opt("anonymous").map(|x| x.is_some())),
         ),
     )
-    .map(|(name, inputs, _visibility, mutability, outputs, anonymous)| ParsedSignature {
+    .map(|(name, inputs, state_mutability, outputs, anonymous)| ParsedSignature {
         name: name.span().into(),
         inputs,
         outputs,
         anonymous,
-        state_mutability: mutability.map(|s| s.parse().unwrap()),
+        state_mutability,
     })
     .parse(new_input(s))
     .map_err(Error::parser)
+}
+
+/// A function modifier that is allowed in a human-readable signature.
+enum Modifier {
+    Visibility,
+    StateMutability(StateMutability),
+    /// `virtual` or `override`, which do not affect the ABI.
+    Inheritance,
+}
+
+/// Parses a single modifier keyword. Backtracks without consuming input on anything else, such as
+/// `returns` or `anonymous`.
+fn modifier_parser(input: &mut Input<'_>) -> ModalResult<Modifier> {
+    trace("modifier", |input: &mut Input<'_>| {
+        let start = input.checkpoint();
+        let modifier = match identifier_parser(input)? {
+            "internal" | "external" | "private" | "public" => Modifier::Visibility,
+            "pure" => Modifier::StateMutability(StateMutability::Pure),
+            "view" => Modifier::StateMutability(StateMutability::View),
+            "payable" => Modifier::StateMutability(StateMutability::Payable),
+            "virtual" => Modifier::Inheritance,
+            "override" => {
+                // `override(A, B.C)`
+                let path = separated::<_, _, (), _, _, _, _>(1.., identifier_parser, '.');
+                let _: Option<()> = opt(preceded(space0, tuple_parser(path))).parse_next(input)?;
+                Modifier::Inheritance
+            }
+            _ => {
+                input.reset(&start);
+                return Err(ErrMode::from_input(input));
+            }
+        };
+        Ok(modifier)
+    })
+    .parse_next(input)
+}
+
+/// Parses the modifiers between a signature's inputs and its outputs. Solidity accepts them in any
+/// order, but at most one visibility and one state mutability.
+fn modifiers_parser(input: &mut Input<'_>) -> ModalResult<Option<StateMutability>> {
+    trace("modifiers", |input: &mut Input<'_>| {
+        let mut visibility = false;
+        let mut state_mutability = None;
+        while let Some(modifier) = opt(preceded(space0, modifier_parser)).parse_next(input)? {
+            let duplicate = match modifier {
+                Modifier::Visibility => core::mem::replace(&mut visibility, true),
+                Modifier::StateMutability(sm) => state_mutability.replace(sm).is_some(),
+                Modifier::Inheritance => false,
+            };
+            if duplicate {
+                return cut_err(fail)
+                    .context(StrContext::Label("duplicate visibility or state mutability"))
+                    .parse_next(input);
+            }
+        }
+        Ok(state_mutability)
+    })
+    .parse_next(input)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn parse(s: &str) -> Result<ParsedSignature<String>> {
+        parse_signature::<true, _, _>(s, |p| p.ty.span().into())
+    }
+
+    #[test]
+    fn modifiers_in_any_order() {
+        let expected = parse("f() public pure returns (uint256)").unwrap();
+        assert_eq!(expected.state_mutability, Some(StateMutability::Pure));
+        assert_eq!(expected.outputs, ["uint256"]);
+        for s in [
+            "f() pure public returns (uint256)",
+            "f()pure   public returns(uint256)",
+            "f() virtual public pure returns (uint256)",
+            "f() public override pure virtual returns (uint256)",
+            "f() pure override(A, B.C) public returns (uint256)",
+            "f() pure override (A) returns (uint256)",
+        ] {
+            assert_eq!(parse(s).as_ref(), Ok(&expected), "{s}");
+        }
+
+        let sig = parse("f() external payable virtual override returns (uint256)").unwrap();
+        assert_eq!(sig.state_mutability, Some(StateMutability::Payable));
+        assert_eq!(sig.outputs, ["uint256"]);
+
+        let sig = parse("f() override").unwrap();
+        assert_eq!(sig.state_mutability, None);
+        assert!(sig.outputs.is_empty());
+    }
+
+    #[test]
+    fn modifiers_reject_duplicates_and_unknown() {
+        parse("f() pure view").unwrap_err();
+        parse("f() view view").unwrap_err();
+        parse("f() public external").unwrap_err();
+        parse("f() pure purex").unwrap_err();
+        parse("f() onlyOwner").unwrap_err();
+    }
+
+    #[test]
+    fn address_payable_parameter() {
+        let sig =
+            parse("f(address payable a, address payable[] memory b) returns (address payable)")
+                .unwrap();
+        assert_eq!(sig.inputs, ["address payable", "address payable[]"]);
+        assert_eq!(sig.outputs, ["address payable"]);
+    }
 }
