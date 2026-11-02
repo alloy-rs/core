@@ -19,7 +19,7 @@ cfg_if! {
 // Used by the optional `FxBuildHasher`.
 #[cfg(feature = "map-fxhash")]
 cfg_if! {
-    if #[cfg(all(feature = "std", feature = "rand", not(alloy_fixed_hash)))] {
+    if #[cfg(all(feature = "std", feature = "rand"))] {
         pub(super) use rustc_hash::FxRandomState as FxBuildHasherInner;
     } else {
         pub(super) use rustc_hash::FxBuildHasher as FxBuildHasherInner;
@@ -34,27 +34,18 @@ pub use foldhash;
 #[doc(no_inline)]
 pub use rapidhash;
 
-// Default hasher. With `alloy_fixed_hash`, each one is replaced by its fixed-seed counterpart.
+// Default hasher.
 cfg_if! {
     if #[cfg(all(feature = "map-foldhash", alloy_fixed_hash))] {
         type DefaultHashBuilderInner = foldhash::fast::FixedState;
     } else if #[cfg(feature = "map-foldhash")] {
         type DefaultHashBuilderInner = foldhash::fast::RandomState;
-    } else if #[cfg(all(feature = "map-rapidhash", alloy_fixed_hash))] {
-        type DefaultHashBuilderInner =
-            core::hash::BuildHasherDefault<rapidhash::fast::RapidHasher<'static>>;
     } else if #[cfg(feature = "map-rapidhash")] {
         type DefaultHashBuilderInner = rapidhash::fast::RandomState;
     } else if #[cfg(feature = "map-fxhash")] {
         type DefaultHashBuilderInner = FxBuildHasher;
-    } else if #[cfg(all(any(feature = "map-hashbrown", not(feature = "std")), alloy_fixed_hash))] {
-        // hashbrown's default hasher is foldhash's `RandomState`.
-        type DefaultHashBuilderInner = foldhash::fast::FixedState;
     } else if #[cfg(any(feature = "map-hashbrown", not(feature = "std")))] {
         type DefaultHashBuilderInner = hashbrown::DefaultHashBuilder;
-    } else if #[cfg(alloy_fixed_hash)] {
-        type DefaultHashBuilderInner =
-            core::hash::BuildHasherDefault<std::collections::hash_map::DefaultHasher>;
     } else {
         type DefaultHashBuilderInner = std::collections::hash_map::RandomState;
     }
