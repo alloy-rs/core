@@ -710,7 +710,10 @@ impl DynSolType {
             }
             #[cfg(feature = "eip712")]
             Self::CustomStruct { name, tuple, prop_names } => {
-                Self::decode_tuple(tuple, dec, validation).map(|tuple| DynSolValue::CustomStruct {
+                let tuple = Self::decode_tuple(tuple, dec, validation)?;
+                dec.reserve_elements::<String>(prop_names.len())?;
+                dec.reserve(name.len() + prop_names.iter().map(String::len).sum::<usize>())?;
+                Ok(DynSolValue::CustomStruct {
                     name: name.clone(),
                     prop_names: prop_names.clone(),
                     tuple,
@@ -1428,6 +1431,29 @@ re-enc: {re_enc}
                 Err(alloy_sol_types::Error::MemoryLimitExceeded(size - 1).into()),
             );
         }
+    }
+
+    #[test]
+    #[cfg(feature = "eip712")]
+    fn custom_struct_metadata_respects_memory_limit() {
+        let ty = DynSolType::CustomStruct {
+            name: "Foo".into(),
+            prop_names: vec!["a".into(), "bc".into()],
+            tuple: vec![DynSolType::Uint(256), DynSolType::Uint(256)],
+        };
+        let encoded = [0u8; 64];
+
+        // Fields, plus the name and prop name strings.
+        let size = 2 * core::mem::size_of::<DynSolValue>()
+            + 2 * core::mem::size_of::<String>()
+            + "Foo".len()
+            + "a".len()
+            + "bc".len();
+        assert!(decode_with_memory_limit(&ty, &encoded, size).is_ok());
+        assert_eq!(
+            decode_with_memory_limit(&ty, &encoded, size - 1),
+            Err(alloy_sol_types::Error::MemoryLimitExceeded(size - 1).into()),
+        );
     }
 
     #[test]
