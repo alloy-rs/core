@@ -660,8 +660,7 @@ impl DynSolType {
                     return Err(alloy_sol_types::Error::Overrun.into());
                 }
 
-                child.reserve_elements::<DynSolValue>(size)?;
-                let mut values = vec_try_with_capacity(size)?;
+                let mut values = Self::alloc_values(&mut child, size)?;
                 for _ in 0..size {
                     values.push(ty.decode_value(&mut child, validation)?);
                 }
@@ -698,7 +697,7 @@ impl DynSolType {
                     .checked_mul(*size)
                     .ok_or_else(|| alloy_sol_types::Error::Overrun)?;
                 dec.set_strict_head_words(head_words)?;
-                let mut values = vec_try_with_capacity(*size)?;
+                let mut values = Self::alloc_values(dec, *size)?;
                 for _ in 0..*size {
                     values.push(ty.decode_value(dec, validation)?);
                 }
@@ -709,7 +708,10 @@ impl DynSolType {
             }
             #[cfg(feature = "eip712")]
             Self::CustomStruct { name, tuple, prop_names } => {
-                Self::decode_tuple(tuple, dec, validation).map(|tuple| DynSolValue::CustomStruct {
+                let tuple = Self::decode_tuple(tuple, dec, validation)?;
+                dec.reserve_elements::<String>(prop_names.len())?;
+                dec.reserve(name.len() + prop_names.iter().map(String::len).sum::<usize>())?;
+                Ok(DynSolValue::CustomStruct {
                     name: name.clone(),
                     prop_names: prop_names.clone(),
                     tuple,
@@ -733,10 +735,19 @@ impl DynSolType {
             .try_fold(0usize, |sum, ty| sum.checked_add(ty.minimum_words()))
             .ok_or_else(|| alloy_sol_types::Error::Overrun)?;
         dec.set_strict_head_words(head_words)?;
-        let mut values = vec_try_with_capacity(types.len())?;
+        let mut values = Self::alloc_values(dec, types.len())?;
         for ty in types {
             values.push(ty.decode_value(dec, validation)?);
         }
+        Ok(values)
+    }
+
+    /// Charges `len` values against the decoder's memory limit and allocates exactly that capacity,
+    /// so the charge matches what the vector retains.
+    fn alloc_values(dec: &mut Decoder<'_, '_>, len: usize) -> Result<Vec<DynSolValue>> {
+        dec.reserve_elements::<DynSolValue>(len)?;
+        let mut values = Vec::new();
+        values.try_reserve_exact(len).map_err(alloy_sol_types::Error::from)?;
         Ok(values)
     }
 
@@ -893,6 +904,7 @@ mod tests {
     use super::*;
     use alloc::string::ToString;
     use alloy_primitives::{Address, U256, hex};
+    use alloy_sol_types::abi::AbiDecoderConfig;
 
     fn pad_usize(value: usize) -> Word {
         let mut word = Word::ZERO;
@@ -1406,6 +1418,86 @@ re-enc: {re_enc}
         let my_type: DynSolType = "uint32[1][]".parse().unwrap();
         let decoded = my_type.abi_decode(&hex::decode(payload).unwrap());
         assert_eq!(decoded, Err(alloy_sol_types::Error::Overrun.into()))
+    }
+
+    fn decode_with_memory_limit(ty: &DynSolType, data: &[u8], limit: usize) -> Result<DynSolValue> {
+        let mut decoder = Decoder::with_config(data, AbiDecoderConfig::new().memory_limit(limit));
+        ty.abi_decode_inner(&mut decoder, None)
+    }
+
+    #[test]
+    fn fixed_array_and_tuple_respect_memory_limit() {
+        let encoded = [0u8; 64];
+        for ty in ["uint256[2]", "(uint256,uint256)"] {
+            let ty = ty.parse::<DynSolType>().unwrap();
+            let size = 2 * core::mem::size_of::<DynSolValue>();
+            assert!(decode_with_memory_limit(&ty, &encoded, size).is_ok());
+            assert_eq!(
+                decode_with_memory_limit(&ty, &encoded, size - 1),
+                Err(alloy_sol_types::Error::MemoryLimitExceeded(size - 1).into()),
+            );
+        }
+    }
+
+    #[test]
+    #[cfg(feature = "eip712")]
+    fn custom_struct_metadata_respects_memory_limit() {
+        let ty = DynSolType::CustomStruct {
+            name: "Foo".into(),
+            prop_names: vec!["a".into(), "bc".into()],
+            tuple: vec![DynSolType::Uint(256), DynSolType::Uint(256)],
+        };
+        let encoded = [0u8; 64];
+
+        // Fields, plus the name and prop name strings.
+        let size = 2 * core::mem::size_of::<DynSolValue>()
+            + 2 * core::mem::size_of::<String>()
+            + "Foo".len()
+            + "a".len()
+            + "bc".len();
+        assert!(decode_with_memory_limit(&ty, &encoded, size).is_ok());
+        assert_eq!(
+            decode_with_memory_limit(&ty, &encoded, size - 1),
+            Err(alloy_sol_types::Error::MemoryLimitExceeded(size - 1).into()),
+        );
+    }
+
+    #[test]
+    fn composite_capacity_matches_charge() {
+        let encoded = [0u8; 32];
+        for ty in ["uint256[1]", "(uint256)"] {
+            let ty = ty.parse::<DynSolType>().unwrap();
+            let size = core::mem::size_of::<DynSolValue>();
+            let value = decode_with_memory_limit(&ty, &encoded, size).unwrap();
+            let (DynSolValue::FixedArray(values) | DynSolValue::Tuple(values)) = value else {
+                panic!("not a composite");
+            };
+            assert_eq!(values.capacity(), 1);
+        }
+    }
+
+    #[test]
+    fn aliased_offsets_are_charged_per_composite() {
+        // Every element of the outer array points at the same `(uint256[])` tuple.
+        const N: usize = 4;
+        let ty = "(uint256[])[]".parse::<DynSolType>().unwrap();
+        let mut encoded = Vec::new();
+        encoded.extend_from_slice(pad_usize(32).as_slice());
+        encoded.extend_from_slice(pad_usize(N).as_slice());
+        for _ in 0..N {
+            encoded.extend_from_slice(pad_usize(N * 32).as_slice());
+        }
+        encoded.extend_from_slice(pad_usize(32).as_slice());
+        encoded.extend_from_slice(pad_usize(1).as_slice());
+        encoded.extend_from_slice(pad_usize(0).as_slice());
+
+        // Outer array, plus one tuple and one inner array per reference.
+        let size = 3 * N * core::mem::size_of::<DynSolValue>();
+        assert!(decode_with_memory_limit(&ty, &encoded, size).is_ok());
+        assert_eq!(
+            decode_with_memory_limit(&ty, &encoded, size - 1),
+            Err(alloy_sol_types::Error::MemoryLimitExceeded(size - 1).into()),
+        );
     }
 
     #[test]

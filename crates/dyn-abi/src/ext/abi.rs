@@ -1,7 +1,7 @@
 use crate::{DynSolValue, Error as CrateError, Result, Specifier};
 use alloc::vec::Vec;
 use alloy_json_abi::{Constructor, Error, Function, Param};
-use alloy_primitives::Selector;
+use alloy_primitives::{Selector, utils::vec_try_with_capacity};
 use alloy_sol_types::abi::{AbiDecoderConfig, Decoder};
 
 #[allow(unknown_lints, unnameable_types)]
@@ -209,8 +209,9 @@ fn abi_decode(data: &[u8], params: &[Param], config: AbiDecoderConfig) -> Result
     if config.get_strict() {
         return Err(CrateError::custom("strict decoding is not supported"));
     }
-    let mut values = Vec::with_capacity(params.len());
     let mut decoder = Decoder::with_config(data, config);
+    decoder.reserve_elements::<DynSolValue>(params.len())?;
+    let mut values = vec_try_with_capacity(params.len())?;
     for param in params {
         let ty = param.resolve()?;
         let value = ty.abi_decode_inner(
@@ -313,5 +314,21 @@ mod tests {
     	"
         );
         assert_eq!(hex::encode(expected), hex::encode(result));
+    }
+
+    #[test]
+    fn decode_input_charges_parameter_list() {
+        let func = Function::parse("f(uint256,uint256)").unwrap();
+        let data = [0u8; 64];
+        let size = 2 * core::mem::size_of::<DynSolValue>();
+
+        let config = AbiDecoderConfig::new().memory_limit(size);
+        assert!(func.abi_decode_input_with_config(&data, config).is_ok());
+
+        let config = AbiDecoderConfig::new().memory_limit(size - 1);
+        assert_eq!(
+            func.abi_decode_input_with_config(&data, config),
+            Err(alloy_sol_types::Error::MemoryLimitExceeded(size - 1).into()),
+        );
     }
 }

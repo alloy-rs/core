@@ -18,6 +18,12 @@
 //! resistance should enable the "rand" feature so that the hasher is initialized using a random
 //! seed.
 //!
+//! Building with `--cfg alloy_fixed_hash` (for example through `RUSTFLAGS`) replaces foldhash's
+//! randomly seeded state with a fixed seed, in both [`DefaultHashBuilder`] and [`FbBuildHasher`],
+//! so that hashing and iteration order are identical across runs and processes. It requires the
+//! "map-foldhash" feature. This is meant for fuzzing and deterministic testing, as it removes
+//! HashDoS resistance.
+//!
 //! Note that using the types provided in this module may require using different APIs than the
 //! standard library as they might not be generic over the hasher state, such as using
 //! `HashMap::default()` instead of `HashMap::new()`.
@@ -26,6 +32,9 @@
 //! [`Selector`]: crate::Selector
 //! [`Address`]: crate::Address
 //! [`B256`]: crate::B256
+
+#[cfg(all(alloy_fixed_hash, not(feature = "map-foldhash")))]
+compile_error!("`alloy_fixed_hash` requires the `map-foldhash` feature");
 
 use cfg_if::cfg_if;
 

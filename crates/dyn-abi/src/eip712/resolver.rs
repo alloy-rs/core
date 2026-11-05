@@ -222,6 +222,9 @@ fn check_type_depth(depth: usize) -> Result<()> {
 
 const MAX_RESOLVED_TYPE_NODES: usize = 1024;
 
+/// Maximum number of bytes of struct names and property names that a resolved type may own.
+const MAX_RESOLVED_METADATA_BYTES: usize = 1024 * 1024;
+
 /// Cheap necessary condition for a parsed root type name to be a basic Solidity
 /// type, so that struct names can skip the (allocating) basic type check.
 fn may_be_basic_type(name: &str) -> bool {
@@ -461,7 +464,13 @@ impl Resolver {
     pub fn resolve(&self, type_name: &str) -> Result<DynSolType> {
         self.detect_cycle(type_name)?;
         let mut remaining = MAX_RESOLVED_TYPE_NODES;
-        self.resolve_unchecked(&TypeSpecifier::parse_eip712(type_name)?, 0, &mut remaining)
+        let mut metadata_budget = MAX_RESOLVED_METADATA_BYTES;
+        self.resolve_unchecked(
+            &TypeSpecifier::parse_eip712(type_name)?,
+            0,
+            &mut remaining,
+            &mut metadata_budget,
+        )
     }
 
     /// Resolve a type into a [`crate::DynSolType`] without checking for cycles.
@@ -470,6 +479,7 @@ impl Resolver {
         type_spec: &TypeSpecifier<'_>,
         depth: usize,
         remaining: &mut usize,
+        metadata_budget: &mut usize,
     ) -> Result<DynSolType> {
         let depth = depth.saturating_add(type_spec.sizes.len());
         check_type_depth(depth)?;
@@ -477,11 +487,13 @@ impl Resolver {
         charge_type_nodes(remaining, 1)?;
         charge_type_nodes(remaining, type_spec.sizes.len())?;
         let ty = match &type_spec.stem {
-            TypeStem::Root(root) => self.resolve_root_type(*root, depth, remaining),
+            TypeStem::Root(root) => {
+                self.resolve_root_type(*root, depth, remaining, metadata_budget)
+            }
             TypeStem::Tuple(tuple) => tuple
                 .types
                 .iter()
-                .map(|ty| self.resolve_unchecked(ty, depth + 1, remaining))
+                .map(|ty| self.resolve_unchecked(ty, depth + 1, remaining, metadata_budget))
                 .collect::<Result<_, _>>()
                 .map(DynSolType::Tuple),
         }?;
@@ -495,6 +507,7 @@ impl Resolver {
         root_type: RootType<'_>,
         depth: usize,
         remaining: &mut usize,
+        metadata_budget: &mut usize,
     ) -> Result<DynSolType> {
         if let Some(ty) =
             may_be_basic_type(root_type.span()).then(|| root_type.resolve().ok()).flatten()
@@ -512,10 +525,20 @@ impl Resolver {
         if ty.props.len() > *remaining {
             return Err(Error::custom("EIP-712 type expansion limit exceeded"));
         }
+        // Charge before copying the struct name or property names.
+        let metadata_len = ty.type_name.len() + ty.prop_names().map(str::len).sum::<usize>();
+        *metadata_budget = metadata_budget
+            .checked_sub(metadata_len)
+            .ok_or_else(|| Error::custom("EIP-712 type metadata limit exceeded"))?;
         let tuple: Vec<_> = ty
             .prop_types()
             .map(|ty| {
-                self.resolve_unchecked(&TypeSpecifier::parse_eip712(ty)?, depth + 1, remaining)
+                self.resolve_unchecked(
+                    &TypeSpecifier::parse_eip712(ty)?,
+                    depth + 1,
+                    remaining,
+                    metadata_budget,
+                )
             })
             .collect::<Result<_, _>>()?;
         let prop_names: Vec<_> = ty.prop_names().map(str::to_string).collect();
@@ -713,14 +736,14 @@ mod tests {
 
         // Pair + two independent Leaf structs + their uint256 fields.
         let spec = TypeSpecifier::parse_eip712("Pair").unwrap();
-        assert!(graph.resolve_unchecked(&spec, 0, &mut 5).is_ok());
+        assert!(graph.resolve_unchecked(&spec, 0, &mut 5, &mut 1_000_000).is_ok());
         assert_eq!(
-            graph.resolve_unchecked(&spec, 0, &mut 4).unwrap_err(),
+            graph.resolve_unchecked(&spec, 0, &mut 4, &mut 1_000_000).unwrap_err(),
             Error::custom("EIP-712 type expansion limit exceeded"),
         );
         let spec = TypeSpecifier::parse_eip712("Pair[2][]").unwrap();
-        assert!(graph.resolve_unchecked(&spec, 0, &mut 7).is_ok());
-        assert!(graph.resolve_unchecked(&spec, 0, &mut 6).is_err());
+        assert!(graph.resolve_unchecked(&spec, 0, &mut 7, &mut 1_000_000).is_ok());
+        assert!(graph.resolve_unchecked(&spec, 0, &mut 6, &mut 1_000_000).is_err());
         assert!(graph.resolve("Pair").is_ok());
     }
 
@@ -738,6 +761,23 @@ mod tests {
         assert_eq!(
             graph.resolve("Record").unwrap_err(),
             Error::custom("EIP-712 type expansion limit exceeded")
+        );
+    }
+
+    #[test]
+    fn resolved_metadata_is_limited() {
+        let mut graph = Resolver::default();
+        let big_props = (0..8)
+            .map(|i| PropertyDef::new("bool", format!("{}{i}", "p".repeat(32 * 1024))).unwrap())
+            .collect();
+        graph.ingest(TypeDef::new("Big", big_props).unwrap());
+        let props = (0..8).map(|i| PropertyDef::new("Big", format!("b{i}")).unwrap()).collect();
+        graph.ingest(TypeDef::new("Root", props).unwrap());
+
+        assert!(graph.resolve("Big").is_ok());
+        assert_eq!(
+            graph.resolve("Root").unwrap_err(),
+            Error::custom("EIP-712 type metadata limit exceeded")
         );
     }
 
