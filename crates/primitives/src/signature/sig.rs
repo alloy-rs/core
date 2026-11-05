@@ -407,15 +407,7 @@ impl Signature {
         let this = self.normalized_s();
         let sig = this.to_secp256k1()?;
         let msg = secp256k1::Message::from_digest(prehash.0);
-        #[cfg(feature = "std")]
-        {
-            secp256k1::SECP256K1.recover_ecdsa(msg, &sig).map_err(Into::into)
-        }
-        #[cfg(not(feature = "std"))]
-        {
-            let secp = secp256k1::Secp256k1::verification_only();
-            secp.recover_ecdsa(msg, &sig).map_err(Into::into)
-        }
+        sig.recover(msg).map_err(Into::into)
     }
 
     /// Returns the `r` component of this signature.
@@ -574,7 +566,7 @@ mod tests {
     use alloy_rlp::{Decodable, Encodable};
 
     #[test]
-    #[cfg(feature = "k256")]
+    #[cfg(any(feature = "k256", feature = "secp256k1"))]
     #[cfg_attr(miri, ignore = "k256 is too slow under Miri")]
     fn can_recover_tx_sender_not_normalized() {
         let sig = Signature::from_str("48b55bfa915ac795c431978d8a6a992b628d557da5ff759b307d495a36649353efffd310ac743f371de3b9f7f9cb56c0b28ad43601b4ab949f53faa07bd2c8041b").unwrap();
@@ -584,7 +576,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(feature = "k256")]
+    #[cfg(any(feature = "k256", feature = "secp256k1"))]
     #[cfg_attr(miri, ignore = "k256 is too slow under Miri")]
     fn recover_web3_signature() {
         // test vector taken from:
