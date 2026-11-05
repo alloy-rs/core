@@ -338,12 +338,12 @@ impl<'a, 'e> InternalTypes<'a, 'e> {
             }
             Some(it @ InternalType::Other { contract, ty }) => {
                 // `Other` is a UDVT if it's not a basic Solidity type.
-                if let Some(it) = it.other_specifier() {
-                    if it.try_basic_solidity().is_err() {
-                        let ty = ty.split('[').next().unwrap();
-                        let real_ty = real_ty.split('[').next().unwrap();
-                        self.extend_one(contract, It::new(ty, ItKind::Udvt(real_ty)));
-                    }
+                if let Some(it) = it.other_specifier()
+                    && it.try_basic_solidity().is_err()
+                {
+                    let ty = ty.split('[').next().unwrap();
+                    let real_ty = real_ty.split('[').next().unwrap();
+                    self.extend_one(contract, It::new(ty, ItKind::Udvt(real_ty)));
                 }
             }
         }
@@ -669,11 +669,11 @@ impl<IN: ToSol> ToSol for AbiFunction<'_, IN> {
             out.push_str(visibility.as_str());
         }
 
-        if let Some(state_mutability) = self.state_mutability {
-            if let Some(state_mutability) = state_mutability.as_str() {
-                out.push(' ');
-                out.push_str(state_mutability);
-            }
+        if let Some(state_mutability) = self.state_mutability
+            && let Some(state_mutability) = state_mutability.as_str()
+        {
+            out.push(' ');
+            out.push_str(state_mutability);
         }
 
         if !self.outputs.is_empty() {
@@ -786,11 +786,11 @@ fn param(
         }
         // primitive type
         _ => {
-            if let Some(contract_name) = contract_name {
-                if contract_name != out.name {
-                    out.push_ident(contract_name);
-                    out.push('.');
-                }
+            if let Some(contract_name) = contract_name
+                && contract_name != out.name
+            {
+                out.push_ident(contract_name);
+                out.push('.');
             }
             out.push_ident(type_name);
         }

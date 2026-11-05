@@ -569,7 +569,7 @@ mod tests {
         fn int_size(x: usize) {
             let sz = super::int_size(x);
             prop_assert!(sz > 0 && sz <= 256, "{sz}");
-            prop_assert!(sz % 8 == 0, "{sz}");
+            prop_assert!(sz.is_multiple_of(8), "{sz}");
         }
 
         #[test]

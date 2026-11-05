@@ -369,10 +369,10 @@ impl<'a> ArraySizeEvaluator<'a> {
             return Err(EvalErrorKind::RecursionLimitReached.spanned(expr.span()));
         }
         let mut r = self.try_eval_expr(expr);
-        if let Err(e) = &mut r {
-            if e.span.is_none() {
-                e.span = Some(expr.span());
-            }
+        if let Err(e) = &mut r
+            && e.span.is_none()
+        {
+            e.span = Some(expr.span());
         }
         self.depth -= 1;
         r

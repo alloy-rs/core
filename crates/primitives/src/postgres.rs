@@ -314,11 +314,11 @@ impl<'a, const BITS: usize, const LIMBS: usize> FromSql<'a> for Signed<BITS, LIM
                     return Err(Box::new(FromSqlError::ParseError(ty.clone())));
                 }
                 let mut error = false;
-                let iter = raw.chunks_exact(2).filter_map(|raw| {
+                let iter = raw.as_chunks::<2>().0.iter().filter_map(|&raw| {
                     if error {
                         return None;
                     }
-                    let digit = i16::from_be_bytes(raw.try_into().unwrap());
+                    let digit = i16::from_be_bytes(raw);
                     if !(0..10000).contains(&digit) {
                         error = true;
                         return None;
