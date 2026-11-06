@@ -51,7 +51,7 @@ impl DynSolCall {
 
     /// ABI encode the given values as function params.
     pub fn abi_encode_input(&self, values: &[DynSolValue]) -> Result<Vec<u8>> {
-        encode_typeck(&self.parameters, values).map(prefix_selector(self.selector))
+        encode_typeck_with_prefix(&self.parameters, values, self.selector.as_slice())
     }
 
     /// ABI encode the given values as function params without prefixing the
@@ -114,17 +114,15 @@ impl DynSolReturns {
     }
 }
 
-#[inline]
-pub(crate) fn prefix_selector(selector: Selector) -> impl FnOnce(Vec<u8>) -> Vec<u8> {
-    move |data| {
-        let mut new = Vec::with_capacity(data.len() + 4);
-        new.extend_from_slice(&selector[..]);
-        new.extend_from_slice(&data[..]);
-        new
-    }
+pub(crate) fn encode_typeck(tys: &[DynSolType], values: &[DynSolValue]) -> Result<Vec<u8>> {
+    encode_typeck_with_prefix(tys, values, &[])
 }
 
-pub(crate) fn encode_typeck(tys: &[DynSolType], values: &[DynSolValue]) -> Result<Vec<u8>> {
+fn encode_typeck_with_prefix(
+    tys: &[DynSolType],
+    values: &[DynSolValue],
+    prefix: &[u8],
+) -> Result<Vec<u8>> {
     if values.len() != tys.len() {
         return Err(Error::EncodeLengthMismatch { expected: tys.len(), actual: values.len() });
     }
@@ -138,12 +136,7 @@ pub(crate) fn encode_typeck(tys: &[DynSolType], values: &[DynSolValue]) -> Resul
         }
     }
 
-    Ok(abi_encode(values))
-}
-
-#[inline]
-pub(crate) fn abi_encode(values: &[DynSolValue]) -> Vec<u8> {
-    DynSolValue::encode_seq(values)
+    Ok(DynSolValue::encode_seq_with_prefix(values, prefix))
 }
 
 pub(crate) fn abi_decode(data: &[u8], tys: &[DynSolType]) -> Result<Vec<DynSolValue>> {
