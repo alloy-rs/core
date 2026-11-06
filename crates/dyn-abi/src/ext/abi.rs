@@ -1,7 +1,7 @@
 use crate::{DynSolValue, Error as CrateError, Result, Specifier};
 use alloc::vec::Vec;
 use alloy_json_abi::{Constructor, Error, Function, Param};
-use alloy_primitives::{Selector, utils::vec_try_with_capacity};
+use alloy_primitives::utils::vec_try_with_capacity;
 use alloy_sol_types::abi::{AbiDecoderConfig, Decoder};
 
 #[allow(unknown_lints, unnameable_types)]
@@ -119,7 +119,7 @@ impl JsonAbiExt for Constructor {
 impl JsonAbiExt for Error {
     #[inline]
     fn abi_encode_input(&self, values: &[DynSolValue]) -> Result<Vec<u8>> {
-        encode_typeck(&self.inputs, values).map(prefix_selector(self.selector()))
+        encode_typeck_with_prefix(&self.inputs, values, self.selector().as_slice())
     }
 
     #[inline]
@@ -140,7 +140,7 @@ impl JsonAbiExt for Error {
 impl JsonAbiExt for Function {
     #[inline]
     fn abi_encode_input(&self, values: &[DynSolValue]) -> Result<Vec<u8>> {
-        encode_typeck(&self.inputs, values).map(prefix_selector(self.selector()))
+        encode_typeck_with_prefix(&self.inputs, values, self.selector().as_slice())
     }
 
     #[inline]
@@ -170,17 +170,15 @@ impl FunctionExt for Function {
     }
 }
 
-#[inline]
-fn prefix_selector(selector: Selector) -> impl FnOnce(Vec<u8>) -> Vec<u8> {
-    move |data| {
-        let mut new = Vec::with_capacity(data.len() + 4);
-        new.extend_from_slice(&selector[..]);
-        new.extend_from_slice(&data[..]);
-        new
-    }
+fn encode_typeck(params: &[Param], values: &[DynSolValue]) -> Result<Vec<u8>> {
+    encode_typeck_with_prefix(params, values, &[])
 }
 
-fn encode_typeck(params: &[Param], values: &[DynSolValue]) -> Result<Vec<u8>> {
+fn encode_typeck_with_prefix(
+    params: &[Param],
+    values: &[DynSolValue],
+    prefix: &[u8],
+) -> Result<Vec<u8>> {
     if values.len() != params.len() {
         return Err(CrateError::EncodeLengthMismatch {
             expected: params.len(),
@@ -197,12 +195,7 @@ fn encode_typeck(params: &[Param], values: &[DynSolValue]) -> Result<Vec<u8>> {
         }
     }
 
-    Ok(abi_encode(values))
-}
-
-#[inline]
-fn abi_encode(values: &[DynSolValue]) -> Vec<u8> {
-    DynSolValue::encode_seq(values)
+    Ok(DynSolValue::encode_seq_with_prefix(values, prefix))
 }
 
 fn abi_decode(data: &[u8], params: &[Param], config: AbiDecoderConfig) -> Result<Vec<DynSolValue>> {
@@ -227,6 +220,49 @@ fn abi_decode(data: &[u8], params: &[Param], config: AbiDecoderConfig) -> Result
 mod tests {
     use super::*;
     use alloy_primitives::{Address, U256, address, bytes, hex};
+
+    #[test]
+    fn selector_prefix_preserves_nested_offsets() {
+        let function = Function::parse("submit((uint256,bytes)[],string,bytes[2])").unwrap();
+        let values = vec![
+            DynSolValue::Array(vec![
+                DynSolValue::Tuple(vec![
+                    DynSolValue::Uint(U256::from(1), 256),
+                    DynSolValue::Bytes(vec![7; 33]),
+                ]),
+                DynSolValue::Tuple(vec![
+                    DynSolValue::Uint(U256::from(2), 256),
+                    DynSolValue::Bytes(vec![]),
+                ]),
+            ]),
+            DynSolValue::String("hello".into()),
+            DynSolValue::FixedArray(vec![
+                DynSolValue::Bytes(vec![]),
+                DynSolValue::Bytes(vec![9; 65]),
+            ]),
+        ];
+        let mut expected = function.selector().to_vec();
+        expected.extend(function.abi_encode_input_raw(&values).unwrap());
+        assert_eq!(function.abi_encode_input(&values).unwrap(), expected);
+
+        let call: crate::DynSolCall = function.resolve().unwrap();
+        assert_eq!(call.abi_encode_input(&values).unwrap(), expected);
+        let error = Error { name: function.name.clone(), inputs: function.inputs.clone() };
+        assert_eq!(error.abi_encode_input(&values).unwrap(), expected);
+
+        for bad_values in [&[][..], &[DynSolValue::Bool(false)][..]] {
+            assert_eq!(
+                function.abi_encode_input(bad_values).unwrap_err(),
+                function.abi_encode_input_raw(bad_values).unwrap_err(),
+            );
+            assert_eq!(
+                call.abi_encode_input(bad_values).unwrap_err(),
+                call.abi_encode_input_raw(bad_values).unwrap_err(),
+            );
+        }
+        let empty = Function::parse("noop()").unwrap();
+        assert_eq!(empty.abi_encode_input(&[]).unwrap(), empty.selector().as_slice());
+    }
 
     #[test]
     fn can_encode_decode_functions() {

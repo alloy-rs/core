@@ -817,6 +817,15 @@ impl DynSolValue {
         buf
     }
 
+    /// Encode this data as a sequence after `prefix`, in the same allocation. Offsets are relative
+    /// to the start of the sequence, not of the prefix.
+    pub(crate) fn encode_seq_with_prefix(seq: &[Self], prefix: &[u8]) -> Vec<u8> {
+        let mut buf = Vec::with_capacity(prefix.len() + Self::seq_total_words(seq).1 * 32);
+        buf.extend_from_slice(prefix);
+        Self::encode_seq_into(seq, &mut buf);
+        buf
+    }
+
     /// Encode this data as a sequence at the end of `buf`.
     ///
     /// Reserves the head, writes each element's tail while patching its offset into the head, and
