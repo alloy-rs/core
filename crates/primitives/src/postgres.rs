@@ -310,6 +310,8 @@ impl<'a, const BITS: usize, const LIMBS: usize> FromSql<'a> for Signed<BITS, LIM
                     || dscale != 0
                     || digits > exponent + 1
                     || raw.len() != digits as usize * 2
+                    // NaN and ±Infinity use other sign words and have no integer value.
+                    || !matches!(sign, 0x0000 | 0x4000)
                 {
                     return Err(Box::new(FromSqlError::ParseError(ty.clone())));
                 }
@@ -376,6 +378,21 @@ mod test {
                 let err = decode(sign, digit).unwrap_err();
                 assert_eq!(
                     err.downcast_ref::<FromSqlError>(),
+                    Some(&FromSqlError::ParseError(Type::NUMERIC))
+                );
+            }
+        }
+
+        // NaN, +Infinity, -Infinity and unknown sign words must not decode as numbers.
+        for sign in [0xC000u16, 0xD000, 0xF000, 0x1234] {
+            let mut special = [0u8; 8];
+            special[4..6].copy_from_slice(&sign.to_be_bytes());
+            for result in [
+                I8::from_sql(&Type::NUMERIC, &special),
+                decode(i16::from_be_bytes(sign.to_be_bytes()), 5),
+            ] {
+                assert_eq!(
+                    result.unwrap_err().downcast_ref::<FromSqlError>(),
                     Some(&FromSqlError::ParseError(Type::NUMERIC))
                 );
             }
