@@ -413,11 +413,9 @@ impl Resolver {
     pub fn ingest(&mut self, type_def: TypeDef) {
         let type_name = type_def.type_name.to_owned();
 
-        // Insert the edges into the graph
-        let entry = self.edges.entry(type_name.clone()).or_default();
-        for prop in &type_def.props {
-            entry.push(prop.root_type_name().to_owned());
-        }
+        // Insert the edges into the graph, replacing those of an earlier definition.
+        let edges = type_def.props.iter().map(|prop| prop.root_type_name().to_owned()).collect();
+        self.edges.insert(type_name.clone(), edges);
 
         // Insert the node into the graph
         self.nodes.insert(type_name, type_def);
@@ -570,16 +568,17 @@ impl Resolver {
     ///
     /// <https://eips.ethereum.org/EIPS/eip-712#definition-of-encodetype>
     pub fn encode_type(&self, name: &str) -> Result<String> {
-        let defs = self.linearize(name)?;
+        let mut defs = self.linearize(name)?;
         if defs.is_empty() {
             return Err(Error::missing_type(name));
         }
-        let mut encoded = defs.into_iter().map(|x| x.eip712_encode_type()).collect::<Vec<_>>();
-        encoded[1..].sort_unstable();
+        // Dependencies are sorted by name, which is not the order of their encoded strings: `$`
+        // sorts before `(`.
+        defs[1..].sort_unstable_by(|a, b| a.type_name.cmp(&b.type_name));
 
         let mut output = String::new();
-        for ty in encoded {
-            output.push_str(&ty);
+        for def in defs {
+            def.fmt_eip712_encode_type(&mut output).unwrap();
         }
         debug_assert!(!output.is_empty());
         Ok(output)
@@ -1125,5 +1124,26 @@ mod tests {
         });
 
         let _result: Resolver = serde_json::from_value(json).unwrap();
+    }
+
+    #[test]
+    fn reingest_replaces_edges() {
+        let mut graph = Resolver::default();
+        graph.ingest_string("A(B b)B(uint256 x)").unwrap();
+        graph.ingest_string("A(uint256 y)").unwrap();
+        assert_eq!(graph.encode_type("A").unwrap(), "A(uint256 y)");
+
+        let mut fresh = Resolver::default();
+        fresh.ingest_string("A(uint256 y)B(uint256 x)").unwrap();
+        assert_eq!(graph, fresh);
+    }
+
+    #[test]
+    fn encode_type_sorts_dependencies_by_name() {
+        // `$` sorts before `(`, so sorting the encoded strings instead of the names would put
+        // `A$` before `A`.
+        let mut graph = Resolver::default();
+        graph.ingest_string("M(A$ b,A a)A(uint256 x)A$(uint256 y)").unwrap();
+        assert_eq!(graph.encode_type("M").unwrap(), "M(A$ b,A a)A(uint256 x)A$(uint256 y)");
     }
 }
