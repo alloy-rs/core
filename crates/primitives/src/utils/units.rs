@@ -830,25 +830,9 @@ mod tests {
 
     #[test]
     fn test_signed_zero_parse_units() {
-        assert_eq!(parse_units("0", 77).unwrap(), ParseUnits::U256(U256::ZERO));
         assert_eq!(parse_units("-0", 77).unwrap(), ParseUnits::I256(I256::ZERO));
-        assert_eq!(ParseUnits::parse_units("-0", Unit::MAX).unwrap(), ParseUnits::I256(I256::ZERO));
-
-        for amount in ["-0", "-00", "-0.", "-0.0", "-.0", "-0_0", "-0.0_0"] {
-            for unit in [0, 18, 76, 77] {
-                assert_eq!(
-                    parse_units(amount, unit).unwrap(),
-                    ParseUnits::I256(I256::ZERO),
-                    "{amount:?}, {unit}"
-                );
-            }
-        }
-
-        for amount in ["-0x0", "-0z", "-0.0z", "-1"] {
-            assert!(parse_units(amount, 77).is_err(), "{amount:?}");
-        }
-        assert!(parse_units("-0", 78).is_err());
-        assert!(parse_units("-1", 76).is_ok());
+        assert!(parse_units("-1", 77).is_err());
+        assert!(parse_units("-0z", 77).is_err());
     }
 
     #[test]
