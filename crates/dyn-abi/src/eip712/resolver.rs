@@ -205,10 +205,21 @@ impl TypeDef {
     }
 }
 
+/// The cycle detection state of a type that the depth-first search has reached.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Visit {
+    /// The type is on the current path: its dependencies are still being searched.
+    InProgress,
+    /// The type and all of its dependencies have been searched without finding a cycle.
+    Done,
+}
+
 #[derive(Debug, Default)]
 struct DfsContext<'a> {
-    visited: BTreeSet<&'a TypeDef>,
-    stack: BTreeSet<&'a str>,
+    /// The state of each reached type. Types without an entry have not been reached yet.
+    visits: BTreeMap<&'a str, Visit>,
+    /// The number of [`Visit::InProgress`] types, i.e. the length of the current path.
+    depth: usize,
 }
 
 const MAX_TYPE_DEPTH: usize = 80;
@@ -350,31 +361,36 @@ impl Resolver {
     ) -> Result<bool> {
         let Some(ty) = self.nodes.get(type_name) else { return Ok(false) };
 
-        // Detect cycle.
-        if context.stack.contains(type_name) {
+        let visit = context.visits.get(type_name).copied();
+        // Reaching a type on the current path again is a cycle.
+        if visit == Some(Visit::InProgress) {
             return Ok(true);
         }
-        check_type_depth(context.stack.len())?;
-        // Mark as visited.
-        if !context.visited.insert(ty) {
+        check_type_depth(context.depth)?;
+        if visit == Some(Visit::Done) {
             return Ok(false);
         }
 
         let edges = self.edges(ty);
-        if !edges.is_empty() {
-            context.stack.insert(&ty.type_name);
-            for edge in edges {
-                // EIP-712 permits recursive struct types, so a self-edge is
-                // not treated as a cycle when `allow_self_refs` is enabled.
-                if allow_self_refs && edge == type_name {
-                    continue;
-                }
-                if self.detect_cycle_inner(edge, context, allow_self_refs)? {
-                    return Ok(true);
-                }
-            }
-            context.stack.remove(type_name);
+        if edges.is_empty() {
+            context.visits.insert(&ty.type_name, Visit::Done);
+            return Ok(false);
         }
+
+        context.visits.insert(&ty.type_name, Visit::InProgress);
+        context.depth += 1;
+        for edge in edges {
+            // EIP-712 permits recursive struct types, so a self-edge is
+            // not treated as a cycle when `allow_self_refs` is enabled.
+            if allow_self_refs && edge == type_name {
+                continue;
+            }
+            if self.detect_cycle_inner(edge, context, allow_self_refs)? {
+                return Ok(true);
+            }
+        }
+        context.depth -= 1;
+        context.visits.insert(&ty.type_name, Visit::Done);
 
         Ok(false)
     }
