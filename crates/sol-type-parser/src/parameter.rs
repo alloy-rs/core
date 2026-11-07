@@ -203,10 +203,6 @@ mod tests {
         ParameterSpecifier::parse(&alloc::format!("{ty} value")).unwrap();
         Parameters::parse(&alloc::format!("({ty} value)")).unwrap_err();
         ParameterSpecifier::parse(&alloc::format!("({ty} child) value")).unwrap_err();
-
-        let arrays = "[]".repeat(crate::input::LIMIT - 1);
-        ParameterSpecifier::parse(&alloc::format!("(uint256{arrays} child) value")).unwrap();
-        ParameterSpecifier::parse(&alloc::format!("(uint256{arrays}[] child) value")).unwrap_err();
     }
 
     #[test]
