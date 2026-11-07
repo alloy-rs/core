@@ -321,6 +321,27 @@ mod tests {
     }
 
     #[test]
+    fn referenced_type_name_order() {
+        let typed_data: TypedData = serde_json::from_value(json!({
+            "types": {
+                "EIP712Domain": [{ "name": "name", "type": "string" }],
+                "P": [{ "name": "a", "type": "A" }, { "name": "b", "type": "A$" }],
+                "A": [{ "name": "x", "type": "uint256" }],
+                "A$": [{ "name": "y", "type": "uint256" }]
+            },
+            "primaryType": "P",
+            "domain": { "name": "x" },
+            "message": { "a": { "x": 1 }, "b": { "y": 2 } }
+        }))
+        .unwrap();
+
+        // Sort names, where A precedes A$, rather than encodings, where A$(...) precedes A(...).
+        // The primary type stays first even though its name sorts after both dependencies.
+        let encoded = "P(A a,A$ b)A(uint256 x)A$(uint256 y)";
+        assert_eq!(typed_data.encode_type().unwrap(), encoded);
+    }
+
+    #[test]
     fn primitive_primary_type_returns_error() {
         let json = json!({
             "types": {
