@@ -161,7 +161,7 @@ impl<const BITS: usize, const LIMBS: usize> ToSql for Signed<BITS, LIMBS> {
                     _ => 0x4000,
                 };
 
-                let mut digits: Vec<_> = self.abs().0.to_base_be(BASE).collect();
+                let mut digits: Vec<_> = self.unsigned_abs().to_base_be(BASE).collect();
                 let exponent = digits.len().saturating_sub(1).try_into()?;
 
                 // Trailing zeros are removed.
@@ -310,6 +310,8 @@ impl<'a, const BITS: usize, const LIMBS: usize> FromSql<'a> for Signed<BITS, LIM
                     || dscale != 0
                     || digits > exponent + 1
                     || raw.len() != digits as usize * 2
+                    // NaN and ±Infinity use other sign words and have no integer value.
+                    || !matches!(sign, 0x0000 | 0x4000)
                 {
                     return Err(Box::new(FromSqlError::ParseError(ty.clone())));
                 }
@@ -330,15 +332,13 @@ impl<'a, const BITS: usize, const LIMBS: usize> FromSql<'a> for Signed<BITS, LIM
                 // Expression can not be negative due to checks above
                 let iter = iter.chain(iter::repeat_n(0, (exponent + 1 - digits) as usize));
 
-                let mut value = Self::from_base_be(10000, iter)?;
-                if sign == 0x4000 {
-                    value = -value;
-                }
+                let abs = ruint::Uint::from_base_be(10000, iter)?;
                 if error {
                     return Err(Box::new(FromSqlError::ParseError(ty.clone())));
                 }
 
-                value
+                let sign = if sign == 0x4000 { Sign::Negative } else { Sign::Positive };
+                Self::checked_from_sign_and_abs(sign, abs).ok_or(FromSqlError::Overflow)?
             }
 
             // Unsupported types
@@ -351,7 +351,51 @@ impl<'a, const BITS: usize, const LIMBS: usize> FromSql<'a> for Signed<BITS, LIM
 mod test {
     use super::*;
 
-    use crate::{Address, I256};
+    use crate::{Address, I8, I256};
+
+    #[test]
+    fn numeric_from_sql_bounds() {
+        let decode = |sign: i16, digit: i16| {
+            let bytes: Vec<_> =
+                [1i16, 0, sign, 0, digit].into_iter().flat_map(i16::to_be_bytes).collect();
+            I8::from_sql(&Type::NUMERIC, &bytes)
+        };
+        assert_eq!(decode(0, 127).unwrap(), I8::MAX);
+        assert_eq!(decode(0x4000, 128).unwrap(), I8::MIN);
+        for (sign, digit) in [(0, 128), (0x4000, 129)] {
+            let err = decode(sign, digit).unwrap_err();
+            assert_eq!(err.downcast_ref::<FromSqlError>(), Some(&FromSqlError::Overflow));
+        }
+
+        // NaN, +Infinity, -Infinity and unknown sign words must not decode as numbers.
+        for sign in [0xC000u16, 0xD000, 0xF000, 0x1234] {
+            let mut special = [0u8; 8];
+            special[4..6].copy_from_slice(&sign.to_be_bytes());
+            for result in [
+                I8::from_sql(&Type::NUMERIC, &special),
+                decode(i16::from_be_bytes(sign.to_be_bytes()), 5),
+            ] {
+                assert_eq!(
+                    result.unwrap_err().downcast_ref::<FromSqlError>(),
+                    Some(&FromSqlError::ParseError(Type::NUMERIC))
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn numeric_round_trip() {
+        fn check<const BITS: usize, const LIMBS: usize>() {
+            type Int<const BITS: usize, const LIMBS: usize> = Signed<BITS, LIMBS>;
+            for value in [Int::MIN, Int::MAX] {
+                let mut bytes = BytesMut::new();
+                value.to_sql(&Type::NUMERIC, &mut bytes).unwrap();
+                assert_eq!(Int::<BITS, LIMBS>::from_sql(&Type::NUMERIC, &bytes).unwrap(), value);
+            }
+        }
+        check::<9, 1>();
+        check::<256, 4>();
+    }
 
     #[test]
     fn positive_i256_from_sql() {
