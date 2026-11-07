@@ -1178,10 +1178,7 @@ mod tests {
             .0,
         );
 
-        // Empty strings inside composites are excluded here: solc contributes no bytes for
-        // them (see `encode_topic_solc_vectors`), while the static implementation currently
-        // pads them to a full zero word.
-        for strings in [&["alpha", "beta"][..], &[][..]] {
+        for strings in [&["alpha", "beta"][..], &[][..], &[""][..], &["", "alpha", ""][..]] {
             assert_eq!(
                 DynSolValue::Array(strings.iter().map(|s| string(s)).collect()).encode_topic(),
                 <sol_data::Array<sol_data::String> as EventTopic>::encode_topic(
@@ -1192,12 +1189,23 @@ mod tests {
             );
         }
 
+        for s in ["", "hello"] {
+            assert_eq!(
+                DynSolValue::Tuple(vec![uint(7), string(s)]).encode_topic(),
+                <(sol_data::Uint<256>, sol_data::String) as EventTopic>::encode_topic(&(
+                    U256::from(7),
+                    s.to_string()
+                ))
+                .0,
+            );
+        }
+
         assert_eq!(
-            DynSolValue::Tuple(vec![uint(7), string("hello")]).encode_topic(),
-            <(sol_data::Uint<256>, sol_data::String) as EventTopic>::encode_topic(&(
-                U256::from(7),
-                "hello".to_string()
-            ))
+            DynSolValue::Array(vec![bytes(b""), bytes(b"ab")]).encode_topic(),
+            <sol_data::Array<sol_data::Bytes> as EventTopic>::encode_topic(&vec![
+                Bytes::new(),
+                Bytes::from_static(b"ab"),
+            ])
             .0,
         );
 
