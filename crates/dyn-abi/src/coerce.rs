@@ -381,6 +381,9 @@ fn uint<'i>(len: usize) -> impl ModalParser<Input<'i>, U256, ContextError> {
 
             // (intpart * 10^fract.len() + fract) * 10^(units-fract.len())
             (|| -> Option<U256> {
+                if intpart.is_zero() && fract_uint.is_zero() {
+                    return Some(U256::ZERO);
+                }
                 let extension = pow10(fract.len())?;
                 let extended = intpart.checked_mul(extension)?;
                 let uint = fract_uint.checked_add(extended)?;
@@ -801,10 +804,21 @@ mod tests {
         }
         uint_test(&format!("0e{}", isize::MAX), Ok("0"));
 
+        // Zero fractional mantissas skip scaling too.
+        for input in ["0.0e78", "0.0e79", "0.00e100", "0.0e78 ether", "0.000e1000 gwei"] {
+            uint_test(input, Ok("0"));
+        }
+        uint_test(&format!("0.{}e1000", "0".repeat(100)), Ok("0"));
+        uint_test(&format!("0.0e{}", isize::MAX), Ok("0"));
+
         for input in ["1e78", "1e1000", "0e", "0e+", "0e-1", "0e78x", "0e78 ether trailing"] {
             uint_test(input, Err(()));
         }
         uint_test(&format!("0e{}0", isize::MAX), Err(()));
+        // Nonzero overflow and excess decimals are still rejected.
+        for input in ["0.1e1000", "1.0e79", "0.00e1", "0.0"] {
+            uint_test(input, Err(()));
+        }
     }
 
     #[test]
