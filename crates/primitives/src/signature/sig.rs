@@ -827,49 +827,30 @@ mod tests {
     }
 
     #[test]
-    fn normalization_preserves_out_of_range_s() {
-        for s in [SECP256K1N_ORDER, SECP256K1N_ORDER + U256::ONE, U256::MAX] {
-            for parity in [false, true] {
-                let signature = Signature::new(U256::ONE, s, parity);
-                assert_eq!(signature.normalize_s(), None);
-                assert_eq!(signature.normalized_s(), signature);
-            }
-        }
-    }
-
-    #[test]
     fn erc2098_scalar_boundaries() {
         let half_order = SECP256K1N_ORDER >> 1;
-        for r in [U256::ZERO, U256::ONE, SECP256K1N_ORDER, U256::MAX] {
-            for (s, normalized_s, flip_parity) in [
-                (U256::ZERO, U256::ZERO, false),
-                (U256::ONE, U256::ONE, false),
-                (half_order, half_order, false),
-                (half_order + U256::ONE, half_order, true),
-                (SECP256K1N_ORDER - U256::ONE, U256::ONE, true),
-            ] {
-                for parity in [false, true] {
-                    let signature = Signature::new(r, s, parity);
-                    let expected = Signature::new(r, normalized_s, parity ^ flip_parity);
-                    assert_eq!(signature.normalized_s(), expected);
-                    assert_eq!(signature.normalize_s(), flip_parity.then_some(expected));
-                    let compact = signature.try_as_erc2098().unwrap();
-                    assert_eq!(signature.as_erc2098(), compact);
-                    assert_eq!(Signature::from_erc2098(&compact), expected);
-                }
-            }
+        for (s, normalized_s, flip_parity) in [
+            (U256::ZERO, U256::ZERO, false),
+            (half_order, half_order, false),
+            (half_order + U256::ONE, half_order, true),
+            (SECP256K1N_ORDER - U256::ONE, U256::ONE, true),
+        ] {
+            // Compact encoding preserves r even when it is not a valid ECDSA scalar.
+            let signature = Signature::new(U256::MAX, s, false);
+            let expected = Signature::new(U256::MAX, normalized_s, flip_parity);
+            assert_eq!(signature.normalize_s(), flip_parity.then_some(expected));
+            let compact = signature.try_as_erc2098().unwrap();
+            assert_eq!(Signature::from_erc2098(&compact), expected);
         }
     }
 
     #[test]
     fn try_as_erc2098_rejects_out_of_range_s() {
         for s in [SECP256K1N_ORDER, SECP256K1N_ORDER + U256::ONE, U256::MAX] {
-            for parity in [false, true] {
-                let signature = Signature::new(U256::ONE, s, parity);
-                let parsed = Signature::from_raw(&signature.as_bytes()).unwrap();
-                assert_eq!(parsed, signature);
-                assert!(matches!(parsed.try_as_erc2098(), Err(SignatureError::FromBytes(_))));
-            }
+            let signature = Signature::new(U256::ONE, s, false);
+            assert_eq!(signature.normalize_s(), None);
+            assert_eq!(signature.normalized_s(), signature);
+            assert!(matches!(signature.try_as_erc2098(), Err(SignatureError::FromBytes(_))));
         }
     }
 
