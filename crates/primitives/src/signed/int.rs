@@ -585,6 +585,46 @@ mod tests {
     }
 
     #[test]
+    fn unsigned_primitive_conversion() {
+        macro_rules! check {
+            ($unsigned:ty, $as_unsigned:ident) => {
+                for value in [0u8, 1, 127] {
+                    let signed = I8::try_from(value).unwrap();
+                    assert_eq!(<$unsigned>::try_from(signed), Ok(value as $unsigned));
+                    assert_eq!(signed.$as_unsigned(), value as $unsigned);
+                }
+                assert_eq!(<$unsigned>::try_from(I0::ZERO), Ok(0));
+                assert_eq!(<$unsigned>::try_from(I8::MINUS_ONE), Err(BigIntConversionError));
+
+                let max = I256::try_from(<$unsigned>::MAX).unwrap();
+                assert_eq!(<$unsigned>::try_from(max), Ok(<$unsigned>::MAX));
+                assert_eq!(max.$as_unsigned(), <$unsigned>::MAX);
+                assert_eq!(<$unsigned>::try_from(max + I256::ONE), Err(BigIntConversionError));
+            };
+        }
+
+        check!(u8, as_u8);
+        check!(u16, as_u16);
+        check!(u32, as_u32);
+        check!(u64, as_u64);
+        check!(usize, as_usize);
+
+        assert_eq!(u128::try_from(I0::ZERO), Ok(0));
+        assert_eq!(u128::try_from(I1::ZERO), Ok(0));
+        assert_eq!(u128::try_from(I1::MINUS_ONE), Err(BigIntConversionError));
+        assert_eq!(u128::try_from(I8::ONE), Ok(1));
+        assert_eq!(u128::try_from(I16::MAX), Ok(i16::MAX as u128));
+        assert_eq!(u128::try_from(I32::MAX), Ok(i32::MAX as u128));
+        assert_eq!(u128::try_from(I64::MAX), Ok(i64::MAX as u128));
+        assert_eq!(u128::try_from(I128::MAX), Ok(i128::MAX as u128));
+        assert_eq!(u128::try_from(I128::MIN), Err(BigIntConversionError));
+
+        let max = I256::try_from(u128::MAX).unwrap();
+        assert_eq!(u128::try_from(max), Ok(u128::MAX));
+        assert_eq!(u128::try_from(max + I256::ONE), Err(BigIntConversionError));
+    }
+
+    #[test]
     fn std_num_conversion() {
         // test conversion from basic types
 
