@@ -241,6 +241,11 @@ impl ParseUnits {
     /// See [`parse_units`] for more information.
     #[allow(clippy::self_named_constructors)]
     pub fn parse_units(amount: &str, unit: Unit) -> Result<Self, UnitsError> {
+        // Validate before truncating so byte offsets cannot split a UTF-8 character or discard it.
+        if let Some(c) = amount.chars().find(|c| !c.is_ascii()) {
+            return Err(ruint::ParseError::InvalidDigit(c).into());
+        }
+
         let exponent = unit.get() as usize;
 
         let mut amount = amount.to_string();
@@ -808,6 +813,46 @@ mod tests {
 
         let n: U256 = parse_units("", 3).unwrap().into();
         assert_eq!(n, U256::ZERO, "empty");
+    }
+
+    #[test]
+    fn test_parse_units_non_ascii() {
+        for amount in [".😀", "1.éa", "-1.éa", "+1.éa", "é1.2", "1é.2", "1.2é", "1.２"] {
+            for decimals in [1, 0, 2, 18, 77] {
+                assert!(parse_units(amount, decimals).is_err(), "{amount:?}, {decimals}");
+                assert!(
+                    ParseUnits::parse_units(amount, Unit::new(decimals).unwrap()).is_err(),
+                    "{amount:?}, {decimals}"
+                );
+            }
+        }
+
+        // The non-ASCII suffix must also be rejected when it would be truncated entirely.
+        assert!(parse_units("1.23😀", 2).is_err());
+        assert!(parse_units("-1.23😀", 2).is_err());
+    }
+
+    #[test]
+    fn test_parse_ether_non_ascii() {
+        for prefix in ["0.", "-0.", "+0."] {
+            for zeros in [17, 18] {
+                let amount = format!("{prefix}{}😀", "0".repeat(zeros));
+                assert!(parse_ether(&amount).is_err(), "{amount:?}");
+            }
+        }
+    }
+
+    #[test]
+    fn test_parse_units_ascii_truncation() {
+        for (amount, expected) in [("1.239", 123), ("-1.239", -123)] {
+            assert_eq!(
+                parse_units(amount, 2).unwrap().get_signed(),
+                I256::try_from(expected).unwrap()
+            );
+        }
+        assert!(parse_units("+1.239", 2).is_err());
+        assert_eq!(parse_units("3_3_0", 3).unwrap(), ParseUnits::U256(U256::from(330000)));
+        assert_eq!(parse_units("-.33_319_2", 0).unwrap(), ParseUnits::I256(I256::ZERO));
     }
 
     #[test]
