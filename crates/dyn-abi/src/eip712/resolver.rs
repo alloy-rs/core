@@ -554,12 +554,12 @@ impl Resolver {
     ///
     /// <https://eips.ethereum.org/EIPS/eip-712#definition-of-encodetype>
     pub fn encode_type(&self, name: &str) -> Result<String> {
-        let defs = self.linearize(name)?;
+        let mut defs = self.linearize(name)?;
         if defs.is_empty() {
             return Err(Error::missing_type(name));
         }
-        let mut encoded = defs.into_iter().map(|x| x.eip712_encode_type()).collect::<Vec<_>>();
-        encoded[1..].sort_unstable();
+        defs[1..].sort_unstable_by(|a, b| a.type_name.cmp(&b.type_name));
+        let encoded = defs.into_iter().map(|x| x.eip712_encode_type()).collect::<Vec<_>>();
 
         let mut output = String::new();
         for ty in encoded {

@@ -235,7 +235,7 @@ mod tests {
     use super::*;
     use crate::{Error, TypedData};
     use alloc::string::ToString;
-    use alloy_primitives::hex;
+    use alloy_primitives::{U256, hex};
     use alloy_sol_types::sol;
     use serde_json::json;
 
@@ -318,6 +318,47 @@ mod tests {
             hex::encode(&hash[..]),
             "8d4a3f4082945b7879e2b55f181c31a77c8c0a464b70669458abbaaf99de4c38",
         );
+    }
+
+    #[test]
+    fn referenced_type_name_order() {
+        let typed_data: TypedData = serde_json::from_value(json!({
+            "types": {
+                "EIP712Domain": [{ "name": "name", "type": "string" }],
+                "P": [{ "name": "a", "type": "A" }, { "name": "b", "type": "A$" }],
+                "A": [{ "name": "x", "type": "uint256" }],
+                "A$": [{ "name": "y", "type": "uint256" }]
+            },
+            "primaryType": "P",
+            "domain": { "name": "x" },
+            "message": { "a": { "x": 1 }, "b": { "y": 2 } }
+        }))
+        .unwrap();
+
+        // Sort names, where A precedes A$, rather than encodings, where A$(...) precedes A(...).
+        // The primary type stays first even though its name sorts after both dependencies.
+        let encoded = "P(A a,A$ b)A(uint256 x)A$(uint256 y)";
+        assert_eq!(typed_data.encode_type().unwrap(), encoded);
+        let mut resolver = Resolver::default();
+        resolver.ingest_string(encoded).unwrap();
+        assert_eq!(resolver.encode_type("P").unwrap(), encoded);
+
+        // Assemble the canonical hash inputs independently of the resolver.
+        let type_hash = keccak256(encoded);
+        let a_hash =
+            keccak256([keccak256("A(uint256 x)").0, U256::from(1).to_be_bytes::<32>()].concat());
+        let b_hash =
+            keccak256([keccak256("A$(uint256 y)").0, U256::from(2).to_be_bytes::<32>()].concat());
+        let struct_hash = keccak256([type_hash.0, a_hash.0, b_hash.0].concat());
+        let domain_hash =
+            keccak256([keccak256("EIP712Domain(string name)").0, keccak256("x").0].concat());
+        let mut signing_preimage = vec![0x19, 0x01];
+        signing_preimage.extend_from_slice(domain_hash.as_slice());
+        signing_preimage.extend_from_slice(struct_hash.as_slice());
+
+        assert_eq!(typed_data.type_hash().unwrap(), type_hash);
+        assert_eq!(typed_data.hash_struct().unwrap(), struct_hash);
+        assert_eq!(typed_data.eip712_signing_hash().unwrap(), keccak256(signing_preimage));
     }
 
     #[test]
