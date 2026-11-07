@@ -1,4 +1,4 @@
-use crate::{DynSolType, DynSolValue, Error, Result};
+use crate::{DynSolType, DynSolValue, Error, Result, dynamic::ty::ValidationLevel};
 use alloy_primitives::Selector;
 use alloy_sol_types::abi::Decoder;
 
@@ -150,7 +150,7 @@ pub(crate) fn abi_decode(data: &[u8], tys: &[DynSolType]) -> Result<Vec<DynSolVa
     let mut values = Vec::with_capacity(tys.len());
     let mut decoder = Decoder::new(data);
     for ty in tys {
-        let value = ty.abi_decode_inner(&mut decoder, None)?;
+        let value = ty.abi_decode_inner(&mut decoder, ValidationLevel::Off)?;
         values.push(value);
     }
     Ok(values)
