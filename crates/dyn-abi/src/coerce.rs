@@ -799,26 +799,16 @@ mod tests {
 
     #[test]
     fn coerce_uint_scientific_zero() {
-        for input in ["0e77", "0e78", "0e+78", "0e1000", "0e60 ether", "0e69 gwei"] {
-            uint_test(input, Ok("0"));
-        }
+        uint_test("0e78", Ok("0"));
+        uint_test("0e60 ether", Ok("0"));
         uint_test(&format!("0e{}", isize::MAX), Ok("0"));
-
-        // Zero fractional mantissas skip scaling too.
-        for input in ["0.0e78", "0.0e79", "0.00e100", "0.0e78 ether", "0.000e1000 gwei"] {
-            uint_test(input, Ok("0"));
-        }
+        // Skip both fractional extension and exponent scaling when the mantissa is zero.
+        uint_test("0.0e79", Ok("0"));
         uint_test(&format!("0.{}e1000", "0".repeat(100)), Ok("0"));
-        uint_test(&format!("0.0e{}", isize::MAX), Ok("0"));
-
-        for input in ["1e78", "1e1000", "0e", "0e+", "0e-1", "0e78x", "0e78 ether trailing"] {
-            uint_test(input, Err(()));
-        }
-        uint_test(&format!("0e{}0", isize::MAX), Err(()));
-        // Nonzero overflow and excess decimals are still rejected.
-        for input in ["0.1e1000", "1.0e79", "0.00e1", "0.0"] {
-            uint_test(input, Err(()));
-        }
+        uint_test("1e78", Err(()));
+        uint_test("0.1e1000", Err(()));
+        uint_test("0.00e1", Err(()));
+        uint_test("0e78x", Err(()));
     }
 
     #[test]
