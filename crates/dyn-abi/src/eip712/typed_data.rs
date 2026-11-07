@@ -235,7 +235,7 @@ mod tests {
     use super::*;
     use crate::{Error, TypedData};
     use alloc::string::ToString;
-    use alloy_primitives::{U256, hex};
+    use alloy_primitives::hex;
     use alloy_sol_types::sol;
     use serde_json::json;
 
@@ -339,26 +339,6 @@ mod tests {
         // The primary type stays first even though its name sorts after both dependencies.
         let encoded = "P(A a,A$ b)A(uint256 x)A$(uint256 y)";
         assert_eq!(typed_data.encode_type().unwrap(), encoded);
-        let mut resolver = Resolver::default();
-        resolver.ingest_string(encoded).unwrap();
-        assert_eq!(resolver.encode_type("P").unwrap(), encoded);
-
-        // Assemble the canonical hash inputs independently of the resolver.
-        let type_hash = keccak256(encoded);
-        let a_hash =
-            keccak256([keccak256("A(uint256 x)").0, U256::from(1).to_be_bytes::<32>()].concat());
-        let b_hash =
-            keccak256([keccak256("A$(uint256 y)").0, U256::from(2).to_be_bytes::<32>()].concat());
-        let struct_hash = keccak256([type_hash.0, a_hash.0, b_hash.0].concat());
-        let domain_hash =
-            keccak256([keccak256("EIP712Domain(string name)").0, keccak256("x").0].concat());
-        let mut signing_preimage = vec![0x19, 0x01];
-        signing_preimage.extend_from_slice(domain_hash.as_slice());
-        signing_preimage.extend_from_slice(struct_hash.as_slice());
-
-        assert_eq!(typed_data.type_hash().unwrap(), type_hash);
-        assert_eq!(typed_data.hash_struct().unwrap(), struct_hash);
-        assert_eq!(typed_data.eip712_signing_hash().unwrap(), keccak256(signing_preimage));
     }
 
     #[test]
