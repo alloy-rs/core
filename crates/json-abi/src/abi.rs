@@ -603,14 +603,38 @@ impl<'de> Visitor<'de> for ContractObjectVisitor {
             deployed_bytecode: Option<Bytecode>,
         }
 
+        /// A key of a contract object. Unlike `&str`, it can also be deserialized from keys that
+        /// are not borrowed from the input, such as escaped keys or those of a `serde_json::Value`.
+        #[derive(Deserialize)]
+        #[serde(field_identifier)]
+        enum Key {
+            #[serde(rename = "abi")]
+            Abi,
+            #[serde(rename = "evm")]
+            Evm,
+            #[serde(rename = "bytecode", alias = "bin")]
+            Bytecode,
+            #[serde(
+                rename = "deployedBytecode",
+                alias = "deployedbytecode",
+                alias = "deployed_bytecode",
+                alias = "runtimeBin",
+                alias = "runtimebin",
+                alias = "runtime "
+            )]
+            DeployedBytecode,
+            #[serde(other)]
+            Other,
+        }
+
         let mut abi = None;
         let mut bytecode = None;
         let mut deployed_bytecode = None;
 
-        while let Some(key) = map.next_key::<&str>()? {
+        while let Some(key) = map.next_key::<Key>()? {
             match key {
-                "abi" => set_if_none!(@serde abi, map.next_value()?),
-                "evm" => {
+                Key::Abi => set_if_none!(@serde abi, map.next_value()?),
+                Key::Evm => {
                     let evm = map.next_value::<EvmObj>()?;
                     if let Some(bytes) = evm.bytecode {
                         if let Some(b) = bytes.ensure_bytes(self.ignore_unlinked_bytecode)? {
@@ -623,27 +647,57 @@ impl<'de> Visitor<'de> for ContractObjectVisitor {
                         }
                     }
                 }
-                "bytecode" | "bin" => {
+                Key::Bytecode => {
                     if let Some(b) =
                         map.next_value::<Bytecode>()?.ensure_bytes(self.ignore_unlinked_bytecode)?
                     {
                         set_if_none!(@serde bytecode, b);
                     }
                 }
-                "deployedBytecode" | "deployedbytecode" | "deployed_bytecode" | "runtimeBin"
-                | "runtimebin" | "runtime " => {
+                Key::DeployedBytecode => {
                     if let Some(b) =
                         map.next_value::<Bytecode>()?.ensure_bytes(self.ignore_unlinked_bytecode)?
                     {
                         set_if_none!(@serde deployed_bytecode, b);
                     }
                 }
-                _ => {
+                Key::Other => {
                     map.next_value::<serde::de::IgnoredAny>()?;
                 }
             }
         }
 
         Ok(ContractObject { abi, bytecode, deployed_bytecode })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn contract_object_owned_keys() {
+        let value = serde_json::json!({
+            "abi": [],
+            "evm": { "bytecode": { "object": "0x01" }, "deployedBytecode": { "object": "0x02" } },
+            "other": 1,
+        });
+        let expected = ContractObject {
+            abi: Some(JsonAbi::new()),
+            bytecode: Some(Bytes::from_static(&[1])),
+            deployed_bytecode: Some(Bytes::from_static(&[2])),
+        };
+        let json = serde_json::to_string(&value).unwrap();
+        assert_eq!(serde_json::from_str::<ContractObject>(&json).unwrap(), expected);
+        assert_eq!(serde_json::from_value::<ContractObject>(value).unwrap(), expected);
+        assert_eq!(
+            serde_json::from_reader::<_, ContractObject>(json.as_bytes()).unwrap(),
+            expected
+        );
+        // Escaped keys can't be borrowed from the input either.
+        let escaped = r#"{"\u0061bi": [], "bin": "0x01"}"#;
+        let object = serde_json::from_str::<ContractObject>(escaped).unwrap();
+        assert_eq!(object.abi, Some(JsonAbi::new()));
+        assert_eq!(object.bytecode, Some(Bytes::from_static(&[1])));
     }
 }

@@ -205,10 +205,21 @@ impl TypeDef {
     }
 }
 
+/// The cycle detection state of a type that the depth-first search has reached.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Visit {
+    /// The type is on the current path: its dependencies are still being searched.
+    InProgress,
+    /// The type and all of its dependencies have been searched without finding a cycle.
+    Done,
+}
+
 #[derive(Debug, Default)]
 struct DfsContext<'a> {
-    visited: BTreeSet<&'a TypeDef>,
-    stack: BTreeSet<&'a str>,
+    /// The state of each reached type. Types without an entry have not been reached yet.
+    visits: BTreeMap<&'a str, Visit>,
+    /// The number of [`Visit::InProgress`] types, i.e. the length of the current path.
+    depth: usize,
 }
 
 const MAX_TYPE_DEPTH: usize = 80;
@@ -350,31 +361,36 @@ impl Resolver {
     ) -> Result<bool> {
         let Some(ty) = self.nodes.get(type_name) else { return Ok(false) };
 
-        // Detect cycle.
-        if context.stack.contains(type_name) {
+        let visit = context.visits.get(type_name).copied();
+        // Reaching a type on the current path again is a cycle.
+        if visit == Some(Visit::InProgress) {
             return Ok(true);
         }
-        check_type_depth(context.stack.len())?;
-        // Mark as visited.
-        if !context.visited.insert(ty) {
+        check_type_depth(context.depth)?;
+        if visit == Some(Visit::Done) {
             return Ok(false);
         }
 
         let edges = self.edges(ty);
-        if !edges.is_empty() {
-            context.stack.insert(&ty.type_name);
-            for edge in edges {
-                // EIP-712 permits recursive struct types, so a self-edge is
-                // not treated as a cycle when `allow_self_refs` is enabled.
-                if allow_self_refs && edge == type_name {
-                    continue;
-                }
-                if self.detect_cycle_inner(edge, context, allow_self_refs)? {
-                    return Ok(true);
-                }
-            }
-            context.stack.remove(type_name);
+        if edges.is_empty() {
+            context.visits.insert(&ty.type_name, Visit::Done);
+            return Ok(false);
         }
+
+        context.visits.insert(&ty.type_name, Visit::InProgress);
+        context.depth += 1;
+        for edge in edges {
+            // EIP-712 permits recursive struct types, so a self-edge is
+            // not treated as a cycle when `allow_self_refs` is enabled.
+            if allow_self_refs && edge == type_name {
+                continue;
+            }
+            if self.detect_cycle_inner(edge, context, allow_self_refs)? {
+                return Ok(true);
+            }
+        }
+        context.depth -= 1;
+        context.visits.insert(&ty.type_name, Visit::Done);
 
         Ok(false)
     }
@@ -397,11 +413,9 @@ impl Resolver {
     pub fn ingest(&mut self, type_def: TypeDef) {
         let type_name = type_def.type_name.to_owned();
 
-        // Insert the edges into the graph
-        let entry = self.edges.entry(type_name.clone()).or_default();
-        for prop in &type_def.props {
-            entry.push(prop.root_type_name().to_owned());
-        }
+        // Insert the edges into the graph, replacing those of an earlier definition.
+        let edges = type_def.props.iter().map(|prop| prop.root_type_name().to_owned()).collect();
+        self.edges.insert(type_name.clone(), edges);
 
         // Insert the node into the graph
         self.nodes.insert(type_name, type_def);
@@ -554,16 +568,17 @@ impl Resolver {
     ///
     /// <https://eips.ethereum.org/EIPS/eip-712#definition-of-encodetype>
     pub fn encode_type(&self, name: &str) -> Result<String> {
-        let defs = self.linearize(name)?;
+        let mut defs = self.linearize(name)?;
         if defs.is_empty() {
             return Err(Error::missing_type(name));
         }
-        let mut encoded = defs.into_iter().map(|x| x.eip712_encode_type()).collect::<Vec<_>>();
-        encoded[1..].sort_unstable();
+        // Dependencies are sorted by name, which is not the order of their encoded strings: `$`
+        // sorts before `(`.
+        defs[1..].sort_unstable_by(|a, b| a.type_name.cmp(&b.type_name));
 
         let mut output = String::new();
-        for ty in encoded {
-            output.push_str(&ty);
+        for def in defs {
+            def.fmt_eip712_encode_type(&mut output).unwrap();
         }
         debug_assert!(!output.is_empty());
         Ok(output)
@@ -1109,5 +1124,26 @@ mod tests {
         });
 
         let _result: Resolver = serde_json::from_value(json).unwrap();
+    }
+
+    #[test]
+    fn reingest_replaces_edges() {
+        let mut graph = Resolver::default();
+        graph.ingest_string("A(B b)B(uint256 x)").unwrap();
+        graph.ingest_string("A(uint256 y)").unwrap();
+        assert_eq!(graph.encode_type("A").unwrap(), "A(uint256 y)");
+
+        let mut fresh = Resolver::default();
+        fresh.ingest_string("A(uint256 y)B(uint256 x)").unwrap();
+        assert_eq!(graph, fresh);
+    }
+
+    #[test]
+    fn encode_type_sorts_dependencies_by_name() {
+        // `$` sorts before `(`, so sorting the encoded strings instead of the names would put
+        // `A$` before `A`.
+        let mut graph = Resolver::default();
+        graph.ingest_string("M(A$ b,A a)A(uint256 x)A$(uint256 y)").unwrap();
+        assert_eq!(graph.encode_type("M").unwrap(), "M(A$ b,A a)A(uint256 x)A$(uint256 y)");
     }
 }
