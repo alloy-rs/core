@@ -1,5 +1,5 @@
 use super::{ParseSignedError, Sign, utils::*};
-use alloc::string::String;
+use alloc::string::{String, ToString};
 use core::fmt;
 use ruint::{BaseConvertError, Uint, UintTryFrom, UintTryTo};
 
@@ -65,8 +65,11 @@ impl<const BITS: usize, const LIMBS: usize> fmt::Debug for Signed<BITS, LIMBS> {
 impl<const BITS: usize, const LIMBS: usize> fmt::Display for Signed<BITS, LIMBS> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let (sign, abs) = self.into_sign_and_abs();
-        sign.fmt(f)?;
-        if f.sign_plus() { write!(f, "{abs}") } else { abs.fmt(f) }
+        if f.width().is_none() {
+            sign.fmt(f)?;
+            return if f.sign_plus() { write!(f, "{abs}") } else { abs.fmt(f) };
+        }
+        f.pad_integral(!sign.is_negative(), "", &abs.to_string())
     }
 }
 
@@ -790,6 +793,24 @@ mod tests {
         run_test!(I160, U160);
         run_test!(I192, U192);
         run_test!(I256, U256);
+    }
+
+    #[test]
+    fn decimal_formatting_flags() {
+        macro_rules! check {
+            ($($format:literal),+ $(,)?) => {
+                for value in [-123i128, 0, 123] {
+                    let signed = I128::try_from(value).unwrap();
+                    $(assert_eq!(
+                        format!($format, signed),
+                        format!($format, value),
+                        "{} for {value}", $format,
+                    );)+
+                }
+            };
+        }
+
+        check!("{:2}", "{:08}", "{:<8}", "{:*^8}", "{:*>8}", "{:+8}", "{:+08}", "{:+08?}");
     }
 
     #[test]
