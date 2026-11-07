@@ -519,8 +519,7 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
         Self(Uint::from_limbs(limbs))
     }
 
-    /// Constructs the [`Signed`] from digits in the base `base` in big-endian.
-    /// Wrapper around ruint's from_base_be
+    /// Constructs a nonnegative [`Signed`] from digits in the base `base` in big-endian.
     ///
     /// # Errors
     ///
@@ -531,7 +530,8 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
         base: u64,
         digits: I,
     ) -> Result<Self, BaseConvertError> {
-        Ok(Self(Uint::from_base_be(base, digits)?))
+        let abs = Uint::from_base_be(base, digits)?;
+        Self::checked_from_sign_and_abs(Sign::Positive, abs).ok_or(BaseConvertError::Overflow)
     }
 }
 
@@ -735,6 +735,25 @@ mod tests {
         run_test!(I160, U160);
         run_test!(I192, U192);
         run_test!(I256, U256);
+    }
+
+    #[test]
+    fn from_base_be() {
+        assert_eq!(I8::from_base_be(10, [2, 0, 0]), Err(BaseConvertError::Overflow));
+        assert_eq!(I8::from_base_be(10, [1, 2, 7]), Ok(I8::MAX));
+        for digits in [[1, 2, 8], [2, 5, 5], [2, 5, 6]] {
+            assert_eq!(I8::from_base_be(10, digits), Err(BaseConvertError::Overflow));
+        }
+        assert_eq!(I8::from_base_be(10, [0]), Ok(I8::ZERO));
+        assert_eq!(I8::from_base_be(10, [1]), Ok(I8::ONE));
+        assert_eq!(I8::from_base_be(1, [0]), Err(BaseConvertError::InvalidBase(1)));
+        assert_eq!(I8::from_base_be(10, [10]), Err(BaseConvertError::InvalidDigit(10, 10)));
+
+        assert_eq!(I256::from_base_be(10, I256::MAX.into_raw().to_base_be(10)), Ok(I256::MAX));
+        assert_eq!(
+            I256::from_base_be(10, I256::MIN.unsigned_abs().to_base_be(10)),
+            Err(BaseConvertError::Overflow)
+        );
     }
 
     #[test]
