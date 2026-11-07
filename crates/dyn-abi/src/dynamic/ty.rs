@@ -583,7 +583,7 @@ impl DynSolType {
         ) -> Result<DynSolValue>,
     {
         if self.is_zst() {
-            return Ok(self.zero_sized_value().expect("checked"));
+            return self.zero_sized_value(decoder);
         }
 
         if decoder.remaining_words() < self.minimum_words() {
@@ -829,13 +829,28 @@ impl DynSolType {
         }
     }
 
-    #[inline]
-    const fn zero_sized_value(&self) -> Option<DynSolValue> {
+    /// Returns the value of a zero-sized type, which has no encoded data.
+    ///
+    /// Arrays are empty, while fixed arrays and tuples keep their elements, so that the value
+    /// matches the type. Elements are charged against the decoder's memory limit.
+    fn zero_sized_value(&self, dec: &mut Decoder<'_, '_>) -> Result<DynSolValue> {
         match self {
-            Self::Array(_) => Some(DynSolValue::Array(vec![])),
-            Self::FixedArray(_, _) => Some(DynSolValue::FixedArray(vec![])),
-            Self::Tuple(_) => Some(DynSolValue::Tuple(vec![])),
-            _ => None,
+            Self::Array(_) => Ok(DynSolValue::Array(vec![])),
+            Self::FixedArray(ty, size) => {
+                let mut values = Self::alloc_values(dec, *size)?;
+                for _ in 0..*size {
+                    values.push(ty.zero_sized_value(dec)?);
+                }
+                Ok(DynSolValue::FixedArray(values))
+            }
+            Self::Tuple(types) => {
+                let mut values = Self::alloc_values(dec, types.len())?;
+                for ty in types {
+                    values.push(ty.zero_sized_value(dec)?);
+                }
+                Ok(DynSolValue::Tuple(values))
+            }
+            _ => Err(Error::custom("not a zero-sized type")),
         }
     }
 }
@@ -1455,6 +1470,32 @@ re-enc: {re_enc}
         let my_type: DynSolType = "uint32[1][]".parse().unwrap();
         let decoded = my_type.abi_decode(&hex::decode(payload).unwrap());
         assert_eq!(decoded, Err(alloy_sol_types::Error::Overrun.into()))
+    }
+
+    #[test]
+    fn decode_zero_sized_matches_type() {
+        let zst_tuple = DynSolType::Tuple(vec![
+            DynSolType::FixedArray(Box::new(DynSolType::Uint(256)), 0),
+            DynSolType::Tuple(vec![]),
+        ]);
+        let tys = [
+            zst_tuple.clone(),
+            DynSolType::FixedArray(Box::new(DynSolType::Tuple(vec![])), 2),
+            DynSolType::FixedArray(Box::new(zst_tuple), 3),
+            DynSolType::Array(Box::new(DynSolType::Tuple(vec![]))),
+        ];
+        for ty in tys {
+            for value in
+                [ty.abi_decode(&[]), ty.abi_decode_params(&[]), ty.abi_decode_sequence(&[])]
+            {
+                let value = value.unwrap();
+                assert!(ty.matches(&value), "{ty}: {value:?}");
+            }
+        }
+
+        // The elements are charged against the memory limit.
+        let huge = DynSolType::FixedArray(Box::new(DynSolType::Tuple(vec![])), usize::MAX);
+        assert!(huge.abi_decode(&[]).is_err());
     }
 
     fn decode_with_memory_limit(ty: &DynSolType, data: &[u8], limit: usize) -> Result<DynSolValue> {
