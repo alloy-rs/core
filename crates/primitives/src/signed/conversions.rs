@@ -232,7 +232,7 @@ impl<const BITS: usize, const LIMBS: usize> TryFrom<i128> for Signed<BITS, LIMBS
         if overflow {
             return Err(BigIntConversionError);
         }
-        Ok(Self(twos_complement(num)))
+        Self::checked_from_sign_and_abs(Sign::Negative, num).ok_or(BigIntConversionError)
     }
 }
 
