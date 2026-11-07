@@ -771,19 +771,16 @@ impl<'de> Visitor<'de> for ItemVisitor {
     }
 
     fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<Self::Value, A::Error> {
-        let mut kind = self.kind;
+        let mut kind = match self.kind {
+            Some(kind) => KindState::Given(kind),
+            None => KindState::Pending { repeated: 0 },
+        };
         let mut fields = ItemFields::default();
-        // A repeated field is only an error if the item has it, which is unknown until the end
-        // if `type` comes last. Bit `field as u8` is set for each repeated field.
-        let mut repeated = 0u8;
 
         macro_rules! set {
             ($field:expr, $slot:expr) => {
                 if $slot.is_some() {
-                    if kind.is_some() {
-                        return Err(de::Error::duplicate_field($field.name()));
-                    }
-                    repeated |= 1 << $field as u8;
+                    kind.repeat::<A::Error>($field)?;
                     map.next_value::<IgnoredAny>()?;
                 } else {
                     $slot = Some(map.next_value()?);
@@ -793,13 +790,13 @@ impl<'de> Visitor<'de> for ItemVisitor {
 
         while let Some(field) = map.next_key::<Field>()? {
             match field {
-                Field::Type if self.kind.is_none() => {
-                    if kind.is_some() {
+                Field::Type if !matches!(kind, KindState::Given(_)) => {
+                    let KindState::Pending { repeated } = kind else {
                         return Err(de::Error::duplicate_field("type"));
-                    }
-                    kind = Some(map.next_value()?);
+                    };
+                    kind = KindState::Read { kind: map.next_value()?, repeated };
                 }
-                _ if kind.is_some_and(|kind| !kind.has(field)) => {
+                _ if kind.known().is_some_and(|kind| !kind.has(field)) => {
                     map.next_value::<IgnoredAny>()?;
                 }
                 Field::Name => set!(field, fields.name),
@@ -815,14 +812,68 @@ impl<'de> Visitor<'de> for ItemVisitor {
             }
         }
 
-        let kind = kind.ok_or_else(|| de::Error::missing_field("type"))?;
+        fields.finish(kind.finish::<A::Error>()?)
+    }
+}
+
+/// How [`ItemVisitor::visit_map`] knows the item kind.
+///
+/// The `type` field can appear after the fields that depend on it. A repeated field is only an
+/// error if the item has it, so until the kind is known, repeated fields are recorded and checked
+/// once it is.
+#[derive(Clone, Copy)]
+enum KindState {
+    /// The kind was given by the caller. `type` fields are ignored.
+    Given(Kind),
+    /// No `type` field has been read yet.
+    Pending {
+        /// Bit `field as u8` is set for each repeated field.
+        repeated: u8,
+    },
+    /// The kind was read from the `type` field.
+    Read {
+        kind: Kind,
+        /// The fields that were repeated before the `type` field, as in [`Self::Pending`].
+        repeated: u8,
+    },
+}
+
+impl KindState {
+    /// Returns the item kind, if known yet.
+    const fn known(self) -> Option<Kind> {
+        match self {
+            Self::Given(kind) | Self::Read { kind, .. } => Some(kind),
+            Self::Pending { .. } => None,
+        }
+    }
+
+    /// Handles a repeated `field`: an error once the kind is known, otherwise recorded for
+    /// [`finish`](Self::finish).
+    fn repeat<E: de::Error>(&mut self, field: Field) -> Result<(), E> {
+        match self {
+            Self::Pending { repeated } => {
+                *repeated |= 1 << field as u8;
+                Ok(())
+            }
+            Self::Given(_) | Self::Read { .. } => Err(E::duplicate_field(field.name())),
+        }
+    }
+
+    /// Returns the item kind, or an error if it is missing or a field the item has was repeated
+    /// before the kind was known.
+    fn finish<E: de::Error>(self) -> Result<Kind, E> {
+        let (kind, repeated) = match self {
+            Self::Given(kind) => return Ok(kind),
+            Self::Read { kind, repeated } => (kind, repeated),
+            Self::Pending { .. } => return Err(E::missing_field("type")),
+        };
         let repeated = Field::ITEM_FIELDS
             .into_iter()
             .find(|&field| repeated & (1 << field as u8) != 0 && kind.has(field));
         if let Some(field) = repeated {
-            return Err(de::Error::duplicate_field(field.name()));
+            return Err(E::duplicate_field(field.name()));
         }
-        fields.finish(kind)
+        Ok(kind)
     }
 }
 
