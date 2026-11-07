@@ -387,7 +387,7 @@ fn uint<'i>(len: usize) -> impl ModalParser<Input<'i>, U256, ContextError> {
                 let units = pow10(units - fract.len())?;
                 uint.checked_mul(units)
             })()
-        } else if units > 0 {
+        } else if units > 0 && !intpart.is_zero() {
             // intpart * 10^units
             (|| -> Option<U256> {
                 let units = pow10(units)?;
@@ -792,6 +792,19 @@ mod tests {
             DynSolType::Uint(256).coerce_str("1").unwrap(),
             DynSolValue::Uint(U256::from(1), 256)
         );
+    }
+
+    #[test]
+    fn coerce_uint_scientific_zero() {
+        for input in ["0e77", "0e78", "0e+78", "0e1000", "0e60 ether", "0e69 gwei"] {
+            uint_test(input, Ok("0"));
+        }
+        uint_test(&format!("0e{}", isize::MAX), Ok("0"));
+
+        for input in ["1e78", "1e1000", "0e", "0e+", "0e-1", "0e78x", "0e78 ether trailing"] {
+            uint_test(input, Err(()));
+        }
+        uint_test(&format!("0e{}0", isize::MAX), Err(()));
     }
 
     #[test]
