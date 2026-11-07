@@ -241,6 +241,11 @@ impl ParseUnits {
     /// See [`parse_units`] for more information.
     #[allow(clippy::self_named_constructors)]
     pub fn parse_units(amount: &str, unit: Unit) -> Result<Self, UnitsError> {
+        // Validate before truncating so byte offsets cannot split a UTF-8 character or discard it.
+        if let Some(c) = amount.chars().find(|c| !c.is_ascii()) {
+            return Err(ruint::ParseError::InvalidDigit(c).into());
+        }
+
         let exponent = unit.get() as usize;
 
         let mut amount = amount.to_string();
@@ -808,6 +813,14 @@ mod tests {
 
         let n: U256 = parse_units("", 3).unwrap().into();
         assert_eq!(n, U256::ZERO, "empty");
+    }
+
+    #[test]
+    fn test_parse_units_non_ascii() {
+        // Truncation must neither split a UTF-8 character nor silently discard it.
+        for amount in [".😀", "-1.éa", "1.2😀"] {
+            assert!(parse_units(amount, 1).is_err(), "{amount:?}");
+        }
     }
 
     #[test]
