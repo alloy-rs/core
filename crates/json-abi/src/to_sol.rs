@@ -792,7 +792,17 @@ fn param(
                     out.push('.');
                 }
             }
-            out.push_ident(type_name);
+            match type_name.strip_prefix("function") {
+                Some(suffix)
+                    if !out.config.for_sol_macro
+                        && (suffix.is_empty() || suffix.starts_with('[')) =>
+                {
+                    // The ABI omits the function signature. Use an ABI-equivalent external type.
+                    out.push_str("function() external");
+                    out.push_str(suffix);
+                }
+                _ => out.push_ident(type_name),
+            }
         }
     }
 
