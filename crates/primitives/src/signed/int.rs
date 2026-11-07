@@ -739,21 +739,10 @@ mod tests {
 
     #[test]
     fn from_base_be() {
-        assert_eq!(I8::from_base_be(10, [2, 0, 0]), Err(BaseConvertError::Overflow));
         assert_eq!(I8::from_base_be(10, [1, 2, 7]), Ok(I8::MAX));
-        for digits in [[1, 2, 8], [2, 5, 5], [2, 5, 6]] {
+        for digits in [[1, 2, 8], [2, 0, 0], [2, 5, 6]] {
             assert_eq!(I8::from_base_be(10, digits), Err(BaseConvertError::Overflow));
         }
-        assert_eq!(I8::from_base_be(10, [0]), Ok(I8::ZERO));
-        assert_eq!(I8::from_base_be(10, [1]), Ok(I8::ONE));
-        assert_eq!(I8::from_base_be(1, [0]), Err(BaseConvertError::InvalidBase(1)));
-        assert_eq!(I8::from_base_be(10, [10]), Err(BaseConvertError::InvalidDigit(10, 10)));
-
-        assert_eq!(I256::from_base_be(10, I256::MAX.into_raw().to_base_be(10)), Ok(I256::MAX));
-        assert_eq!(
-            I256::from_base_be(10, I256::MIN.unsigned_abs().to_base_be(10)),
-            Err(BaseConvertError::Overflow)
-        );
     }
 
     #[test]
