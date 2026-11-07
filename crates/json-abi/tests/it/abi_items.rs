@@ -212,6 +212,7 @@ fn full_signature_with_named_components_parses_back() {
         "event Placed(address indexed by, tuple(address who, uint256[] amounts, tuple(bytes32 tag) inner) order, tuple(address who, uint256[] amounts, tuple(bytes32 tag) inner)[] orders)"
     );
     let parsed = Event::parse(&sig).unwrap();
+    assert_eq!(parsed, event);
     assert_eq!(parsed.selector(), event.selector());
     assert_eq!(
         parsed.inputs.iter().map(|input| input.indexed).collect::<Vec<_>>(),
@@ -225,6 +226,7 @@ fn full_signature_with_named_components_parses_back() {
     ))
     .unwrap();
     let parsed = Function::parse(&function.full_signature()).unwrap();
+    assert_eq!(parsed, function);
     assert_eq!(parsed.selector(), function.selector());
     assert_eq!(parsed.outputs[0].selector_type(), function.outputs[0].selector_type());
 }

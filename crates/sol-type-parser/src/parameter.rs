@@ -14,6 +14,8 @@ pub struct ParameterSpecifier<'a> {
     /// The full span of the specifier.
     pub span: &'a str,
     /// The type of the parameter.
+    ///
+    /// Tuple component names, when present, are retained in the tuple's span.
     pub ty: TypeSpecifier<'a>,
     /// The storage specifier.
     pub storage: Option<Storage>,
@@ -183,6 +185,28 @@ mod tests {
         // Bare types stay strict.
         TypeSpecifier::parse("(address who, uint256 amount)").unwrap_err();
         TupleSpecifier::parse("(address who)").unwrap_err();
+        TypeSpecifier::parse("((uint256 amount)[] orders,bool)").unwrap_err();
+        TupleSpecifier::parse("((uint256 amount)[] orders,bool)").unwrap_err();
+
+        ParameterSpecifier::parse("(address who extra) order").unwrap_err();
+        ParameterSpecifier::parse("(address 1who) order").unwrap_err();
+    }
+
+    #[test]
+    fn named_tuple_recursion_limits() {
+        let mut ty = alloc::string::String::from("uint256");
+        for _ in 0..crate::input::LIMIT - 2 {
+            ty = alloc::format!("({ty} child)");
+        }
+        Parameters::parse(&alloc::format!("({ty} value)")).unwrap();
+        ty = alloc::format!("({ty} child)");
+        ParameterSpecifier::parse(&alloc::format!("{ty} value")).unwrap();
+        Parameters::parse(&alloc::format!("({ty} value)")).unwrap_err();
+        ParameterSpecifier::parse(&alloc::format!("({ty} child) value")).unwrap_err();
+
+        let arrays = "[]".repeat(crate::input::LIMIT - 1);
+        ParameterSpecifier::parse(&alloc::format!("(uint256{arrays} child) value")).unwrap();
+        ParameterSpecifier::parse(&alloc::format!("(uint256{arrays}[] child) value")).unwrap_err();
     }
 
     #[test]

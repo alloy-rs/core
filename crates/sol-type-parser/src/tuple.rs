@@ -5,6 +5,7 @@ use crate::{
 use alloc::vec::Vec;
 use winnow::{
     ModalResult, Parser,
+    ascii::space0,
     combinator::{opt, preceded, trace},
 };
 
@@ -75,6 +76,7 @@ impl<'a> TupleSpecifier<'a> {
         let ty = TypeSpecifier::parser(input)?;
         if input.state.component_names() {
             opt_ws_ident(input)?;
+            space0(input)?;
         }
         Ok(ty)
     }

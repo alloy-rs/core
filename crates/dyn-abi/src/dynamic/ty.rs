@@ -914,6 +914,21 @@ mod tests {
     }
 
     #[test]
+    fn bare_tuple_types_reject_component_names() {
+        for ty in [
+            "(address who,uint256 amount)",
+            "tuple(address who,uint256 amount)[]",
+            "((uint256 amount)[] orders,bool)",
+        ] {
+            assert!(DynSolType::parse(ty).is_err(), "accepted {ty}");
+        }
+        assert_eq!(
+            DynSolType::parse("(address,uint256)").unwrap(),
+            DynSolType::Tuple(vec![DynSolType::Address, DynSolType::Uint(256)])
+        );
+    }
+
+    #[test]
     fn dynamically_encodes() {
         let word1 =
             "0000000000000000000000000101010101010101010101010101010101010101".parse().unwrap();
