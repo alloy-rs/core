@@ -381,13 +381,16 @@ fn uint<'i>(len: usize) -> impl ModalParser<Input<'i>, U256, ContextError> {
 
             // (intpart * 10^fract.len() + fract) * 10^(units-fract.len())
             (|| -> Option<U256> {
+                if intpart.is_zero() && fract_uint.is_zero() {
+                    return Some(U256::ZERO);
+                }
                 let extension = pow10(fract.len())?;
                 let extended = intpart.checked_mul(extension)?;
                 let uint = fract_uint.checked_add(extended)?;
                 let units = pow10(units - fract.len())?;
                 uint.checked_mul(units)
             })()
-        } else if units > 0 {
+        } else if units > 0 && !intpart.is_zero() {
             // intpart * 10^units
             (|| -> Option<U256> {
                 let units = pow10(units)?;
@@ -792,6 +795,20 @@ mod tests {
             DynSolType::Uint(256).coerce_str("1").unwrap(),
             DynSolValue::Uint(U256::from(1), 256)
         );
+    }
+
+    #[test]
+    fn coerce_uint_scientific_zero() {
+        uint_test("0e78", Ok("0"));
+        uint_test("0e60 ether", Ok("0"));
+        uint_test(&format!("0e{}", isize::MAX), Ok("0"));
+        // Skip both fractional extension and exponent scaling when the mantissa is zero.
+        uint_test("0.0e79", Ok("0"));
+        uint_test(&format!("0.{}e1000", "0".repeat(100)), Ok("0"));
+        uint_test("1e78", Err(()));
+        uint_test("0.1e1000", Err(()));
+        uint_test("0.00e1", Err(()));
+        uint_test("0e78x", Err(()));
     }
 
     #[test]
