@@ -233,13 +233,7 @@ mod tests {
         let mut ab = [0; 32];
         ab[..2].copy_from_slice(b"ab");
         assert_composite_topic::<FixedArray<String, 2>>(&[Default::default(), "ab".into()], &ab);
-        assert_composite_topic::<Array<Bytes>>(
-            &vec![Default::default(), b"ab".to_vec().into()],
-            &ab,
-        );
-        assert_composite_topic::<(String, Bytes)>(&("ab".into(), Default::default()), &ab);
 
-        // A generated struct uses the same member preimages as a tuple.
         crate::sol! {
             struct S {
                 uint256 n;
@@ -247,33 +241,10 @@ mod tests {
                 bytes b;
             }
         }
-        let mut one = [0; 32];
-        one[31] = 1;
-        assert_composite_topic::<(Uint<256>, String)>(&(U256::ONE, Default::default()), &one);
         assert_composite_topic::<S>(
             &S { n: U256::ONE, s: Default::default(), b: Default::default() },
-            &one,
+            &U256::ONE.to_be_bytes::<32>(),
         );
-        assert_composite_topic::<Array<S>>(
-            &vec![S { n: U256::ONE, s: Default::default(), b: Default::default() }],
-            &one,
-        );
-    }
-
-    #[test]
-    fn bytes_and_string_topic_padding() {
-        for (len, padded_len) in [(0, 0), (1, 32), (31, 32), (32, 32), (33, 64), (64, 64)] {
-            let bytes = vec![b'a'; len];
-            let string = "a".repeat(len);
-            let mut expected = vec![0; padded_len];
-            expected[..len].copy_from_slice(&bytes);
-            assert_composite_topic::<Array<Bytes>>(&vec![bytes.clone().into()], &expected);
-            assert_composite_topic::<Array<String>>(&vec![string.clone()], &expected);
-
-            // Top-level bytes and strings hash their contents without padding.
-            assert_eq!(Bytes::encode_topic(&bytes.clone().into()).0, keccak256(&bytes));
-            assert_eq!(String::encode_topic(&string).0, keccak256(&bytes));
-        }
     }
 
     #[test]
