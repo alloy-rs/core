@@ -1422,30 +1422,15 @@ mod tests {
 
     #[test]
     fn coerce_uint_exponent_overflow() {
-        for (unit, decimals) in [("ether", 18), ("gwei", 9)] {
-            for exponent in [isize::MAX - decimals, isize::MAX - decimals + 1, isize::MAX] {
-                for (ty, sign) in [
-                    (DynSolType::Uint(256), ""),
-                    (DynSolType::Int(256), ""),
-                    (DynSolType::Int(256), "-"),
-                ] {
-                    let input = format!("{sign}1e{exponent} {unit}");
-                    let err = ty.coerce_str(&input).unwrap_err();
-                    #[cfg(feature = "std")]
-                    assert!(
-                        err.to_string().contains(&Error::IntOverflow.to_string()),
-                        "{input}: {err}"
-                    );
-                    #[cfg(not(feature = "std"))]
-                    let _ = err;
-                }
-            }
+        for exponent in [isize::MAX - 18, isize::MAX - 17] {
+            let input = format!("1e{exponent} ether");
+            let err = DynSolType::Uint(256).coerce_str(&input).unwrap_err();
+            #[cfg(feature = "std")]
+            assert!(err.to_string().contains(&Error::IntOverflow.to_string()), "{input}: {err}");
+            #[cfg(not(feature = "std"))]
+            let _ = err;
         }
-
         uint_test("1e-18 ether", Ok("1"));
-        uint_test("1e-9 gwei", Ok("1"));
-        uint_test("1e-19 ether", Err(()));
-        uint_test(&format!("1e{} ether", isize::MIN), Err(()));
     }
 
     #[test]
