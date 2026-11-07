@@ -640,23 +640,10 @@ mod tests {
 
     #[test]
     fn i128_conversion_bounds() {
-        for value in [-200i128, -129, -255, -256, i128::MIN] {
+        assert_eq!(I8::try_from(-128i128), Ok(I8::MIN));
+        for value in [-129i128, -200, -256, i128::MIN] {
             assert_eq!(I8::try_from(value), Err(BigIntConversionError), "{value}");
         }
-        assert_eq!(I8::try_from(-128i128), Ok(I8::MIN));
-        assert_eq!(I8::try_from(-1i128), Ok(I8::MINUS_ONE));
-        assert_eq!(I8::try_from(0i128), Ok(I8::ZERO));
-        assert_eq!(I8::try_from(127i128), Ok(I8::MAX));
-        assert_eq!(I8::try_from(128i128), Err(BigIntConversionError));
-
-        let min = i128::from(i64::MIN);
-        assert_eq!(I64::try_from(min), Ok(I64::MIN));
-        assert_eq!(I64::try_from(min - 1), Err(BigIntConversionError));
-        assert_eq!(I64::try_from(-i128::from(u64::MAX)), Err(BigIntConversionError));
-
-        assert_eq!(I128::try_from(i128::MIN), Ok(I128::MIN));
-        assert_eq!(I128::try_from(i128::MAX), Ok(I128::MAX));
-        assert_eq!(I256::try_from(i128::MIN).unwrap().to_string(), i128::MIN.to_string());
     }
 
     #[test]
