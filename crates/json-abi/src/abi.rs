@@ -687,7 +687,7 @@ mod tests {
             bytecode: Some(Bytes::from_static(&[1])),
             deployed_bytecode: Some(Bytes::from_static(&[2])),
         };
-        let json = value.to_string();
+        let json = serde_json::to_string(&value).unwrap();
         assert_eq!(serde_json::from_str::<ContractObject>(&json).unwrap(), expected);
         assert_eq!(serde_json::from_value::<ContractObject>(value).unwrap(), expected);
         assert_eq!(
