@@ -55,7 +55,7 @@ impl Encoder {
 
     /// Return a reference to the encoded words.
     #[inline]
-    pub fn words(&self) -> &[Word] {
+    pub const fn words(&self) -> &[Word] {
         // SAFETY: `#[repr(transparent)] FixedBytes<N>([u8; N])`, alignment 1.
         unsafe { core::slice::from_raw_parts(self.buf.as_ptr().cast(), self.buf.len() / 32) }
     }
