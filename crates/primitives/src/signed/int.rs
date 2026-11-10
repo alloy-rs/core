@@ -543,6 +543,7 @@ mod tests {
     use core::ops::Neg;
     use ruint::{
         ParseError,
+        Uint,
         aliases::{U0, U1, U128, U160, U256},
     };
 
@@ -1111,6 +1112,37 @@ mod tests {
         assert_eq!(z.asl(1), Some(z));
         assert_eq!(o.asl(1), Some(o));
         assert_eq!(m.asl(1), None);
+
+        // Regression tests for https://github.com/alloy-rs/core/issues/1283:
+        // overflow that keeps the sign of the result.
+        let value = Signed::<8, 1>::from_raw(Uint::<8, 1>::from(64_u8));
+        assert_eq!(value.asl(2), None, "64i8 << 2 (256) was not None");
+        assert_eq!(
+            Signed::<8, 1>::from_raw(Uint::<8, 1>::from(32_u8)).asl(2),
+            None,
+            "32i8 << 2 (128) was not None"
+        );
+        assert_eq!(
+            I8::try_from(31_i32).unwrap().asl(2),
+            Some(I8::try_from(124_i32).unwrap()),
+            "31i8 << 2 was not 124"
+        );
+        assert_eq!(
+            I8::try_from(16_i32).unwrap().asl(2),
+            Some(I8::try_from(64_i32).unwrap()),
+            "16i8 << 2 was not 64"
+        );
+
+        // Negative values whose magnitude overflows past MIN.
+        assert_eq!(I8::try_from(-64_i32).unwrap().asl(1), Some(I8::MIN), "-64i8 << 1 was not -128");
+        assert_eq!(
+            I8::try_from(-65_i32).unwrap().asl(1),
+            None,
+            "-65i8 << 1 (-130) was not None"
+        );
+        assert_eq!(I8::try_from(-2_i32).unwrap().asl(7), None, "-2i8 << 7 (-256) was not None");
+        assert_eq!(I8::MIN.asl(1), None, "-128i8 << 1 was not None");
+        assert_eq!(I8::try_from(-1_i32).unwrap().asl(7), Some(I8::MIN), "-1i8 << 7 was not -128");
 
         run_test!(I96, U96);
         run_test!(I128, U128);
