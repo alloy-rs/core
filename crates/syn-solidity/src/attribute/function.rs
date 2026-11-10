@@ -58,12 +58,11 @@ impl Parse for FunctionAttributes {
                 FunctionAttribute::Visibility(_)
                     | FunctionAttribute::Mutability(_)
                     | FunctionAttribute::Virtual(_)
-            ) {
-                if let Some(prev) = attributes.iter().find(|a| **a == attr) {
-                    let mut e = Error::new(attr.span(), "duplicate attribute");
-                    e.combine(Error::new(prev.span(), "previous declaration is here"));
-                    return Err(e);
-                }
+            ) && let Some(prev) = attributes.iter().find(|a| **a == attr)
+            {
+                let mut e = Error::new(attr.span(), "duplicate attribute");
+                e.combine(Error::new(prev.span(), "previous declaration is here"));
+                return Err(e);
             }
             attributes.push(attr);
         }

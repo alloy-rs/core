@@ -175,7 +175,7 @@ secp256k1 = ["dep:secp256k1"]
 rand = [
     "dep:rand",
     "getrandom",
-    "ruint/rand-09",
+    "ruint/rand-010",
     "rapidhash?/rand",
     "rustc-hash?/rand",
 ]
