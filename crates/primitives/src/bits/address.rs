@@ -858,6 +858,7 @@ mod tests {
 
     #[test]
     #[cfg(feature = "secp256k1")]
+    #[cfg_attr(miri, ignore = "secp256k1 calls unsupported foreign functions")]
     fn secp256k1_keys_to_address() {
         let secret =
             secp256k1::SecretKey::from_secret_bytes(crate::B256::with_last_byte(1).0).unwrap();
