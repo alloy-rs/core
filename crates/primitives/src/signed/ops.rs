@@ -772,11 +772,7 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
             Sign::Negative => result.sign() != Sign::Negative,
         };
 
-        if overflowed {
-            None
-        } else {
-            Some(result)
-        }
+        if overflowed { None } else { Some(result) }
     }
 
     /// Compute the [two's complement](https://en.wikipedia.org/wiki/Two%27s_complement) of this number.

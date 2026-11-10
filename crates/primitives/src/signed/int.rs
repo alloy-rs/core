@@ -542,8 +542,7 @@ mod tests {
     use alloc::string::ToString;
     use core::ops::Neg;
     use ruint::{
-        ParseError,
-        Uint,
+        ParseError, Uint,
         aliases::{U0, U1, U128, U160, U256},
     };
 
@@ -1135,11 +1134,7 @@ mod tests {
 
         // Negative values whose magnitude overflows past MIN.
         assert_eq!(I8::try_from(-64_i32).unwrap().asl(1), Some(I8::MIN), "-64i8 << 1 was not -128");
-        assert_eq!(
-            I8::try_from(-65_i32).unwrap().asl(1),
-            None,
-            "-65i8 << 1 (-130) was not None"
-        );
+        assert_eq!(I8::try_from(-65_i32).unwrap().asl(1), None, "-65i8 << 1 (-130) was not None");
         assert_eq!(I8::try_from(-2_i32).unwrap().asl(7), None, "-2i8 << 7 (-256) was not None");
         assert_eq!(I8::MIN.asl(1), None, "-128i8 << 1 was not None");
         assert_eq!(I8::try_from(-1_i32).unwrap().asl(7), Some(I8::MIN), "-1i8 << 7 was not -128");
