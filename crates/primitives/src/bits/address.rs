@@ -533,8 +533,7 @@ impl Address {
     #[inline]
     #[cfg(feature = "secp256k1")]
     pub fn from_secp256k1_secret_key(secret_key: &secp256k1::SecretKey) -> Self {
-        let secp = secp256k1::Secp256k1::signing_only();
-        let pubkey = secp256k1::PublicKey::from_secret_key(&secp, secret_key);
+        let pubkey = secp256k1::PublicKey::from_secret_key(secret_key);
         Self::from_secp256k1_public_key(&pubkey)
     }
 }
