@@ -47,27 +47,6 @@ pub trait SolStruct: SolType<RustType = Self> {
     ///
     /// See [EIP-712 `encodeType`](https://eips.ethereum.org/EIPS/eip-712#definition-of-encodetype).
     fn eip712_encode_type() -> Cow<'static, str> {
-        fn eip712_encode_types(
-            root_type: Cow<'static, str>,
-            mut components: Vec<Cow<'static, str>>,
-        ) -> Cow<'static, str> {
-            if components.is_empty() {
-                return root_type;
-            }
-
-            components.sort_unstable();
-            components.dedup();
-
-            let mut s = String::with_capacity(
-                root_type.len() + components.iter().map(|s| s.len()).sum::<usize>(),
-            );
-            s.push_str(&root_type);
-            for component in components {
-                s.push_str(&component);
-            }
-            Cow::Owned(s)
-        }
-
         eip712_encode_types(Self::eip712_root_type(), Self::eip712_components())
     }
 
@@ -111,5 +90,57 @@ pub trait SolStruct: SolType<RustType = Self> {
         digest_input[2..34].copy_from_slice(&domain.hash_struct()[..]);
         digest_input[34..66].copy_from_slice(&self.eip712_hash_struct()[..]);
         keccak256(digest_input)
+    }
+}
+
+fn eip712_encode_types(
+    root_type: Cow<'static, str>,
+    mut components: Vec<Cow<'static, str>>,
+) -> Cow<'static, str> {
+    if components.is_empty() {
+        return root_type;
+    }
+
+    // Compare names first: `A` precedes `A$`, but `A$(...)` precedes `A(...)`.
+    components.sort_unstable_by(|a, b| {
+        a.split_once('(').unwrap_or((a, "")).cmp(&b.split_once('(').unwrap_or((b, "")))
+    });
+    components.dedup();
+
+    let mut s =
+        String::with_capacity(root_type.len() + components.iter().map(|s| s.len()).sum::<usize>());
+    s.push_str(&root_type);
+    for component in components {
+        s.push_str(&component);
+    }
+    Cow::Owned(s)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use alloc::vec;
+
+    #[test]
+    fn encode_type_name_order() {
+        let root = "P(A a,A$ b,A$$ c)";
+        let components = vec![
+            "A$$(uint256 z)".into(),
+            "A(uint256 x)".into(),
+            "A$(uint256 y)".into(),
+            "A(uint256 x)".into(),
+        ];
+        assert_eq!(
+            eip712_encode_types(root.into(), components),
+            "P(A a,A$ b,A$$ c)A(uint256 x)A$(uint256 y)A$$(uint256 z)"
+        );
+    }
+
+    #[test]
+    fn encode_type_without_components() {
+        assert!(matches!(
+            eip712_encode_types("A(uint256 x)".into(), Vec::new()),
+            Cow::Borrowed("A(uint256 x)")
+        ));
     }
 }
