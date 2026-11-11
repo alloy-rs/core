@@ -749,16 +749,24 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     #[must_use]
     pub fn asl(self, rhs: usize) -> Option<Self> {
         if rhs == 0 || BITS == 0 {
-            Some(self)
-        } else {
-            let result = self.wrapping_shl(rhs);
-            if result.sign() != self.sign() {
-                // Overflow occurred
-                None
-            } else {
-                Some(result)
-            }
+            return Some(self);
         }
+        if rhs >= BITS {
+            // Shifting by the full width discards the value: only zero
+            // survives the shift.
+            return if self.is_zero() { Some(Self::ZERO) } else { None };
+        }
+        let result = self.wrapping_shl(rhs);
+        if result.sign() != self.sign() {
+            // Overflow occurred: the sign bit flipped.
+            return None;
+        }
+        if self.sign() == Sign::Positive && (self.0 >> (BITS - 1 - rhs)) != Uint::ZERO {
+            // Overflow occurred: the magnitude ran past the range, but the
+            // sign bit of the wrapped result was preserved.
+            return None;
+        }
+        Some(result)
     }
 
     /// Compute the [two's complement](https://en.wikipedia.org/wiki/Two%27s_complement) of this number.
