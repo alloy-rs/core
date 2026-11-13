@@ -246,8 +246,17 @@ impl ParseUnits {
         let mut amount = amount.to_string();
         let negative = amount.starts_with('-');
         let dec_len = if let Some(di) = amount.find('.') {
-            amount.remove(di);
-            amount[di..].len()
+            let mut fraction = amount.split_off(di + 1);
+            amount.pop();
+            // The length of the fraction sets the scale and the truncation point, so it may only
+            // hold digits. Drop the `_` separators that the integer parser skips and reject
+            // anything else, which truncation could otherwise discard.
+            fraction.retain(|c| c != '_');
+            if let Some(c) = fraction.chars().find(|c| !c.is_ascii_digit()) {
+                return Err(ruint::ParseError::InvalidDigit(c).into());
+            }
+            amount.push_str(&fraction);
+            fraction.len()
         } else {
             0
         };
@@ -875,5 +884,21 @@ mod tests {
 
         let n: I256 = parse_units("-", 3).unwrap().into();
         assert_eq!(n, I256::ZERO, "empty");
+    }
+
+    #[test]
+    fn test_parse_units_fraction() {
+        // Separators in the fraction do not count as decimals.
+        let n: U256 = parse_units("1.000_000", 6).unwrap().into();
+        assert_eq!(n, U256::from(1_000_000));
+        let n: U256 = parse_units(".33_319_2", 3).unwrap().into();
+        assert_eq!(n, U256::from(333));
+
+        // Anything else is rejected, even where truncation would discard it.
+        for amount in ["1.2x", "1.2.3", "1.2 ", "1.+2", "-1.2-", ".😀"] {
+            for unit in [0u8, 1, 18] {
+                assert!(parse_units(amount, unit).is_err(), "{amount:?} with {unit} decimals");
+            }
+        }
     }
 }
