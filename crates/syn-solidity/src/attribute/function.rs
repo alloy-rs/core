@@ -74,17 +74,21 @@ impl FunctionAttributes {
         Self(Vec::new())
     }
 
-    /// Parses the attributes of a function type, which are only its visibility and mutability.
+    /// Parses the attributes of a function type: one visibility, `internal` or `external`, and
+    /// its mutability.
     ///
-    /// Unlike in a function definition, an identifier that follows is not a modifier: it is the
-    /// storage location, `indexed` or the name of the variable that has this type.
+    /// Unlike in a function definition, what follows belongs to the variable that has this type:
+    /// its name, storage location or `indexed`, and for a state variable its own visibility and
+    /// `constant`, as in `function() external public constant callback`.
     pub(crate) fn parse_type_attributes(input: ParseStream<'_>) -> Result<Self> {
         let mut attributes = Self::new();
         loop {
-            let attr = if let Some(visibility) = Visibility::parse_opt(input)? {
-                FunctionAttribute::Visibility(visibility)
-            } else if let Some(mutability) = Mutability::parse_opt(input)? {
-                FunctionAttribute::Mutability(mutability)
+            let attr = if attributes.visibility().is_none()
+                && (input.peek(kw::external) || input.peek(kw::internal))
+            {
+                FunctionAttribute::Visibility(input.parse()?)
+            } else if input.peek(kw::pure) || input.peek(kw::view) || input.peek(kw::payable) {
+                FunctionAttribute::Mutability(input.parse()?)
             } else {
                 return Ok(attributes);
             };

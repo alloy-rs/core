@@ -469,6 +469,18 @@ mod tests {
         }
     }
 
+    #[test]
+    fn function_type_state_variable() {
+        // The second visibility and `constant` belong to the variable, not to its type.
+        let var = syn::parse_str::<VariableDefinition>(
+            "function() external view public constant callback = target;",
+        )
+        .unwrap();
+        let Type::Function(ty) = &var.ty else { panic!("not a function type: {}", var.ty) };
+        assert_eq!(ty.attributes.to_string(), "external view");
+        assert_eq!(var.attributes.to_string(), "public constant");
+    }
+
     fn test_getter(var_s: &str, fn_s: &str, run_solc: bool) {
         let var = syn::parse_str::<VariableDefinition>(var_s).unwrap();
         let getter = ItemFunction::from_variable_definition(var);
