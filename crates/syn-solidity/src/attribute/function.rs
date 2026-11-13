@@ -50,24 +50,11 @@ impl DerefMut for FunctionAttributes {
 
 impl Parse for FunctionAttributes {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
-        let mut attributes = Vec::<FunctionAttribute>::new();
+        let mut attributes = Self::new();
         while !input.is_empty() && !input.peek(kw::returns) && input.peek(Ident::peek_any) {
-            let attr: FunctionAttribute = input.parse()?;
-            if matches!(
-                attr,
-                FunctionAttribute::Visibility(_)
-                    | FunctionAttribute::Mutability(_)
-                    | FunctionAttribute::Virtual(_)
-            ) {
-                if let Some(prev) = attributes.iter().find(|a| **a == attr) {
-                    let mut e = Error::new(attr.span(), "duplicate attribute");
-                    e.combine(Error::new(prev.span(), "previous declaration is here"));
-                    return Err(e);
-                }
-            }
-            attributes.push(attr);
+            attributes.push_unique(input.parse()?)?;
         }
-        Ok(Self(attributes))
+        Ok(attributes)
     }
 }
 
@@ -85,6 +72,42 @@ impl FunctionAttributes {
     #[inline]
     pub fn new() -> Self {
         Self(Vec::new())
+    }
+
+    /// Parses the attributes of a function type, which are only its visibility and mutability.
+    ///
+    /// Unlike in a function definition, an identifier that follows is not a modifier: it is the
+    /// storage location, `indexed` or the name of the variable that has this type.
+    pub(crate) fn parse_type_attributes(input: ParseStream<'_>) -> Result<Self> {
+        let mut attributes = Self::new();
+        loop {
+            let attr = if let Some(visibility) = Visibility::parse_opt(input)? {
+                FunctionAttribute::Visibility(visibility)
+            } else if let Some(mutability) = Mutability::parse_opt(input)? {
+                FunctionAttribute::Mutability(mutability)
+            } else {
+                return Ok(attributes);
+            };
+            attributes.push_unique(attr)?;
+        }
+    }
+
+    /// Adds `attr`, or returns an error if it repeats a visibility, mutability or `virtual`.
+    fn push_unique(&mut self, attr: FunctionAttribute) -> Result<()> {
+        if matches!(
+            attr,
+            FunctionAttribute::Visibility(_)
+                | FunctionAttribute::Mutability(_)
+                | FunctionAttribute::Virtual(_)
+        ) {
+            if let Some(prev) = self.iter().find(|a| **a == attr) {
+                let mut e = Error::new(attr.span(), "duplicate attribute");
+                e.combine(Error::new(prev.span(), "previous declaration is here"));
+                return Err(e);
+            }
+        }
+        self.push(attr);
+        Ok(())
     }
 
     pub fn visibility(&self) -> Option<Visibility> {
