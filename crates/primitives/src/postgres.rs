@@ -3,7 +3,7 @@
 //! **WARNING**: this module depends entirely on [`postgres_types`], which is not yet stable,
 //! therefore this module is exempt from the semver guarantees of this crate.
 
-use super::{FixedBytes, Sign, Signed};
+use super::{BigIntConversionError, FixedBytes, Sign, Signed};
 use bytes::{BufMut, BytesMut};
 use derive_more::Display;
 use postgres_types::{FromSql, IsNull, ToSql, Type, WrongType, accepts, to_sql_checked};
@@ -71,7 +71,8 @@ impl core::error::Error for ToSqlError {}
 /// * `DECIMAL` and `NUMERIC`, which are variable length.
 /// * `MONEY` which is a 64 bit integer with two decimals.
 /// * `BYTEA`, `BIT`, `VARBIT` interpreted as a big-endian binary number.
-/// * `CHAR`, `VARCHAR`, `TEXT` as `0x`-prefixed big-endian hex strings.
+/// * `CHAR`, `VARCHAR`, `TEXT` as `0x`-prefixed big-endian hex strings, with a leading `-` for
+///   negative values.
 /// * `JSON`, `JSONB` as a hex string compatible with the Serde serialization.
 ///
 /// # Errors
@@ -79,7 +80,7 @@ impl core::error::Error for ToSqlError {}
 /// Returns an error when trying to convert to a value that is too small to fit
 /// the number. Note that this depends on the value, not the type, so a
 /// [`Signed<256>`] can be stored in a `SMALLINT` column, as long as the values
-/// are less than $2^{16}$.
+/// fit in 16 bits.
 ///
 /// # Implementation details
 ///
@@ -96,15 +97,16 @@ impl<const BITS: usize, const LIMBS: usize> ToSql for Signed<BITS, LIMBS> {
             // Big-endian simple types
             // Note `BufMut::put_*` methods write big-endian by default.
             Type::BOOL => out.put_u8(u8::from(bool::try_from(self.0)?)),
-            Type::INT2 => out.put_i16(self.0.try_into()?),
-            Type::INT4 => out.put_i32(self.0.try_into()?),
+            Type::INT2 => out.put_i16((*self).try_into()?),
+            Type::INT4 => out.put_i32((*self).try_into()?),
+            Type::OID if self.is_negative() => return Err(Box::new(BigIntConversionError)),
             Type::OID => out.put_u32(self.0.try_into()?),
-            Type::INT8 => out.put_i64(self.0.try_into()?),
+            Type::INT8 => out.put_i64((*self).try_into()?),
 
             Type::MONEY => {
                 // Like i64, but with two decimals.
                 out.put_i64(
-                    i64::try_from(self.0)?
+                    i64::try_from(*self)?
                         .checked_mul(100)
                         .ok_or(ToSqlError::Overflow(BITS, ty.clone()))?,
                 );
@@ -140,14 +142,14 @@ impl<const BITS: usize, const LIMBS: usize> ToSql for Signed<BITS, LIMBS> {
 
             // Hex strings
             Type::CHAR | Type::TEXT | Type::VARCHAR => {
-                out.put_slice(format!("{self:#x}").as_bytes());
+                out.put_slice(self.to_hex_string().as_bytes());
             }
             Type::JSON | Type::JSONB => {
                 if *ty == Type::JSONB {
                     // Version 1 of JSONB is just plain text JSON.
                     out.put_u8(1);
                 }
-                out.put_slice(format!("\"{self:#x}\"").as_bytes());
+                out.put_slice(format!("\"{}\"", self.to_hex_string()).as_bytes());
             }
 
             // Binary coded decimal types
@@ -419,6 +421,47 @@ mod test {
                 0x00, 0x01, // digit: 1
             ],
         );
+    }
+
+    #[test]
+    fn negative_round_trip() {
+        fn check<const BITS: usize, const LIMBS: usize>(value: i16, ty: &Type) {
+            let value = Signed::<BITS, LIMBS>::try_from(value).unwrap();
+            let mut bytes = BytesMut::new();
+            value.to_sql(ty, &mut bytes).unwrap();
+            assert_eq!(Signed::<BITS, LIMBS>::from_sql(ty, &bytes).unwrap(), value, "{ty}");
+        }
+
+        let types =
+            [Type::INT2, Type::INT4, Type::INT8, Type::MONEY, Type::TEXT, Type::JSON, Type::JSONB];
+        for ty in &types {
+            for value in [i16::MIN, -1, i16::MAX] {
+                check::<16, 1>(value, ty);
+                check::<256, 4>(value, ty);
+            }
+        }
+    }
+
+    #[test]
+    fn integer_to_sql_bounds() {
+        fn to_sql<const BITS: usize, const LIMBS: usize>(
+            value: i32,
+            ty: Type,
+        ) -> Result<BytesMut, BoxedError> {
+            let mut bytes = BytesMut::new();
+            Signed::<BITS, LIMBS>::try_from(value).unwrap().to_sql(&ty, &mut bytes)?;
+            Ok(bytes)
+        }
+
+        assert_eq!(*to_sql::<8, 1>(-1, Type::INT8).unwrap(), (-1i64).to_be_bytes());
+        assert_eq!(*to_sql::<256, 4>(-1, Type::INT8).unwrap(), (-1i64).to_be_bytes());
+        assert_eq!(*to_sql::<8, 1>(1, Type::OID).unwrap(), 1u32.to_be_bytes());
+        // `OID` is unsigned.
+        assert!(to_sql::<8, 1>(-1, Type::OID).is_err());
+        assert!(to_sql::<256, 4>(-1, Type::OID).is_err());
+        for value in [i32::from(i16::MIN) - 1, i32::from(i16::MAX) + 1] {
+            assert!(to_sql::<256, 4>(value, Type::INT2).is_err(), "{value}");
+        }
     }
 
     #[test]
