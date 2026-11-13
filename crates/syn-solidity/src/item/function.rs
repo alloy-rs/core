@@ -488,8 +488,10 @@ mod tests {
         assert!(matches!(item, Item::Variable(_)), "{item:?}");
 
         // A function without a name is still a function.
-        let item = syn::parse_str::<Item>("function() external payable;").unwrap();
-        assert!(matches!(item, Item::Function(_)), "{item:?}");
+        for function in ["function() external payable;", "function() public payable;"] {
+            let item = syn::parse_str::<Item>(function).unwrap();
+            assert!(matches!(item, Item::Function(_)), "{item:?}");
+        }
     }
 
     fn test_getter(var_s: &str, fn_s: &str, run_solc: bool) {

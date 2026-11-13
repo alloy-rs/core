@@ -74,8 +74,7 @@ impl FunctionAttributes {
         Self(Vec::new())
     }
 
-    /// Parses the attributes of a function type: one visibility, `internal` or `external`, and
-    /// its mutability.
+    /// Parses the attributes of a function type: one visibility and its mutability.
     ///
     /// Unlike in a function definition, what follows belongs to the variable that has this type:
     /// its name, storage location or `indexed`, and for a state variable its own visibility and
@@ -83,10 +82,16 @@ impl FunctionAttributes {
     pub(crate) fn parse_type_attributes(input: ParseStream<'_>) -> Result<Self> {
         let mut attributes = Self::new();
         loop {
-            let attr = if attributes.visibility().is_none()
-                && (input.peek(kw::external) || input.peek(kw::internal))
-            {
-                FunctionAttribute::Visibility(input.parse()?)
+            // Like solc, give the first visibility to the type even if it is not `internal` or
+            // `external`. Otherwise the fallback function `function() public payable;` of
+            // Solidity 0.4 would read as a public variable named `payable`.
+            let visibility = if attributes.visibility().is_none() {
+                Visibility::parse_opt(input)?
+            } else {
+                None
+            };
+            let attr = if let Some(visibility) = visibility {
+                FunctionAttribute::Visibility(visibility)
             } else if input.peek(kw::pure) || input.peek(kw::view) || input.peek(kw::payable) {
                 FunctionAttribute::Mutability(input.parse()?)
             } else {
