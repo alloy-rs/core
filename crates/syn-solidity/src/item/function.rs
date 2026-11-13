@@ -404,6 +404,7 @@ impl FunctionBody {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::Item;
     use pretty_assertions::assert_eq;
     use std::{
         error::Error,
@@ -479,6 +480,16 @@ mod tests {
         let Type::Function(ty) = &var.ty else { panic!("not a function type: {}", var.ty) };
         assert_eq!(ty.attributes.to_string(), "external view");
         assert_eq!(var.attributes.to_string(), "public constant");
+    }
+
+    #[test]
+    fn function_type_item() {
+        let item = syn::parse_str::<Item>("function() external public callback;").unwrap();
+        assert!(matches!(item, Item::Variable(_)), "{item:?}");
+
+        // A function without a name is still a function.
+        let item = syn::parse_str::<Item>("function() external payable;").unwrap();
+        assert!(matches!(item, Item::Function(_)), "{item:?}");
     }
 
     fn test_getter(var_s: &str, fn_s: &str, run_solc: bool) {
