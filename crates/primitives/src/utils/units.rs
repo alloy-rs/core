@@ -246,16 +246,19 @@ impl ParseUnits {
         let mut amount = amount.to_string();
         let negative = amount.starts_with('-');
         let dec_len = if let Some(di) = amount.find('.') {
-            let mut fraction = amount.split_off(di + 1);
-            amount.pop();
+            amount.remove(di);
             // The length of the fraction sets the scale and the truncation point, so it may only
             // hold digits. Drop the `_` separators that the integer parser skips and reject
             // anything else, which truncation could otherwise discard.
-            fraction.retain(|c| c != '_');
-            if let Some(c) = fraction.chars().find(|c| !c.is_ascii_digit()) {
+            if amount[di..].contains('_') {
+                let fraction = amount.split_off(di);
+                amount.extend(fraction.chars().filter(|c| *c != '_'));
+            }
+            let fraction = &amount[di..];
+            let invalid = fraction.as_bytes().iter().position(|b| !b.is_ascii_digit());
+            if let Some(c) = invalid.and_then(|i| fraction[i..].chars().next()) {
                 return Err(ruint::ParseError::InvalidDigit(c).into());
             }
-            amount.push_str(&fraction);
             fraction.len()
         } else {
             0
