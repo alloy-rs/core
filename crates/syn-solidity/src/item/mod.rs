@@ -3,7 +3,8 @@ use proc_macro2::Span;
 use std::fmt;
 use syn::{
     Attribute, Result, Token,
-    parse::{Parse, ParseStream},
+    parse::{Parse, ParseStream, discouraged::Speculative},
+    token::Paren,
 };
 
 mod contract;
@@ -122,7 +123,18 @@ impl Parse for Item {
         let mut attrs = input.call(Attribute::parse_outer)?;
 
         let lookahead = input.lookahead1();
-        let mut item = if FunctionKind::peek(&lookahead) {
+        let mut item = if input.peek(kw::function) && input.peek2(Paren) {
+            // `function(` starts a function type, so this is a state variable of that type unless
+            // it turns out to be a function without a name, like the fallback of Solidity 0.5.
+            let fork = input.fork();
+            match fork.parse() {
+                Ok(variable) => {
+                    input.advance_to(&fork);
+                    Ok(Self::Variable(variable))
+                }
+                Err(_) => input.parse().map(Self::Function),
+            }
+        } else if FunctionKind::peek(&lookahead) {
             input.parse().map(Self::Function)
         } else if lookahead.peek(Token![struct]) {
             input.parse().map(Self::Struct)
