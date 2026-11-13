@@ -248,18 +248,20 @@ impl ParseUnits {
         let dec_len = if let Some(di) = amount.find('.') {
             amount.remove(di);
             // The length of the fraction sets the scale and the truncation point, so it may only
-            // hold digits. Drop the `_` separators that the integer parser skips and reject
-            // anything else, which truncation could otherwise discard.
-            if amount[di..].contains('_') {
+            // hold digits. Folding instead of short-circuiting lets this check vectorize.
+            let digits = amount.as_bytes()[di..].iter().fold(true, |ok, b| ok & b.is_ascii_digit());
+            if !digits {
+                // Drop the `_` separators that the integer parser skips and reject anything
+                // else, which truncation could otherwise discard.
                 let fraction = amount.split_off(di);
-                amount.extend(fraction.chars().filter(|c| *c != '_'));
+                for c in fraction.chars().filter(|c| *c != '_') {
+                    if !c.is_ascii_digit() {
+                        return Err(ruint::ParseError::InvalidDigit(c).into());
+                    }
+                    amount.push(c);
+                }
             }
-            let fraction = &amount[di..];
-            let invalid = fraction.as_bytes().iter().position(|b| !b.is_ascii_digit());
-            if let Some(c) = invalid.and_then(|i| fraction[i..].chars().next()) {
-                return Err(ruint::ParseError::InvalidDigit(c).into());
-            }
-            fraction.len()
+            amount.len() - di
         } else {
             0
         };
