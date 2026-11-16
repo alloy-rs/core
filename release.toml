@@ -5,6 +5,7 @@ allow-branch = ["main"]
 sign-commit = true
 sign-tag = true
 shared-version = true
+publish = false # crates.io releases are published by .github/workflows/publish.yml
 pre-release-commit-message = "chore: release {{version}}"
 tag-prefix = "" # tag only once instead of per every crate
 pre-release-hook = [
