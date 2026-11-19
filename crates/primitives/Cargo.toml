@@ -116,6 +116,7 @@ sqlx-core = { workspace = true, optional = true }
 sqlx-postgres = { workspace = true, optional = true }
 
 [dev-dependencies]
+alloy-rlp = { workspace = true, features = ["derive"] }
 bcs.workspace = true
 bincode.workspace = true
 criterion.workspace = true

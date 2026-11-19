@@ -283,79 +283,34 @@ const KECCAK256_RATE: usize = 136;
 #[cfg_attr(
     feature = "rlp",
     doc = r#"
-Hashing an RLP encoding, such as a signing hash of the form `keccak256(type || rlp([...]))`,
-encodes each field straight into the hasher. This matters most when the encoding has no size
-bound known at compile time, here because of `data` and `recipients`, so it can't be encoded
-onto the stack with `alloy_rlp::encode_fixed_size`:
+An RLP encoding can be hashed without first collecting it in a buffer, including one with no
+size bound known at compile time, which `alloy_rlp::encode_fixed_size` can't handle:
 
 ```
-use alloy_primitives::{Address, B256, Bytes, Keccak256, U256, keccak256};
-use alloy_rlp::{Encodable, Header};
+use alloy_primitives::{Address, Bytes, Keccak256, keccak256};
+use alloy_rlp::{Encodable, RlpEncodable};
 use bytes::BufMut;
 
+#[derive(RlpEncodable)]
 struct Batch {
     chain_id: u64,
-    recipients: Vec<(Address, U256)>,
+    recipients: Vec<Address>,
     data: Bytes,
-}
-
-impl Batch {
-    fn recipients_header(&self) -> Header {
-        let payload_length = self
-            .recipients
-            .iter()
-            .map(|(to, amount)| item_header(to, amount).length_with_payload())
-            .sum();
-        Header { list: true, payload_length }
-    }
-
-    fn rlp_header(&self) -> Header {
-        let payload_length = self.chain_id.length()
-            + self.recipients_header().length_with_payload()
-            + self.data.length();
-        Header { list: true, payload_length }
-    }
-
-    /// Writes `rlp([chain_id, [[to, amount], ...], data])`.
-    fn encode(&self, out: &mut dyn BufMut) {
-        self.rlp_header().encode(out);
-        self.chain_id.encode(out);
-        self.recipients_header().encode(out);
-        for (to, amount) in &self.recipients {
-            item_header(to, amount).encode(out);
-            to.encode(out);
-            amount.encode(out);
-        }
-        self.data.encode(out);
-    }
-
-    /// `keccak256(0x7a || rlp([chain_id, [[to, amount], ...], data]))`, without allocating.
-    fn signing_hash(&self) -> B256 {
-        let mut hasher = Keccak256::new();
-        hasher.put_u8(0x7a);
-        self.encode(&mut hasher);
-        hasher.finalize()
-    }
-}
-
-fn item_header(to: &Address, amount: &U256) -> Header {
-    Header { list: true, payload_length: to.length() + amount.length() }
 }
 
 let batch = Batch {
     chain_id: 1,
-    recipients: (1..=20u8).map(|i| (Address::repeat_byte(i), U256::from(i) << 64)).collect(),
+    recipients: vec![Address::repeat_byte(0x11); 20],
     data: Bytes::from(vec![0xab; 1000]),
 };
 
-// The same hash as encoding into a `Vec` first.
-let mut buf = vec![0x7a];
-batch.encode(&mut buf);
-assert_eq!(batch.signing_hash(), keccak256(&buf));
-```
+// keccak256(0x7a || rlp(batch))
+let mut hasher = Keccak256::new();
+hasher.put_u8(0x7a);
+batch.encode(&mut hasher);
 
-A type that implements [`Encodable`](alloy_rlp::Encodable), for example with
-`#[derive(RlpEncodable)]`, is hashed the same way with `value.encode(&mut hasher)`.
+assert_eq!(hasher.finalize(), keccak256([&[0x7a][..], &alloy_rlp::encode(&batch)].concat()));
+```
 "#
 )]
 ///
