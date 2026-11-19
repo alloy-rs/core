@@ -6,6 +6,7 @@ use cfg_if::cfg_if;
 use core::{
     fmt,
     mem::{ManuallyDrop, MaybeUninit},
+    ptr, slice,
 };
 
 mod units;
@@ -261,7 +262,28 @@ mod keccak256_state {
 #[allow(unused_imports)]
 use keccak256_state::Digest;
 
+/// The Keccak-256 rate in bytes: the sponge absorbs its input in blocks of this size.
+const KECCAK256_RATE: usize = 136;
+
 /// Simple [`Keccak-256`] hasher.
+///
+/// It implements [`BufMut`](bytes::BufMut), so an encoder that writes into a buffer, such as
+/// `alloy_rlp::Encodable::encode(&self, out: &mut dyn BufMut)`, can write straight into the
+/// hasher without an intermediate allocation:
+///
+/// ```
+/// use alloy_primitives::{Keccak256, keccak256};
+/// use bytes::BufMut;
+///
+/// let mut hasher = Keccak256::new();
+/// hasher.put_u8(0x02);
+/// hasher.put_slice(b"payload");
+/// assert_eq!(hasher.finalize(), keccak256(b"\x02payload"));
+/// ```
+///
+/// [`BufMut`](bytes::BufMut) writes are collected in an internal block of 136 bytes, the
+/// Keccak-256 rate, which is absorbed when it fills; a write of a block or more is absorbed
+/// directly. [`update`](Self::update) absorbs its input directly.
 ///
 /// Note that the "native-keccak" feature is not supported for this struct, and will default to the
 /// [`sha3`] implementation.
@@ -270,6 +292,8 @@ use keccak256_state::Digest;
 #[derive(Clone)]
 pub struct Keccak256 {
     state: keccak256_state::State,
+    buf: [MaybeUninit<u8>; KECCAK256_RATE],
+    len: usize,
 }
 
 impl Default for Keccak256 {
@@ -290,12 +314,17 @@ impl Keccak256 {
     /// Creates a new [`Keccak256`] hasher.
     #[inline]
     pub fn new() -> Self {
-        Self { state: keccak256_state::State::new() }
+        Self {
+            state: keccak256_state::State::new(),
+            buf: [MaybeUninit::uninit(); KECCAK256_RATE],
+            len: 0,
+        }
     }
 
     /// Absorbs additional input. Can be called multiple times.
     #[inline]
     pub fn update(&mut self, bytes: impl AsRef<[u8]>) {
+        self.flush();
         self.state.update(bytes.as_ref());
     }
 
@@ -323,7 +352,8 @@ impl Keccak256 {
     /// Pad and squeeze the state into `output`.
     #[inline]
     #[allow(clippy::useless_conversion)]
-    pub fn finalize_into_array(self, output: &mut [u8; 32]) {
+    pub fn finalize_into_array(mut self, output: &mut [u8; 32]) {
+        self.flush();
         self.state.finalize_into(output.into());
     }
 
@@ -336,104 +366,22 @@ impl Keccak256 {
     pub unsafe fn finalize_into_raw(self, output: *mut u8) {
         self.finalize_into_array(unsafe { &mut *output.cast::<[u8; 32]>() })
     }
-}
 
-/// The Keccak-256 rate in bytes: the sponge absorbs its input in blocks of this size.
-const KECCAK256_RATE: usize = 136;
-
-/// A [Keccak-256] hasher that implements [`BufMut`], so that an encoder which writes into a
-/// buffer can write straight into the hasher, with no intermediate allocation.
-///
-/// For example, `alloy_rlp::Encodable::encode(&self, out: &mut dyn BufMut)` can hash a value's
-/// RLP encoding directly:
-///
-/// ```
-/// use alloy_primitives::{Keccak256Buf, keccak256};
-/// use bytes::BufMut;
-///
-/// let mut hasher = Keccak256Buf::new();
-/// hasher.put_u8(0x02);
-/// hasher.put_slice(b"payload");
-/// assert_eq!(hasher.finalize(), keccak256(b"\x02payload"));
-/// ```
-///
-/// Writes are collected in an internal block of 136 bytes, the Keccak-256 rate, which is absorbed
-/// when it fills. A slice of a block or more is absorbed directly, without being copied.
-///
-/// Like [`Keccak256`], this does not use the "native-keccak" hook; with that feature, prefer
-/// encoding into a buffer and calling [`keccak256`] once.
-///
-/// [Keccak-256]: https://en.wikipedia.org/wiki/SHA-3
-#[derive(Clone)]
-pub struct Keccak256Buf {
-    hasher: Keccak256,
-    buf: [u8; KECCAK256_RATE],
-    len: usize,
-}
-
-impl Default for Keccak256Buf {
-    #[inline]
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl fmt::Debug for Keccak256Buf {
-    #[inline]
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Keccak256Buf").finish_non_exhaustive()
-    }
-}
-
-impl From<Keccak256> for Keccak256Buf {
-    #[inline]
-    fn from(hasher: Keccak256) -> Self {
-        Self { hasher, buf: [0; KECCAK256_RATE], len: 0 }
-    }
-}
-
-impl Keccak256Buf {
-    /// Creates a new [`Keccak256Buf`] hasher.
-    #[inline]
-    pub fn new() -> Self {
-        Keccak256::new().into()
-    }
-
-    /// Absorbs additional input. Can be called multiple times.
-    #[inline]
-    pub fn update(&mut self, bytes: impl AsRef<[u8]>) {
-        bytes::BufMut::put_slice(self, bytes.as_ref());
-    }
-
-    /// Absorbs the buffered input and returns the inner [`Keccak256`] hasher.
-    #[inline]
-    pub fn into_inner(mut self) -> Keccak256 {
-        self.flush();
-        self.hasher
-    }
-
-    /// Pad and squeeze the state.
-    #[inline]
-    pub fn finalize(self) -> B256 {
-        self.into_inner().finalize()
-    }
-
-    /// Pad and squeeze the state into `output`.
-    #[inline]
-    pub fn finalize_into_array(self, output: &mut [u8; 32]) {
-        self.into_inner().finalize_into_array(output)
-    }
-
+    /// Absorbs the bytes buffered by [`BufMut`](bytes::BufMut) writes.
     #[inline]
     fn flush(&mut self) {
-        self.hasher.update(&self.buf[..self.len]);
-        self.len = 0;
+        if self.len != 0 {
+            // SAFETY: The first `len` bytes of `buf` are initialized.
+            self.state.update(unsafe { slice::from_raw_parts(self.buf.as_ptr().cast(), self.len) });
+            self.len = 0;
+        }
     }
 }
 
-// SAFETY: `chunk_mut` returns the unfilled part of `buf`, which is initialized memory owned by
-// `self`, and `advance_mut` panics rather than claim more bytes than that chunk holds.
-unsafe impl bytes::BufMut for Keccak256Buf {
+// SAFETY: `chunk_mut` returns the unfilled part of `buf`, which `self` owns, and `advance_mut`
+// panics rather than claim more bytes than that chunk holds, so the first `len` bytes of `buf`
+// are always initialized.
+unsafe impl bytes::BufMut for Keccak256 {
     #[inline]
     fn remaining_mut(&self) -> usize {
         usize::MAX
@@ -450,23 +398,27 @@ unsafe impl bytes::BufMut for Keccak256Buf {
         if self.len == KECCAK256_RATE {
             self.flush();
         }
-        bytes::buf::UninitSlice::new(&mut self.buf[self.len..])
+        bytes::buf::UninitSlice::uninit(&mut self.buf[self.len..])
     }
 
     #[inline]
     fn put_slice(&mut self, src: &[u8]) {
-        if src.len() <= KECCAK256_RATE - self.len {
-            self.buf[self.len..self.len + src.len()].copy_from_slice(src);
-            self.len += src.len();
-        } else {
+        if src.len() > KECCAK256_RATE - self.len {
             self.flush();
             if src.len() >= KECCAK256_RATE {
-                self.hasher.update(src);
-            } else {
-                self.buf[..src.len()].copy_from_slice(src);
-                self.len = src.len();
+                self.state.update(src);
+                return;
             }
         }
+        // SAFETY: `src` fits in the unfilled part of `buf`, checked above.
+        unsafe {
+            ptr::copy_nonoverlapping(
+                src.as_ptr(),
+                self.buf.as_mut_ptr().add(self.len).cast(),
+                src.len(),
+            )
+        };
+        self.len += src.len();
     }
 
     #[inline]
@@ -474,7 +426,7 @@ unsafe impl bytes::BufMut for Keccak256Buf {
         if self.len == KECCAK256_RATE {
             self.flush();
         }
-        self.buf[self.len] = n;
+        self.buf[self.len].write(n);
         self.len += 1;
     }
 }
@@ -527,7 +479,7 @@ mod tests {
     }
 
     #[test]
-    fn keccak256_buf_matches_one_shot() {
+    fn keccak256_buf_mut_matches_one_shot() {
         use bytes::BufMut;
 
         let data: Vec<u8> = (0..1200u32).map(|i| (i * 31 + 7) as u8).collect();
@@ -536,23 +488,23 @@ mod tests {
             let expected = keccak256(input);
 
             // One slice, then pieces of every size from 1 to 300.
-            let mut hasher = Keccak256Buf::new();
+            let mut hasher = Keccak256::new();
             hasher.put_slice(input);
             assert_eq!(hasher.finalize(), expected, "len {len}");
             for step in 1..300 {
-                let mut hasher = Keccak256Buf::new();
+                let mut hasher = Keccak256::new();
                 for chunk in input.chunks(step) {
                     hasher.put_slice(chunk);
                 }
                 assert_eq!(hasher.finalize(), expected, "len {len} step {step}");
             }
 
-            // Byte by byte, through chunk_mut, through put, and mixed with update.
-            let mut hasher = Keccak256Buf::new();
+            // Byte by byte, through chunk_mut, and through put.
+            let mut hasher = Keccak256::new();
             input.iter().for_each(|&b| hasher.put_u8(b));
             assert_eq!(hasher.clone().finalize(), expected);
 
-            let mut hasher = Keccak256Buf::new();
+            let mut hasher = Keccak256::new();
             let mut rest = input;
             while !rest.is_empty() {
                 let chunk = hasher.chunk_mut();
@@ -563,27 +515,33 @@ mod tests {
             }
             assert_eq!(hasher.finalize(), expected);
 
-            let mut hasher = Keccak256Buf::new();
+            let mut hasher = Keccak256::new();
             hasher.put(input);
             assert_eq!(hasher.finalize(), expected);
 
-            let mut hasher = Keccak256Buf::new();
-            let (a, b) = input.split_at(len / 3);
-            hasher.update(a);
-            hasher.put_slice(b);
-            assert_eq!(hasher.into_inner().finalize(), expected);
+            // update after buffered writes, and buffered writes after update.
+            let (a, rest) = input.split_at(len / 3);
+            let (b, c) = rest.split_at(rest.len() / 2);
+            let mut hasher = Keccak256::new();
+            hasher.put_slice(a);
+            hasher.update(b);
+            hasher.put_slice(c);
+            assert_eq!(hasher.clone().finalize(), expected);
+            let mut hash = [0u8; 32];
+            hasher.finalize_into(&mut hash);
+            assert_eq!(hash, expected);
         }
 
-        let mut hasher = Keccak256Buf::new();
+        let mut hasher = Keccak256::new();
         hasher.put_bytes(0xaa, 1000);
         assert_eq!(hasher.finalize(), keccak256([0xaa; 1000]));
     }
 
     #[test]
     #[should_panic = "advance_mut past the end of chunk_mut"]
-    fn keccak256_buf_advance_past_chunk() {
+    fn keccak256_advance_mut_past_chunk() {
         use bytes::BufMut;
-        let mut hasher = Keccak256Buf::new();
+        let mut hasher = Keccak256::new();
         unsafe { hasher.advance_mut(KECCAK256_RATE + 1) };
     }
 
