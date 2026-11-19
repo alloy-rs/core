@@ -263,46 +263,6 @@ use keccak256_state::Digest;
 
 /// Simple [`Keccak-256`] hasher.
 ///
-/// It implements [`BufMut`](bytes::BufMut), so an encoder that writes into a buffer, such as
-/// `alloy_rlp::Encodable::encode(&self, out: &mut dyn BufMut)`, can write straight into the
-/// hasher without an intermediate allocation:
-///
-/// ```
-/// use alloy_primitives::{Keccak256, keccak256};
-/// use bytes::BufMut;
-///
-/// let mut hasher = Keccak256::new();
-/// hasher.put_u8(0x02);
-/// hasher.put_slice(b"payload");
-/// assert_eq!(hasher.finalize(), keccak256(b"\x02payload"));
-/// ```
-#[cfg_attr(
-    feature = "rlp",
-    doc = r#"
-This also works for an RLP encoding with no size bound known at compile time, which
-`alloy_rlp::encode_fixed_size` can't handle:
-
-```
-use alloy_primitives::{Address, Keccak256, keccak256};
-use alloy_rlp::Encodable;
-use bytes::BufMut;
-
-let recipients = vec![Address::repeat_byte(0x11); 20];
-
-// keccak256(0x7a || rlp(recipients))
-let mut hasher = Keccak256::new();
-hasher.put_u8(0x7a);
-recipients.encode(&mut hasher);
-
-assert_eq!(hasher.finalize(), keccak256([&[0x7a][..], &alloy_rlp::encode(&recipients)].concat()));
-```
-"#
-)]
-///
-/// [`BufMut`](bytes::BufMut) writes go straight to [`update`](Self::update). The hasher has no
-/// buffer to lend, so [`chunk_mut`](bytes::BufMut::chunk_mut) panics, and so does
-/// [`advance_mut`](bytes::BufMut::advance_mut) with a non-zero count.
-///
 /// Note that the "native-keccak" feature is not supported for this struct, and will default to the
 /// [`sha3`] implementation.
 ///
