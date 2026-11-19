@@ -280,6 +280,66 @@ const KECCAK256_RATE: usize = 136;
 /// hasher.put_slice(b"payload");
 /// assert_eq!(hasher.finalize(), keccak256(b"\x02payload"));
 /// ```
+#[cfg_attr(
+    feature = "rlp",
+    doc = r#"
+Hashing an RLP encoding, such as a signing hash of the form `keccak256(type || rlp([...]))`,
+encodes each field straight into the hasher:
+
+```
+use alloy_primitives::{Address, B256, Keccak256, U256, keccak256};
+use alloy_rlp::{Encodable, Header};
+use bytes::BufMut;
+
+struct Payment {
+    chain_id: u64,
+    to: Address,
+    amount: U256,
+    memo: B256,
+}
+
+impl Payment {
+    fn rlp_header(&self) -> Header {
+        let payload_length =
+            self.chain_id.length() + self.to.length() + self.amount.length() + self.memo.length();
+        Header { list: true, payload_length }
+    }
+
+    fn encode_fields(&self, out: &mut dyn BufMut) {
+        self.chain_id.encode(out);
+        self.to.encode(out);
+        self.amount.encode(out);
+        self.memo.encode(out);
+    }
+
+    /// `keccak256(0x79 || rlp([chain_id, to, amount, memo]))`, without allocating.
+    fn signing_hash(&self) -> B256 {
+        let mut hasher = Keccak256::new();
+        hasher.put_u8(0x79);
+        self.rlp_header().encode(&mut hasher);
+        self.encode_fields(&mut hasher);
+        hasher.finalize()
+    }
+}
+
+let payment = Payment {
+    chain_id: 1,
+    to: Address::repeat_byte(0x11),
+    amount: U256::from(1_000_000u64),
+    memo: B256::repeat_byte(0xab),
+};
+
+// The same hash as encoding into a `Vec` first.
+let mut buf = vec![0x79];
+payment.rlp_header().encode(&mut buf);
+payment.encode_fields(&mut buf);
+assert_eq!(payment.signing_hash(), keccak256(&buf));
+```
+
+A type that implements [`Encodable`](alloy_rlp::Encodable), for example with
+`#[derive(RlpEncodable)]`, is hashed the same way with `value.encode(&mut hasher)`.
+"#
+)]
 ///
 /// [`BufMut`](bytes::BufMut) writes are collected in an internal block of 136 bytes, the
 /// Keccak-256 rate, which is absorbed when it fills; a write of a block or more is absorbed
