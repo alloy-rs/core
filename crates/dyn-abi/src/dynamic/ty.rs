@@ -3,7 +3,7 @@ use alloc::{borrow::Cow, boxed::Box, string::String, vec::Vec};
 use alloy_primitives::utils::vec_try_with_capacity;
 use alloy_sol_types::{
     abi::{
-        Decoder,
+        AbiDecoderConfig, Decoder,
         token::{PackedSeqToken, Token},
     },
     sol_data,
@@ -470,7 +470,7 @@ impl DynSolType {
     #[inline]
     #[cfg_attr(debug_assertions, track_caller)]
     pub fn abi_decode(&self, data: &[u8]) -> Result<DynSolValue> {
-        self.abi_decode_inner(&mut Decoder::new(data), None)
+        self.abi_decode_inner(&mut Decoder::new(data), ValidationLevel::Off)
     }
 
     /// Decode a [`DynSolValue`] from a byte slice. Fails if the value does not
@@ -507,7 +507,7 @@ impl DynSolType {
     #[inline]
     #[cfg_attr(debug_assertions, track_caller)]
     pub fn abi_decode_sequence(&self, data: &[u8]) -> Result<DynSolValue> {
-        self.decode_checked(&mut Decoder::new(data), None, Self::decode_sequence)
+        self.decode_checked(&mut Decoder::new(data), ValidationLevel::Off, Self::decode_sequence)
     }
 
     /// Returns `true` if this type is dynamically sized type.
@@ -556,14 +556,13 @@ impl DynSolType {
 
     /// Decodes a single value from `decoder`.
     ///
-    /// If `validate` is `Some`, every word is checked for dirty padding, and strings for UTF-8 if
-    /// the flag is `true`, once the value is decoded.
+    /// The decoded data is checked according to `validate`; see [`ValidationLevel`].
     #[inline]
     #[cfg_attr(debug_assertions, track_caller)]
     pub(crate) fn abi_decode_inner<'d>(
         &self,
         decoder: &mut Decoder<'d, '_>,
-        validate: Option<bool>,
+        validate: ValidationLevel,
     ) -> Result<DynSolValue> {
         self.decode_checked(decoder, validate, Self::decode_value)
     }
@@ -573,7 +572,7 @@ impl DynSolType {
     fn decode_checked<'d, F>(
         &self,
         decoder: &mut Decoder<'d, '_>,
-        validate: Option<bool>,
+        validate: ValidationLevel,
         decode: F,
     ) -> Result<DynSolValue>
     where
@@ -584,7 +583,7 @@ impl DynSolType {
         ) -> Result<DynSolValue>,
     {
         if self.is_zst() {
-            return Ok(self.zero_sized_value().expect("checked"));
+            return self.zero_sized_value(decoder);
         }
 
         if decoder.remaining_words() < self.minimum_words() {
@@ -830,14 +829,69 @@ impl DynSolType {
         }
     }
 
-    #[inline]
-    const fn zero_sized_value(&self) -> Option<DynSolValue> {
+    /// Returns the value of a zero-sized type, which has no encoded data.
+    ///
+    /// Arrays are empty, while fixed arrays and tuples keep their elements, so that the value
+    /// matches the type. Elements are charged against the decoder's memory limit.
+    fn zero_sized_value(&self, dec: &mut Decoder<'_, '_>) -> Result<DynSolValue> {
         match self {
-            Self::Array(_) => Some(DynSolValue::Array(vec![])),
-            Self::FixedArray(_, _) => Some(DynSolValue::FixedArray(vec![])),
-            Self::Tuple(_) => Some(DynSolValue::Tuple(vec![])),
-            _ => None,
+            Self::Array(_) => Ok(DynSolValue::Array(vec![])),
+            Self::FixedArray(ty, size) => {
+                let mut values = Self::alloc_values(dec, *size)?;
+                for _ in 0..*size {
+                    values.push(ty.zero_sized_value(dec)?);
+                }
+                Ok(DynSolValue::FixedArray(values))
+            }
+            Self::Tuple(types) => {
+                let mut values = Self::alloc_values(dec, types.len())?;
+                for ty in types {
+                    values.push(ty.zero_sized_value(dec)?);
+                }
+                Ok(DynSolValue::Tuple(values))
+            }
+            _ => Err(Error::custom("not a zero-sized type")),
         }
+    }
+}
+
+/// How thoroughly decoded data is validated.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum ValidationLevel {
+    /// No validation.
+    Off,
+    /// Every word is checked for dirty padding.
+    Words,
+    /// Every word is checked for dirty padding, and strings must be valid UTF-8.
+    Full,
+}
+
+impl ValidationLevel {
+    /// Returns the validation level that `config` requests.
+    ///
+    /// [`AbiDecoderConfig::get_validate`] implies
+    /// [`AbiDecoderConfig::get_validate_words`], so these are the only possible combinations.
+    #[inline]
+    pub(crate) const fn from_config(config: &AbiDecoderConfig) -> Self {
+        if config.get_validate() {
+            Self::Full
+        } else if config.get_validate_words() {
+            Self::Words
+        } else {
+            Self::Off
+        }
+    }
+
+    /// Returns whether words are checked for dirty padding.
+    #[inline]
+    const fn words(self) -> bool {
+        matches!(self, Self::Words | Self::Full)
+    }
+
+    /// Returns whether strings must be valid UTF-8.
+    #[inline]
+    const fn utf8(self) -> bool {
+        matches!(self, Self::Full)
     }
 }
 
@@ -853,20 +907,19 @@ enum Invalid<'d, 't> {
 /// first failure is kept and reported only once decoding succeeds, so malformed data is reported
 /// before invalid data.
 struct Validation<'d, 't> {
-    /// `Some` if validation is enabled, holding whether strings must be valid UTF-8.
-    utf8: Option<bool>,
+    level: ValidationLevel,
     invalid: Option<Invalid<'d, 't>>,
 }
 
 impl<'d, 't> Validation<'d, 't> {
     #[inline]
-    const fn new(utf8: Option<bool>) -> Self {
-        Self { utf8, invalid: None }
+    const fn new(level: ValidationLevel) -> Self {
+        Self { level, invalid: None }
     }
 
     #[inline]
     fn word(&mut self, ty: &'t DynSolType, word: &'d Word) {
-        if self.utf8.is_some() && self.invalid.is_none() && !ty.is_valid_word(word) {
+        if self.level.words() && self.invalid.is_none() && !ty.is_valid_word(word) {
             self.invalid = Some(Invalid::Word(word, ty));
         }
     }
@@ -877,9 +930,8 @@ impl<'d, 't> Validation<'d, 't> {
     }
 
     #[inline]
-    fn utf8(&mut self, bytes: &'d [u8]) {
-        if self.utf8 == Some(true) && self.invalid.is_none() && core::str::from_utf8(bytes).is_err()
-        {
+    const fn utf8(&mut self, bytes: &'d [u8]) {
+        if self.level.utf8() && self.invalid.is_none() && core::str::from_utf8(bytes).is_err() {
             self.invalid = Some(Invalid::NotUtf8(bytes));
         }
     }
@@ -1420,9 +1472,35 @@ re-enc: {re_enc}
         assert_eq!(decoded, Err(alloy_sol_types::Error::Overrun.into()))
     }
 
+    #[test]
+    fn decode_zero_sized_matches_type() {
+        let zst_tuple = DynSolType::Tuple(vec![
+            DynSolType::FixedArray(Box::new(DynSolType::Uint(256)), 0),
+            DynSolType::Tuple(vec![]),
+        ]);
+        let tys = [
+            zst_tuple.clone(),
+            DynSolType::FixedArray(Box::new(DynSolType::Tuple(vec![])), 2),
+            DynSolType::FixedArray(Box::new(zst_tuple), 3),
+            DynSolType::Array(Box::new(DynSolType::Tuple(vec![]))),
+        ];
+        for ty in tys {
+            for value in
+                [ty.abi_decode(&[]), ty.abi_decode_params(&[]), ty.abi_decode_sequence(&[])]
+            {
+                let value = value.unwrap();
+                assert!(ty.matches(&value), "{ty}: {value:?}");
+            }
+        }
+
+        // The elements are charged against the memory limit.
+        let huge = DynSolType::FixedArray(Box::new(DynSolType::Tuple(vec![])), usize::MAX);
+        assert!(huge.abi_decode(&[]).is_err());
+    }
+
     fn decode_with_memory_limit(ty: &DynSolType, data: &[u8], limit: usize) -> Result<DynSolValue> {
         let mut decoder = Decoder::with_config(data, AbiDecoderConfig::new().memory_limit(limit));
-        ty.abi_decode_inner(&mut decoder, None)
+        ty.abi_decode_inner(&mut decoder, ValidationLevel::Off)
     }
 
     #[test]

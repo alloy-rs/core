@@ -1,4 +1,4 @@
-use crate::{DynSolValue, Error as CrateError, Result, Specifier};
+use crate::{DynSolValue, Error as CrateError, Result, Specifier, dynamic::ty::ValidationLevel};
 use alloc::vec::Vec;
 use alloy_json_abi::{Constructor, Error, Function, Param};
 use alloy_primitives::{Selector, utils::vec_try_with_capacity};
@@ -209,15 +209,13 @@ fn abi_decode(data: &[u8], params: &[Param], config: AbiDecoderConfig) -> Result
     if config.get_strict() {
         return Err(CrateError::custom("strict decoding is not supported"));
     }
+    let validation = ValidationLevel::from_config(&config);
     let mut decoder = Decoder::with_config(data, config);
     decoder.reserve_elements::<DynSolValue>(params.len())?;
     let mut values = vec_try_with_capacity(params.len())?;
     for param in params {
         let ty = param.resolve()?;
-        let value = ty.abi_decode_inner(
-            &mut decoder,
-            config.get_validate_words().then(|| config.get_validate()),
-        )?;
+        let value = ty.abi_decode_inner(&mut decoder, validation)?;
         values.push(value);
     }
     Ok(values)
