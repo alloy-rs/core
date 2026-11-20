@@ -464,6 +464,48 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "rlp")]
+    fn keccak256_rlp_encode_matches_one_shot() {
+        use crate::{Address, B256, Bytes, U256};
+        use alloy_rlp::{Encodable, Header};
+        use bytes::BufMut;
+
+        fn check(value: &dyn Encodable) {
+            let mut hasher = Keccak256::new();
+            value.encode(&mut hasher);
+            assert_eq!(hasher.finalize(), keccak256(alloy_rlp::encode(value)));
+        }
+
+        check(&0u64);
+        check(&0x7fu8);
+        check(&u64::MAX);
+        check(&U256::MAX);
+        check(&Address::repeat_byte(0x11));
+        check(&B256::repeat_byte(0x22));
+        check(&"hello");
+        for len in [0, 1, 55, 56, 135, 136, 137, 1000] {
+            check(&Bytes::from(vec![0xab; len]));
+            check(&vec![U256::from(len); len]);
+        }
+        check(&vec![Address::repeat_byte(0x33); 20]);
+        check(&vec![vec![Bytes::from_static(b"abc"); 3]; 100]);
+
+        // A type byte, then a list header and its fields, as in a signing hash.
+        let (a, b, c) = (1u64, Address::repeat_byte(0x44), Bytes::from(vec![0xcd; 300]));
+        let header = Header { list: true, payload_length: a.length() + b.length() + c.length() };
+        let mut buf = Vec::new();
+        let mut hasher = Keccak256::new();
+        for out in [&mut buf as &mut dyn BufMut, &mut hasher] {
+            out.put_u8(0x02);
+            header.encode(out);
+            a.encode(out);
+            b.encode(out);
+            c.encode(out);
+        }
+        assert_eq!(hasher.finalize(), keccak256(&buf));
+    }
+
+    #[test]
     fn test_try_boxing() {
         let x = Box::new(42);
         let y = box_try_new(42).unwrap();
