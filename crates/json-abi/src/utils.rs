@@ -156,12 +156,24 @@ pub(crate) fn mk_param(name: Option<&str>, ty: TypeSpecifier<'_>) -> Param {
         TypeStem::Root(s) => {
             Param { name, ty: ty_string(s.span(), &ty.sizes), components: vec![], internal_type }
         }
-        TypeStem::Tuple(t) => Param {
-            name,
-            ty: ty_string("tuple", &ty.sizes),
-            components: t.types.into_iter().map(|ty| mk_param(None, ty)).collect(),
-            internal_type,
-        },
+        TypeStem::Tuple(t) => {
+            let mut remaining = t.span.strip_prefix("tuple").unwrap_or(t.span);
+            remaining = remaining.strip_prefix('(').unwrap_or_default();
+            let components = t
+                .types
+                .into_iter()
+                .map(|ty| {
+                    // The parser has validated these names but keeps only type spans in its
+                    // public tuple representation. Skip the complete member type, including
+                    // nested tuples and array suffixes, to recover its optional name.
+                    remaining = remaining.trim_start().get(ty.span.len()..).unwrap_or_default();
+                    let (name, rest) = remaining.split_once([',', ')']).unwrap_or_default();
+                    remaining = rest;
+                    mk_param(Some(name.trim()), ty)
+                })
+                .collect();
+            Param { name, ty: ty_string("tuple", &ty.sizes), components, internal_type }
+        }
     }
 }
 
