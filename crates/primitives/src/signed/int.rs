@@ -386,10 +386,6 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
 
         let value = value.strip_prefix("0x").unwrap_or(value);
 
-        if value.len() > 64 {
-            return Err(ParseSignedError::IntegerOverflow);
-        }
-
         let abs = Uint::<BITS, LIMBS>::from_str_radix(value, 16)?;
         Self::checked_from_sign_and_abs(sign, abs).ok_or(ParseSignedError::IntegerOverflow)
     }
@@ -681,6 +677,27 @@ mod tests {
         run_test!(I160, U160);
         run_test!(I192, U192);
         run_test!(I256, U256);
+    }
+
+    #[test]
+    fn from_hex_str_wide() {
+        type I512 = Signed<512, 8>;
+        let value = I512::ONE.wrapping_shl(300);
+        for value in [value, -value, I512::MIN, I512::MAX] {
+            assert_eq!(I512::from_hex_str(&value.to_hex_string()), Ok(value));
+        }
+        for value in [
+            format!("0x{:x}", I512::MIN.unsigned_abs()),
+            format!("-0x{:x}", Uint::<512, 8>::MAX),
+            format!("0x1{}", "0".repeat(128)),
+        ] {
+            assert_eq!(I512::from_hex_str(&value), Err(ParseSignedError::IntegerOverflow));
+        }
+    }
+
+    #[test]
+    fn from_hex_str_padded() {
+        assert_eq!(I256::from_hex_str(&format!("0x{}1", "0".repeat(64))), Ok(I256::ONE));
     }
 
     #[test]
