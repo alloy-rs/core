@@ -1120,6 +1120,54 @@ mod tests {
     }
 
     #[test]
+    fn arithmetic_shift_left_overflow_preserving_sign() {
+        type I8 = Signed<8, 1>;
+        type U8 = Uint<8, 1>;
+
+        // Regression test for issue #1283: 64 << 2 = 256 does not fit in an
+        // 8-bit signed integer, but the wrapped result is 0 and keeps the
+        // positive sign.
+        let value = I8::from_raw(U8::from(64u8));
+        assert_eq!(value.asl(2), None);
+
+        // 64 << 3 = 512 also wraps to 0 with the sign preserved.
+        let value = I8::from_raw(U8::from(64u8));
+        assert_eq!(value.asl(3), None);
+
+        // 63 << 1 = 126 still fits.
+        let value = I8::from_raw(U8::from(63u8));
+        assert_eq!(value.asl(1), Some(I8::from_raw(U8::from(126u8))));
+
+        // 64 << 1 = 128 overflows (max is 127) and flips the sign.
+        let value = I8::from_raw(U8::from(64u8));
+        assert_eq!(value.asl(1), None);
+
+        // -64 << 1 = -128 is the minimum value and still fits.
+        let value = I8::from_raw(U8::from(192u8));
+        assert_eq!(value.asl(1), Some(I8::from_raw(U8::from(128u8))));
+
+        // -128 << 1 = -256 overflows; the wrapped result is 0.
+        let value = I8::from_raw(U8::from(128u8));
+        assert_eq!(value.asl(1), None);
+
+        // -127 << 1 = -254 overflows; the wrapped result is 2 (positive).
+        let value = I8::from_raw(U8::from(129u8));
+        assert_eq!(value.asl(1), None);
+
+        // Shifting by the full width discards the value: only zero survives.
+        let value = I8::from_raw(U8::from(1u8));
+        assert_eq!(value.asl(8), None);
+        let zero = I8::ZERO;
+        assert_eq!(zero.asl(8), Some(I8::ZERO));
+        assert_eq!(zero.asl(100), Some(I8::ZERO));
+
+        // Wide type: 2^20 << (BITS - 11) = 2^137 wraps to 2^9 and keeps the
+        // positive sign.
+        let value = I128::from_raw(U128::from(2u8).pow(U128::from(20u8)));
+        assert_eq!(value.asl(I128::BITS - 11), None);
+    }
+
+    #[test]
     fn addition() {
         macro_rules! run_test {
             ($i_struct:ty, $u_struct:ty) => {
