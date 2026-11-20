@@ -50,24 +50,11 @@ impl DerefMut for FunctionAttributes {
 
 impl Parse for FunctionAttributes {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
-        let mut attributes = Vec::<FunctionAttribute>::new();
+        let mut attributes = Self::new();
         while !input.is_empty() && !input.peek(kw::returns) && input.peek(Ident::peek_any) {
-            let attr: FunctionAttribute = input.parse()?;
-            if matches!(
-                attr,
-                FunctionAttribute::Visibility(_)
-                    | FunctionAttribute::Mutability(_)
-                    | FunctionAttribute::Virtual(_)
-            ) {
-                if let Some(prev) = attributes.iter().find(|a| **a == attr) {
-                    let mut e = Error::new(attr.span(), "duplicate attribute");
-                    e.combine(Error::new(prev.span(), "previous declaration is here"));
-                    return Err(e);
-                }
-            }
-            attributes.push(attr);
+            attributes.push_unique(input.parse()?)?;
         }
-        Ok(Self(attributes))
+        Ok(attributes)
     }
 }
 
@@ -85,6 +72,51 @@ impl FunctionAttributes {
     #[inline]
     pub fn new() -> Self {
         Self(Vec::new())
+    }
+
+    /// Parses the attributes of a function type: one visibility and its mutability.
+    ///
+    /// Unlike in a function definition, what follows belongs to the variable that has this type:
+    /// its name, storage location or `indexed`, and for a state variable its own visibility and
+    /// `constant`, as in `function() external public constant callback`.
+    pub(crate) fn parse_type_attributes(input: ParseStream<'_>) -> Result<Self> {
+        let mut attributes = Self::new();
+        loop {
+            // Like solc, give the first visibility to the type even if it is not `internal` or
+            // `external`. Otherwise the fallback function `function() public payable;` of
+            // Solidity 0.4 would read as a public variable named `payable`.
+            let visibility = if attributes.visibility().is_none() {
+                Visibility::parse_opt(input)?
+            } else {
+                None
+            };
+            let attr = if let Some(visibility) = visibility {
+                FunctionAttribute::Visibility(visibility)
+            } else if input.peek(kw::pure) || input.peek(kw::view) || input.peek(kw::payable) {
+                FunctionAttribute::Mutability(input.parse()?)
+            } else {
+                return Ok(attributes);
+            };
+            attributes.push_unique(attr)?;
+        }
+    }
+
+    /// Adds `attr`, or returns an error if it repeats a visibility, mutability or `virtual`.
+    fn push_unique(&mut self, attr: FunctionAttribute) -> Result<()> {
+        if matches!(
+            attr,
+            FunctionAttribute::Visibility(_)
+                | FunctionAttribute::Mutability(_)
+                | FunctionAttribute::Virtual(_)
+        ) {
+            if let Some(prev) = self.iter().find(|a| **a == attr) {
+                let mut e = Error::new(attr.span(), "duplicate attribute");
+                e.combine(Error::new(prev.span(), "previous declaration is here"));
+                return Err(e);
+            }
+        }
+        self.push(attr);
+        Ok(())
     }
 
     pub fn visibility(&self) -> Option<Visibility> {

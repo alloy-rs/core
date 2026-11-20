@@ -75,7 +75,7 @@ impl Parse for TypeFunction {
             function_token: input.parse()?,
             paren_token: parenthesized!(content in input),
             arguments: content.parse()?,
-            attributes: input.parse()?,
+            attributes: input.call(FunctionAttributes::parse_type_attributes)?,
             returns: input.call(Returns::parse_opt)?,
         })
     }

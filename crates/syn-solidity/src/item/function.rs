@@ -404,6 +404,7 @@ impl FunctionBody {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::Item;
     use pretty_assertions::assert_eq;
     use std::{
         error::Error,
@@ -466,6 +467,30 @@ mod tests {
                 => "function mapArray(uint256, bool) public view returns(bytes2);",
             "mapping(bool => mapping(address => int[])[])[][] public nestedMapArray;"
                 => "function nestedMapArray(uint256, uint256, bool, uint256, address, uint256) public view returns(int);",
+        }
+    }
+
+    #[test]
+    fn function_type_state_variable() {
+        // The second visibility and `constant` belong to the variable, not to its type.
+        let var = syn::parse_str::<VariableDefinition>(
+            "function() external view public constant callback = target;",
+        )
+        .unwrap();
+        let Type::Function(ty) = &var.ty else { panic!("not a function type: {}", var.ty) };
+        assert_eq!(ty.attributes.to_string(), "external view");
+        assert_eq!(var.attributes.to_string(), "public constant");
+    }
+
+    #[test]
+    fn function_type_item() {
+        let item = syn::parse_str::<Item>("function() external public callback;").unwrap();
+        assert!(matches!(item, Item::Variable(_)), "{item:?}");
+
+        // A function without a name is still a function.
+        for function in ["function() external payable;", "function() public payable;"] {
+            let item = syn::parse_str::<Item>(function).unwrap();
+            assert!(matches!(item, Item::Function(_)), "{item:?}");
         }
     }
 

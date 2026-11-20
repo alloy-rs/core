@@ -1783,3 +1783,33 @@ fn enum_builders() {
     let manual = IExampleEvents::Transfer_1(Transfer_1 { from, value: amount });
     assert_eq!(built, manual);
 }
+
+#[test]
+fn function_pointer_types() {
+    sol! {
+        struct Callbacks {
+            function() external single;
+            function(uint256) external view[] many;
+        }
+
+        function register(function() external payable callback, function() external[2] memory pair);
+
+        event Registered(function() external indexed callback, uint256 id);
+
+        contract Registry {
+            function() external public fallbackHandler;
+        }
+    }
+
+    let _ = Callbacks { single: Default::default(), many: Vec::new() };
+
+    assert_eq!(registerCall::SIGNATURE, "register(function,function[2])");
+    let _ = registerCall { callback: Default::default(), pair: Default::default() };
+
+    // `indexed` and the name belong to the parameter, they are not modifiers of its type.
+    let event = Registered { callback: Default::default(), id: U256::from(1) };
+    assert_eq!(event.encode_topics().len(), 2);
+
+    // A public state variable of function type gets a getter like any other.
+    assert_eq!(Registry::fallbackHandlerCall::SIGNATURE, "fallbackHandler()");
+}
