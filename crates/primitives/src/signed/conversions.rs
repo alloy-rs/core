@@ -244,13 +244,6 @@ impl<const BITS: usize, const LIMBS: usize> TryFrom<Signed<BITS, LIMBS>> for u12
             return Err(BigIntConversionError);
         }
 
-        let saturated = Uint::<BITS, LIMBS>::saturating_from(Self::MAX);
-
-        // if the value is greater than the saturated value, return an error
-        if value > Signed(saturated) {
-            return Err(BigIntConversionError);
-        }
-
         value.into_raw().try_into().map_err(|_| BigIntConversionError)
     }
 }
