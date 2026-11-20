@@ -274,6 +274,9 @@ impl ParseUnits {
                 Ok(Self::I256(I256::ZERO))
             } else {
                 let n = I256::from_dec_str(amount)?;
+                if n.is_zero() {
+                    return Ok(Self::I256(n));
+                }
                 let multiplier = I256::try_from(10u8)
                     .unwrap()
                     .checked_pow(U256::from(exponent - dec_len))
@@ -823,6 +826,13 @@ mod tests {
 
         // Signed: `10^76 < I256::MAX < 6 * 10^76`, so `-6 * 10^76` overflows `I256`.
         assert!(parse_units("-6", 76).is_err(), "signed mantissa*10^n overflow must be Err");
+    }
+
+    #[test]
+    fn test_signed_zero_parse_units() {
+        assert_eq!(parse_units("-0", 77).unwrap(), ParseUnits::I256(I256::ZERO));
+        assert!(parse_units("-1", 77).is_err());
+        assert!(parse_units("-0z", 77).is_err());
     }
 
     #[test]
