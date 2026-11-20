@@ -27,6 +27,9 @@ pub mod diesel;
 #[cfg(feature = "sqlx")]
 pub mod sqlx;
 
+#[cfg(feature = "utoipa")]
+mod utoipa;
+
 pub mod aliases;
 #[doc(no_inline)]
 pub use aliases::{
@@ -138,4 +141,7 @@ pub mod private {
 
     #[cfg(feature = "schemars")]
     pub use schemars;
+
+    #[cfg(feature = "utoipa")]
+    pub use utoipa;
 }
