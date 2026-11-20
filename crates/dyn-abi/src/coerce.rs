@@ -355,7 +355,9 @@ fn uint<'i>(len: usize) -> impl ModalParser<Input<'i>, U256, ContextError> {
         let _ = space0(input)?;
         let units = int_units(input)?;
 
-        let units = units as isize + e;
+        let units = (units as isize)
+            .checked_add(e)
+            .ok_or_else(|| ErrMode::from_external_error(input, Error::IntOverflow))?;
         if units < 0 {
             return Err(ErrMode::from_external_error(input, Error::NegativeUnits));
         }
@@ -1416,6 +1418,19 @@ mod tests {
             value = tuple.into_iter().next().unwrap();
         }
         assert_eq!(value, DynSolValue::Bool(true));
+    }
+
+    #[test]
+    fn coerce_uint_exponent_overflow() {
+        for exponent in [isize::MAX - 18, isize::MAX - 17] {
+            let input = format!("1e{exponent} ether");
+            let err = DynSolType::Uint(256).coerce_str(&input).unwrap_err();
+            #[cfg(feature = "std")]
+            assert!(err.to_string().contains(&Error::IntOverflow.to_string()), "{input}: {err}");
+            #[cfg(not(feature = "std"))]
+            let _ = err;
+        }
+        uint_test("1e-18 ether", Ok("1"));
     }
 
     #[test]
