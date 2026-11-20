@@ -99,14 +99,15 @@ fn uint(n: usize, value: &serde_json::Value) -> Option<U256> {
 }
 
 fn fixed_bytes(n: usize, value: &serde_json::Value) -> Option<Word> {
-    if let Some(Ok(buf)) = value.as_str().map(hex::decode) {
-        if n <= Word::len_bytes() && buf.len() == n {
-            let mut word = Word::ZERO;
-            if n != 0 {
-                word[..n].copy_from_slice(&buf);
-            }
-            return Some(word);
+    if let Some(Ok(buf)) = value.as_str().map(hex::decode)
+        && n <= Word::len_bytes()
+        && buf.len() == n
+    {
+        let mut word = Word::ZERO;
+        if n != 0 {
+            word[..n].copy_from_slice(&buf);
         }
+        return Some(word);
     }
     None
 }
@@ -141,14 +142,14 @@ fn tuple(
     value: &serde_json::Value,
     budget: &mut usize,
 ) -> Option<Result<Vec<DynSolValue>>> {
-    if let Some(arr) = value.as_array() {
-        if inner.len() == arr.len() {
-            return Some(
-                core::iter::zip(arr, inner)
-                    .map(|(v, t)| t.coerce_json_with_budget(v, budget))
-                    .collect(),
-            );
-        }
+    if let Some(arr) = value.as_array()
+        && inner.len() == arr.len()
+    {
+        return Some(
+            core::iter::zip(arr, inner)
+                .map(|(v, t)| t.coerce_json_with_budget(v, budget))
+                .collect(),
+        );
     }
     None
 }
@@ -170,10 +171,10 @@ fn fixed_array(
     value: &serde_json::Value,
     budget: &mut usize,
 ) -> Option<Result<Vec<DynSolValue>>> {
-    if let Some(arr) = value.as_array() {
-        if arr.len() == n {
-            return Some(arr.iter().map(|v| inner.coerce_json_with_budget(v, budget)).collect());
-        }
+    if let Some(arr) = value.as_array()
+        && arr.len() == n
+    {
+        return Some(arr.iter().map(|v| inner.coerce_json_with_budget(v, budget)).collect());
     }
     None
 }
