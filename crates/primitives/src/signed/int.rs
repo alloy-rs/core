@@ -639,6 +639,14 @@ mod tests {
     }
 
     #[test]
+    fn i128_conversion_bounds() {
+        assert_eq!(I8::try_from(-128i128), Ok(I8::MIN));
+        for value in [-129i128, -200, -256, i128::MIN] {
+            assert_eq!(I8::try_from(value), Err(BigIntConversionError), "{value}");
+        }
+    }
+
+    #[test]
     fn from_dec_str() {
         macro_rules! run_test {
             ($i_struct:ty, $u_struct:ty) => {
