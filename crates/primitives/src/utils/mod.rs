@@ -263,13 +263,6 @@ use keccak256_state::Digest;
 
 /// Simple [`Keccak-256`] hasher.
 ///
-/// [`BufMut`](bytes::BufMut) writes are passed straight to [`update`](Self::update), so an
-/// encoder such as `alloy_rlp::Encodable::encode` can write into the hasher without a buffer.
-/// The hasher has no buffer to lend, so [`chunk_mut`](bytes::BufMut::chunk_mut) panics, and so
-/// does [`advance_mut`](bytes::BufMut::advance_mut) with a non-zero count. This also rules out
-/// adapters built on them, such as [`writer`](bytes::BufMut::writer) and
-/// [`limit`](bytes::BufMut::limit).
-///
 /// Note that the "native-keccak" feature is not supported for this struct, and will default to the
 /// [`sha3`] implementation.
 ///
@@ -352,11 +345,18 @@ unsafe impl bytes::BufMut for Keccak256 {
         usize::MAX
     }
 
+    /// # Panics
+    ///
+    /// Panics if `cnt` is not zero: the hasher has no buffer to advance.
     #[inline]
     unsafe fn advance_mut(&mut self, cnt: usize) {
         assert_eq!(cnt, 0, "Keccak256 does not support advance_mut");
     }
 
+    /// # Panics
+    ///
+    /// Always panics: the hasher has no buffer to lend. Writes go straight to the hasher through
+    /// [`put_slice`](bytes::BufMut::put_slice) and the other `put` methods instead.
     #[inline]
     fn chunk_mut(&mut self) -> &mut bytes::buf::UninitSlice {
         panic!("Keccak256 does not support chunk_mut")
