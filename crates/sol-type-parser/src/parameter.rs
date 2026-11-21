@@ -44,7 +44,11 @@ impl<'a> ParameterSpecifier<'a> {
         trace(
             "ParameterSpecifier",
             spanned(|input: &mut Input<'a>| {
-                let ty = TypeSpecifier::parser(input)?;
+                // Tuple members of a parameter may be named, as in `Event::full_signature`.
+                let previous = input.state.set_component_names(true);
+                let ty = TypeSpecifier::parser(input);
+                input.state.set_component_names(previous);
+                let ty = ty?;
                 let mut name = opt_ws_ident(input)?;
 
                 let mut storage = None;
@@ -162,6 +166,24 @@ impl Storage {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{TupleSpecifier, TypeStem};
+
+    #[test]
+    fn parse_param_with_named_tuple_components() {
+        let param =
+            ParameterSpecifier::parse("tuple(address who, uint256[] amounts)[] orders").unwrap();
+        assert_eq!(param.name, Some("orders"));
+        assert_eq!(param.ty.sizes.len(), 1);
+        let TypeStem::Tuple(tuple) = &param.ty.stem else { panic!("not a tuple: {param:?}") };
+        assert_eq!(
+            tuple.types.iter().map(|ty| ty.span()).collect::<Vec<_>>(),
+            ["address", "uint256[]"]
+        );
+
+        // Bare types stay strict.
+        TypeSpecifier::parse("(address who, uint256 amount)").unwrap_err();
+        TupleSpecifier::parse("(address who)").unwrap_err();
+    }
 
     #[test]
     fn parse_param() {

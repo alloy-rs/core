@@ -194,3 +194,37 @@ fn deserialize_event_and_error_sequences() {
     assert!(serde_json::from_str::<Function>(r#"["f",[],[]]"#).is_err());
     assert!(item(r#"["E",[]]"#).is_err());
 }
+
+#[test]
+fn full_signature_with_named_components_parses_back() {
+    let order = r#"[{"name":"who","type":"address"},{"name":"amounts","type":"uint256[]"},
+        {"name":"inner","type":"tuple","components":[{"name":"tag","type":"bytes32"}]}]"#;
+    let event: Event = serde_json::from_str(&format!(
+        r#"{{"type":"event","name":"Placed","anonymous":false,"inputs":[
+            {{"name":"by","type":"address","indexed":true}},
+            {{"name":"order","type":"tuple","indexed":false,"components":{order}}},
+            {{"name":"orders","type":"tuple[]","indexed":false,"components":{order}}}]}}"#
+    ))
+    .unwrap();
+    let sig = event.full_signature();
+    assert_eq!(
+        sig,
+        "event Placed(address indexed by, tuple(address who, uint256[] amounts, tuple(bytes32 tag) inner) order, tuple(address who, uint256[] amounts, tuple(bytes32 tag) inner)[] orders)"
+    );
+    let parsed = Event::parse(&sig).unwrap();
+    assert_eq!(parsed.selector(), event.selector());
+    assert_eq!(
+        parsed.inputs.iter().map(|input| input.indexed).collect::<Vec<_>>(),
+        [true, false, false]
+    );
+
+    let function: Function = serde_json::from_str(&format!(
+        r#"{{"type":"function","name":"place","stateMutability":"nonpayable","inputs":[
+            {{"name":"order","type":"tuple","components":{order}}}],"outputs":[
+            {{"name":"","type":"tuple","components":{order}}}]}}"#
+    ))
+    .unwrap();
+    let parsed = Function::parse(&function.full_signature()).unwrap();
+    assert_eq!(parsed.selector(), function.selector());
+    assert_eq!(parsed.outputs[0].selector_type(), function.outputs[0].selector_type());
+}
