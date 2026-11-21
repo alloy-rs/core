@@ -56,6 +56,7 @@ sha3.workspace = true
 tiny-keccak = { workspace = true, features = ["keccak"], optional = true }
 
 fixed-cache = { workspace = true, optional = true }
+equivalent = { workspace = true, optional = true }
 
 # borsh
 borsh = { workspace = true, optional = true, features = ["derive"] }
@@ -158,7 +159,7 @@ asm-keccak = ["dep:keccak-asm"]
 native-keccak = []
 sha3-keccak = []
 tiny-keccak = ["dep:tiny-keccak"]
-keccak-cache = ["std", "dep:rapidhash", "dep:fixed-cache"]
+keccak-cache = ["std", "dep:rapidhash", "dep:fixed-cache", "dep:equivalent"]
 keccak-cache-global = ["keccak-cache"]
 keccak-cache-stats = ["keccak-cache", "fixed-cache/stats"]
 
