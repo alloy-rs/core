@@ -647,6 +647,52 @@ interface TestContract {
 }
 
 #[test]
+fn standalone_globals() {
+    let json = include_str!("../abi/ContractUsingGlobals.json");
+    let abi: JsonAbi = serde_json::from_str(json).unwrap();
+    let name = "ContractUsingGlobals";
+
+    // By default, globals are emitted inside the interface.
+    let default = abi.to_sol(name, None);
+    assert!(default.contains("interface ContractUsingGlobals {\n    type GlobalEnum is uint8;"));
+    assert_eq!(default, abi.to_sol(name, Some(ToSolConfig::new().standalone_globals(false))));
+
+    let mut enums = BTreeMap::new();
+    enums.insert("GlobalEnum".into(), vec!["A".into(), "B".into()]);
+    let config = ToSolConfig::new().standalone_globals(true).enum_definitions(enums);
+    assert_eq!(
+        abi.to_sol(name, Some(config.clone())).trim(),
+        r#"library Interface {
+    struct InterfaceStruct {
+        GlobalEnum kind;
+        uint256 count;
+    }
+}
+
+interface ContractUsingGlobals {
+    error GlobalError(GlobalStruct payload);
+
+    event GlobalEvent(GlobalStruct payload, GlobalUDT amount);
+
+    function emitGlobalEvent(Interface.InterfaceStruct memory data) external;
+    function triggerError() external pure;
+}
+
+enum GlobalEnum { A, B }
+type GlobalUDT is uint256;
+struct GlobalStruct {
+    uint256 value;
+    GlobalEnum enum_;
+}"#
+    );
+
+    // Everything is already in one contract, so there is nothing to hoist.
+    let one_contract = config.clone().one_contract(true);
+    let without_flag = config.standalone_globals(false).one_contract(true);
+    assert_eq!(abi.to_sol(name, Some(one_contract)), abi.to_sol(name, Some(without_flag)));
+}
+
+#[test]
 fn known_enum_definitions() {
     let abi = serde_json::from_str::<JsonAbi>(
         r#"[
