@@ -2,7 +2,8 @@ use alloy_json_abi::{
     Constructor, Error, EventParam, Fallback, Function, InternalType, Param, Receive,
     StateMutability,
 };
-use alloy_sol_types::{JsonAbiExt, sol};
+use alloy_primitives::U256;
+use alloy_sol_types::{JsonAbiExt, SolCall, sol};
 use pretty_assertions::assert_eq;
 use std::collections::BTreeMap;
 
@@ -10,6 +11,95 @@ macro_rules! abi_map {
     ($($k:expr => $v:expr),* $(,)?) => {
         BTreeMap::from([$(($k.into(), vec![$v])),*])
     };
+}
+
+#[test]
+fn renamed_items_and_parameters() {
+    sol! {
+        #![sol(abi, rename_all = "camelCase")]
+
+        #[sol(rename = "ActualStruct", rename_all = "snake_case")]
+        struct RustStruct {
+            uint256 SomeField;
+            #[sol(rename = "exactField")]
+            bool OtherField;
+        }
+
+        function use_struct(RustStruct InputStruct) returns (RustStruct OutputStruct);
+
+        function snake_case_fn(uint256 snake_case_param);
+
+        #[sol(rename = "exactFunction", rename_all = "UPPERCASE")]
+        function RustFunction(
+            #[sol(rename = "exactInput")] uint256 FirstInput,
+            uint256 SecondInput
+        ) returns (uint256 OutputValue);
+
+        event RustEvent(#[sol(rename = "exactEventInput")] uint256 EventInput);
+        error RustError(#[sol(rename = "exactErrorInput")] uint256 ErrorInput);
+    }
+
+    let use_struct = use_structCall::abi();
+    assert_eq!(use_struct.name, "useStruct");
+    assert_eq!(use_struct.inputs[0].name, "inputStruct");
+    assert_eq!(use_struct.outputs[0].name, "outputStruct");
+    assert_eq!(use_struct.inputs[0].components[0].name, "some_field");
+    assert_eq!(use_struct.inputs[0].components[1].name, "exactField");
+
+    let snake = snake_case_fnCall::abi();
+    assert_eq!(snake.name, "snakeCaseFn");
+    assert_eq!(snake.inputs[0].name, "snakeCaseParam");
+    assert_eq!(snake_case_fnCall::SIGNATURE, "snakeCaseFn(uint256)");
+    let _ = snake_case_fnCall { snake_case_param: U256::ZERO };
+
+    let function = RustFunctionCall::abi();
+    assert_eq!(function.name, "exactFunction");
+    assert_eq!(function.inputs[0].name, "exactInput");
+    assert_eq!(function.inputs[1].name, "SECONDINPUT");
+    assert_eq!(function.outputs[0].name, "OUTPUTVALUE");
+
+    let event = RustEvent::abi();
+    assert_eq!(event.name, "rustEvent");
+    assert_eq!(event.inputs[0].name, "exactEventInput");
+
+    let error = RustError::abi();
+    assert_eq!(error.name, "rustError");
+    assert_eq!(error.inputs[0].name, "exactErrorInput");
+}
+
+mod rename_namespace {
+    use alloy_sol_types::{JsonAbiExt, SolStruct, sol};
+    use pretty_assertions::assert_eq;
+
+    sol! {
+        #![sol(abi)]
+
+        struct Global {
+            uint256 my_field;
+        }
+
+        #[sol(rename_all = "camelCase")]
+        contract Scoped {
+            struct Local {
+                Global the_global;
+            }
+
+            function use_local(Local the_local, Global other_global);
+        }
+    }
+
+    #[test]
+    fn rename_all_in_declaring_namespace() {
+        assert_eq!(Global::eip712_encode_type(), "Global(uint256 my_field)");
+        assert_eq!(
+            Scoped::Local::eip712_encode_type(),
+            "local(Global theGlobal)Global(uint256 my_field)"
+        );
+
+        let function = Scoped::use_localCall::abi();
+        assert_eq!(function.inputs[0].components[0].components[0].name, "my_field");
+        assert_eq!(function.inputs[1].components[0].name, "my_field");
+    }
 }
 
 #[test]

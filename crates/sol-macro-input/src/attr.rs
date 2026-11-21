@@ -96,11 +96,9 @@ pub struct SolAttrs {
     /// `#[sol(alloy_contract = alloy_contract)]`
     pub alloy_contract: Option<Path>,
 
-    // TODO: Implement
-    /// UNIMPLEMENTED: `#[sol(rename = "new_name")]`
+    /// `#[sol(rename = "new_name")]`
     pub rename: Option<LitStr>,
-    // TODO: Implement
-    /// UNIMPLEMENTED: `#[sol(rename_all = "camelCase")]`
+    /// `#[sol(rename_all = "camelCase")]`
     pub rename_all: Option<CasingStyle>,
 
     /// `#[sol(bytecode = "0x1234")]`
@@ -236,7 +234,7 @@ impl SolAttrs {
         merge_opt(&mut a.docs, &b.docs);
         merge_opt(&mut a.alloy_sol_types, &b.alloy_sol_types);
         merge_opt(&mut a.alloy_contract, &b.alloy_contract);
-        merge_opt(&mut a.rename, &b.rename);
+        // `rename` applies only to the item it annotates and is not inherited.
         merge_opt(&mut a.rename_all, &b.rename_all);
         merge_opt(&mut a.bytecode, &b.bytecode);
         merge_opt(&mut a.deployed_bytecode, &b.deployed_bytecode);
@@ -348,7 +346,6 @@ impl CasingStyle {
     }
 
     /// Apply the casing style to the given string.
-    #[allow(dead_code)]
     pub fn apply(self, s: &str) -> String {
         match self {
             Self::Pascal => s.to_upper_camel_case(),

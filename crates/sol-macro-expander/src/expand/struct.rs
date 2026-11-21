@@ -1,11 +1,11 @@
 //! [`ItemStruct`] expansion.
 
-use super::{ExpCtxt, expand_fields, expand_from_into_tuples, expand_tokenize};
+use super::{ExpCtxt, derives_serde, expand_fields, expand_from_into_tuples, expand_tokenize};
 use alloy_sol_macro_input::{ContainsSolAttrs, mk_doc};
 use ast::{Item, ItemStruct, SolIdent, SolPath, Spanned, Type};
 use proc_macro2::TokenStream;
 use quote::quote;
-use std::{collections::BTreeSet, num::NonZeroU16};
+use std::{collections::BTreeSet, fmt::Write, num::NonZeroU16};
 use syn::Result;
 
 /// Expands an [`ItemStruct`]:
@@ -35,7 +35,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
     let (field_types, field_names): (Vec<_>, Vec<_>) =
         fields.iter().map(|f| (cx.expand_type(&f.ty), f.name.as_ref().unwrap())).unzip();
 
-    let eip712_encode_type_fns = expand_encode_type_fns(cx, fields, name);
+    let eip712_encode_type_fns = expand_encode_type_fns(cx, s);
 
     let tokenize_impl = expand_tokenize(fields, cx, super::FieldKind::Original);
 
@@ -55,10 +55,11 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
 
     let alloy_sol_types = &cx.crates.sol_types;
 
+    let serde_parent_attrs = derives_serde(&attrs).then_some(s.attrs.as_slice());
     let attrs = attrs.iter();
     let convert = expand_from_into_tuples(&name.0, fields, cx, super::FieldKind::Original);
-    let name_s = name.as_string();
-    let fields = expand_fields(fields, cx);
+    let name_s = cx.sol_name(name, &s.attrs);
+    let fields = expand_fields(fields, cx, serde_parent_attrs);
 
     let doc = docs.then(|| mk_doc(format!("```solidity\n{s}\n```")));
     let tokens = quote! {
@@ -195,14 +196,11 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
     Ok(tokens)
 }
 
-fn expand_encode_type_fns(
-    cx: &ExpCtxt<'_>,
-    fields: &ast::Parameters<syn::token::Semi>,
-    name: &ast::SolIdent,
-) -> TokenStream {
-    let fields = substitute_non_structs(cx, fields, &cx.current_namespace);
+fn expand_encode_type_fns(cx: &ExpCtxt<'_>, s: &ItemStruct) -> TokenStream {
+    let name = &s.name;
+    let fields = substitute_non_structs(cx, &s.fields, &cx.current_namespace);
 
-    let root = fields.eip712_signature(name.as_string());
+    let root = eip712_signature(cx, s, &fields, &cx.current_namespace);
 
     let custom = fields.iter().filter(|f| f.ty.has_custom());
     let n_custom = custom.clone().count();
@@ -264,6 +262,46 @@ fn expand_encode_type_fns(
     }
 }
 
+/// Returns the EIP-712 signature of `s` with Solidity names, resolving names in `namespace`.
+fn eip712_signature(
+    cx: &ExpCtxt<'_>,
+    s: &ItemStruct,
+    fields: &ast::Parameters<syn::token::Semi>,
+    namespace: &Option<SolIdent>,
+) -> String {
+    let fields = fields.iter().map(|field| {
+        let mut out = String::new();
+        fmt_eip712_type(cx, &field.ty, namespace, &mut out);
+        if let Some(name) = &field.name {
+            write!(out, " {}", cx.child_sol_name(name, &field.attrs, &s.attrs, namespace)).unwrap();
+        }
+        out
+    });
+    format!(
+        "{}({})",
+        cx.sol_name_in_namespace(&s.name, &s.attrs, namespace),
+        fields.collect::<Vec<_>>().join(",")
+    )
+}
+
+fn fmt_eip712_type(cx: &ExpCtxt<'_>, ty: &Type, namespace: &Option<SolIdent>, out: &mut String) {
+    match ty {
+        Type::Custom(name) => match cx.custom_sol_name(name, namespace) {
+            Some(name) => out.push_str(&name),
+            None => write!(out, "{}", name.last()).unwrap(),
+        },
+        Type::Array(array) => {
+            fmt_eip712_type(cx, &array.ty, namespace, out);
+            out.push('[');
+            if let Some(size) = array.size_lit() {
+                out.push_str(size.base10_digits());
+            }
+            out.push(']');
+        }
+        ty => write!(out, "{ty}").unwrap(),
+    }
+}
+
 /// Replaces UDVTs, enums and contracts, which do not implement `SolStruct`, with their underlying
 /// types, resolving names in `namespace`.
 fn substitute_non_structs(
@@ -303,7 +341,11 @@ fn encode_type_const(
     let mut stack = vec![(cx.current_namespace.clone(), name.clone())];
     let mut done = BTreeSet::new();
     collect_components(cx, fields, &cx.current_namespace, &mut stack, &mut done, &mut components)?;
-    Some(std::iter::once(root).chain(components.iter().map(String::as_str)).collect())
+    // Sorted by type name, which differs from sorting the whole definitions when a name contains
+    // `$`.
+    let mut components = components.iter().map(String::as_str).collect::<Vec<_>>();
+    components.sort_unstable_by_key(|s| (s.split('(').next(), *s));
+    Some(std::iter::once(root).chain(components).collect())
 }
 
 /// Adds the root types of all structs referenced by the substituted `fields`, which are resolved
@@ -348,7 +390,7 @@ fn collect_components(
         }
 
         let s_fields = substitute_non_structs(cx, &s.fields, struct_namespace);
-        components.insert(s_fields.eip712_signature(s.name.as_string()));
+        components.insert(eip712_signature(cx, s, &s_fields, struct_namespace));
         stack.push(key);
         collect_components(cx, &s_fields, struct_namespace, stack, done, components)?;
         stack.pop();
