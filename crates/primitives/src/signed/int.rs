@@ -1732,6 +1732,34 @@ mod tests {
         assert!(I24::uint_try_from(I128::MAX).is_err());
         assert!(<I128 as UintTryTo<I24>>::uint_try_to(&I128::MAX).is_err());
 
+        // boundaries around the target's `MIN` and `MAX`
+        for (src, dst) in [(-129, true), (-128, false), (127, false), (128, true)] {
+            let src = I16::try_from(src).unwrap();
+            assert_eq!(I8::uint_try_from(src).is_err(), dst, "{src}");
+            assert_eq!(<I16 as UintTryTo<I8>>::uint_try_to(&src).is_err(), dst, "{src}");
+        }
+        assert_eq!(I8::uint_try_from(I16::try_from(-128).unwrap()), Ok(I8::MIN));
+        assert_eq!(I16::try_from(-128).unwrap().to::<I8>(), I8::MIN);
+        assert_eq!(I8::MIN.to::<I16>(), I16::try_from(-128).unwrap());
+        assert_eq!(I8::MIN.to::<I8>(), I8::MIN);
+        assert_eq!(I256::MIN.to::<I256>(), I256::MIN);
+        assert_eq!(I16::MIN.to::<I16>(), I16::MIN);
+        assert!(I8::uint_try_from(I16::MIN).is_err());
+        assert_eq!(I24::MIN.to::<I128>().to::<I24>(), I24::MIN);
+        assert_eq!(I128::MIN.to::<I256>().to::<I128>(), I128::MIN);
+        let below_min = I128::MIN.to::<I256>() - I256::ONE;
+        assert!(I128::uint_try_from(below_min).is_err());
+        assert!(<I256 as UintTryTo<I128>>::uint_try_to(&below_min).is_err());
+
+        // `Uint` <-> `Signed` around `MIN` and `MAX`
+        assert_eq!(U8::from(127).to::<I8>(), I8::MAX);
+        assert!(<U8 as UintTryTo<I8>>::uint_try_to(&U8::from(128)).is_err());
+        assert!(I8::uint_try_from(U16::from(128)).is_err());
+        assert_eq!(I8::MAX.to::<U8>(), U8::from(127));
+        assert!(<I8 as UintTryTo<U8>>::uint_try_to(&I8::MIN).is_err());
+        assert!(U8::uint_try_from(I8::MIN).is_err());
+        assert!(<I8 as UintTryTo<U8>>::uint_try_to(&I8::MINUS_ONE).is_err());
+
         assert_eq!(I24::try_from(-8_388_608i32), Ok(I24::MIN));
         assert!(I24::try_from(-8_388_609i32).is_err());
         assert!(I24::try_from(i32::MIN).is_err());
