@@ -1,5 +1,5 @@
 use super::{ParseSignedError, Sign, utils::*};
-use alloc::string::String;
+use alloc::string::{String, ToString};
 use core::fmt;
 use ruint::{BaseConvertError, Uint, UintTryFrom, UintTryTo};
 
@@ -65,8 +65,11 @@ impl<const BITS: usize, const LIMBS: usize> fmt::Debug for Signed<BITS, LIMBS> {
 impl<const BITS: usize, const LIMBS: usize> fmt::Display for Signed<BITS, LIMBS> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let (sign, abs) = self.into_sign_and_abs();
-        sign.fmt(f)?;
-        if f.sign_plus() { write!(f, "{abs}") } else { abs.fmt(f) }
+        if f.width().is_none() {
+            sign.fmt(f)?;
+            return if f.sign_plus() { write!(f, "{abs}") } else { abs.fmt(f) };
+        }
+        f.pad_integral(!sign.is_negative(), "", &abs.to_string())
     }
 }
 
@@ -386,10 +389,6 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
 
         let value = value.strip_prefix("0x").unwrap_or(value);
 
-        if value.len() > 64 {
-            return Err(ParseSignedError::IntegerOverflow);
-        }
-
         let abs = Uint::<BITS, LIMBS>::from_str_radix(value, 16)?;
         Self::checked_from_sign_and_abs(sign, abs).ok_or(ParseSignedError::IntegerOverflow)
     }
@@ -519,8 +518,7 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
         Self(Uint::from_limbs(limbs))
     }
 
-    /// Constructs the [`Signed`] from digits in the base `base` in big-endian.
-    /// Wrapper around ruint's from_base_be
+    /// Constructs a nonnegative [`Signed`] from digits in the base `base` in big-endian.
     ///
     /// # Errors
     ///
@@ -531,7 +529,8 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
         base: u64,
         digits: I,
     ) -> Result<Self, BaseConvertError> {
-        Ok(Self(Uint::from_base_be(base, digits)?))
+        let abs = Uint::from_base_be(base, digits)?;
+        Self::checked_from_sign_and_abs(Sign::Positive, abs).ok_or(BaseConvertError::Overflow)
     }
 }
 
@@ -582,6 +581,35 @@ mod tests {
             "57896044618658097711785492504343953926634992332820282019728792003956564819967",
             "-57896044618658097711785492504343953926634992332820282019728792003956564819968"
         );
+    }
+
+    #[test]
+    fn unsigned_primitive_conversion() {
+        macro_rules! check {
+            ($unsigned:ty, $as_unsigned:ident) => {
+                assert_eq!(<$unsigned>::try_from(I8::MAX), Ok(127));
+                assert_eq!(I8::MAX.$as_unsigned(), 127);
+                assert_eq!(<$unsigned>::try_from(I8::MINUS_ONE), Err(BigIntConversionError));
+
+                let max = I256::try_from(<$unsigned>::MAX).unwrap();
+                assert_eq!(<$unsigned>::try_from(max), Ok(<$unsigned>::MAX));
+                assert_eq!(<$unsigned>::try_from(max + I256::ONE), Err(BigIntConversionError));
+            };
+        }
+
+        check!(u8, as_u8);
+        check!(u16, as_u16);
+        check!(u32, as_u32);
+        check!(u64, as_u64);
+        check!(usize, as_usize);
+
+        assert_eq!(u128::try_from(I0::ZERO), Ok(0));
+        assert_eq!(u128::try_from(I128::MAX), Ok(i128::MAX as u128));
+        assert_eq!(u128::try_from(I128::MIN), Err(BigIntConversionError));
+
+        let max = I256::try_from(u128::MAX).unwrap();
+        assert_eq!(u128::try_from(max), Ok(u128::MAX));
+        assert_eq!(u128::try_from(max + I256::ONE), Err(BigIntConversionError));
     }
 
     #[test]
@@ -639,6 +667,14 @@ mod tests {
     }
 
     #[test]
+    fn i128_conversion_bounds() {
+        assert_eq!(I8::try_from(-128i128), Ok(I8::MIN));
+        for value in [-129i128, -200, -256, i128::MIN] {
+            assert_eq!(I8::try_from(value), Err(BigIntConversionError), "{value}");
+        }
+    }
+
+    #[test]
     fn from_dec_str() {
         macro_rules! run_test {
             ($i_struct:ty, $u_struct:ty) => {
@@ -681,6 +717,27 @@ mod tests {
         run_test!(I160, U160);
         run_test!(I192, U192);
         run_test!(I256, U256);
+    }
+
+    #[test]
+    fn from_hex_str_wide() {
+        type I512 = Signed<512, 8>;
+        let value = I512::ONE.wrapping_shl(300);
+        for value in [value, -value, I512::MIN, I512::MAX] {
+            assert_eq!(I512::from_hex_str(&value.to_hex_string()), Ok(value));
+        }
+        for value in [
+            format!("0x{:x}", I512::MIN.unsigned_abs()),
+            format!("-0x{:x}", Uint::<512, 8>::MAX),
+            format!("0x1{}", "0".repeat(128)),
+        ] {
+            assert_eq!(I512::from_hex_str(&value), Err(ParseSignedError::IntegerOverflow));
+        }
+    }
+
+    #[test]
+    fn from_hex_str_padded() {
+        assert_eq!(I256::from_hex_str(&format!("0x{}1", "0".repeat(64))), Ok(I256::ONE));
     }
 
     #[test]
@@ -738,6 +795,14 @@ mod tests {
     }
 
     #[test]
+    fn from_base_be() {
+        assert_eq!(I8::from_base_be(10, [1, 2, 7]), Ok(I8::MAX));
+        for digits in [[1, 2, 8], [2, 0, 0], [2, 5, 6]] {
+            assert_eq!(I8::from_base_be(10, digits), Err(BaseConvertError::Overflow));
+        }
+    }
+
+    #[test]
     fn parse() {
         assert_eq!("0x0".parse::<I0>(), Ok(I0::default()));
         assert_eq!("+0x0".parse::<I0>(), Ok(I0::default()));
@@ -790,6 +855,24 @@ mod tests {
         run_test!(I160, U160);
         run_test!(I192, U192);
         run_test!(I256, U256);
+    }
+
+    #[test]
+    fn decimal_formatting_flags() {
+        macro_rules! check {
+            ($($format:literal),+ $(,)?) => {
+                for value in [-123i128, 0, 123] {
+                    let signed = I128::try_from(value).unwrap();
+                    $(assert_eq!(
+                        format!($format, signed),
+                        format!($format, value),
+                        "{} for {value}", $format,
+                    );)+
+                }
+            };
+        }
+
+        check!("{:2}", "{:08}", "{:<8}", "{:*^8}", "{:*>8}", "{:+8}", "{:+08}", "{:+08?}");
     }
 
     #[test]

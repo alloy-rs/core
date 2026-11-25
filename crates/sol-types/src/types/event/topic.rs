@@ -206,33 +206,52 @@ impl EventTopic for () {
 all_the_tuples!(tuple_impls);
 
 fn encode_topic_bytes(sl: &[u8], out: &mut Vec<u8>) {
-    let padding = non_zero_padding(sl.len());
+    let padding = crate::utils::next_multiple_of_32(sl.len()) - sl.len();
     out.reserve(sl.len() + padding);
     out.extend_from_slice(sl);
     out.extend(core::iter::repeat_n(0, padding));
 }
 
-#[inline(always)]
-const fn non_zero_padding(len: usize) -> usize {
-    if len == 0 {
-        return 32;
-    }
-
-    match len % 32 {
-        0 => 0,
-        r => 32 - r,
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use alloy_primitives::U256;
+
+    fn assert_composite_topic<T: EventTopic>(value: &T::RustType, expected: &[u8]) {
+        let mut preimage = Vec::new();
+        T::encode_topic_preimage(value, &mut preimage);
+        assert_eq!(preimage, expected);
+        assert_eq!(T::topic_preimage_length(value), expected.len());
+        assert_eq!(T::encode_topic(value).0, keccak256(expected));
+    }
+
+    #[test]
+    fn empty_members_in_composite_topics() {
+        assert_composite_topic::<Array<String>>(&vec![Default::default()], &[]);
+        assert_composite_topic::<Array<Bytes>>(&vec![Default::default()], &[]);
+
+        let mut ab = [0; 32];
+        ab[..2].copy_from_slice(b"ab");
+        assert_composite_topic::<FixedArray<String, 2>>(&[Default::default(), "ab".into()], &ab);
+
+        crate::sol! {
+            struct S {
+                uint256 n;
+                string s;
+                bytes b;
+            }
+        }
+        assert_composite_topic::<S>(
+            &S { n: U256::ONE, s: Default::default(), b: Default::default() },
+            &U256::ONE.to_be_bytes::<32>(),
+        );
+    }
 
     #[test]
     fn encode_topic_bytes_empty() {
         let mut out = Vec::new();
         encode_topic_bytes(&[], &mut out);
-        assert_eq!(out, vec![0; 32]);
+        assert!(out.is_empty());
     }
 
     #[test]

@@ -40,7 +40,7 @@ where
     for<'c> Db: Backend<BindCollector<'c> = RawBytesBindCollector<Db>>,
 {
     fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Db>) -> SerResult {
-        out.write_all(&self.as_erc2098())?;
+        out.write_all(&self.try_as_erc2098()?)?;
         Ok(IsNull::No)
     }
 }
