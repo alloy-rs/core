@@ -26,31 +26,62 @@ cfg_if! {
     }
 }
 
-macro_rules! fb_alias_maps {
-    ($($ty:ident < $n:literal >),* $(,)?) => { paste::paste! {
-        $(
-            #[doc = concat!("[`HashMap`] optimized for hashing [`", stringify!($ty), "`].")]
-            pub type [<$ty Map>]<V> = HashMap<$ty, V, FbBuildHasher<$n>>;
-            #[doc(hidden)]
-            pub type [<$ty HashMap>]<V> = [<$ty Map>]<V>;
-            #[doc = concat!("[`HashSet`] optimized for hashing [`", stringify!($ty), "`].")]
-            pub type [<$ty Set>] = HashSet<$ty, FbBuildHasher<$n>>;
-            #[doc(hidden)]
-            pub type [<$ty HashSet>] = [<$ty Set>];
+/// [`HashMap`] optimized for hashing [`Selector`].
+pub type SelectorMap<V> = HashMap<Selector, V, FbBuildHasher<4>>;
+#[doc(hidden)]
+pub type SelectorHashMap<V> = SelectorMap<V>;
+/// [`HashSet`] optimized for hashing [`Selector`].
+pub type SelectorSet = HashSet<Selector, FbBuildHasher<4>>;
+#[doc(hidden)]
+pub type SelectorHashSet = SelectorSet;
 
-            cfg_if! {
-                if #[cfg(feature = "map-indexmap")] {
-                    #[doc = concat!("[`IndexMap`] optimized for hashing [`", stringify!($ty), "`].")]
-                    pub type [<$ty IndexMap>]<V> = IndexMap<$ty, V, FbBuildHasher<$n>>;
-                    #[doc = concat!("[`IndexSet`] optimized for hashing [`", stringify!($ty), "`].")]
-                    pub type [<$ty IndexSet>] = IndexSet<$ty, FbBuildHasher<$n>>;
-                }
-            }
-        )*
-    } };
+/// [`HashMap`] optimized for hashing [`Address`].
+pub type AddressMap<V> = HashMap<Address, V, FbBuildHasher<20>>;
+#[doc(hidden)]
+pub type AddressHashMap<V> = AddressMap<V>;
+/// [`HashSet`] optimized for hashing [`Address`].
+pub type AddressSet = HashSet<Address, FbBuildHasher<20>>;
+#[doc(hidden)]
+pub type AddressHashSet = AddressSet;
+
+/// [`HashMap`] optimized for hashing [`B256`].
+pub type B256Map<V> = HashMap<B256, V, FbBuildHasher<32>>;
+#[doc(hidden)]
+pub type B256HashMap<V> = B256Map<V>;
+/// [`HashSet`] optimized for hashing [`B256`].
+pub type B256Set = HashSet<B256, FbBuildHasher<32>>;
+#[doc(hidden)]
+pub type B256HashSet = B256Set;
+
+/// [`HashMap`] optimized for hashing [`U256`].
+pub type U256Map<V> = HashMap<U256, V, FbBuildHasher<32>>;
+#[doc(hidden)]
+pub type U256HashMap<V> = U256Map<V>;
+/// [`HashSet`] optimized for hashing [`U256`].
+pub type U256Set = HashSet<U256, FbBuildHasher<32>>;
+#[doc(hidden)]
+pub type U256HashSet = U256Set;
+
+cfg_if! {
+    if #[cfg(feature = "map-indexmap")] {
+        /// [`IndexMap`] optimized for hashing [`Selector`].
+        pub type SelectorIndexMap<V> = IndexMap<Selector, V, FbBuildHasher<4>>;
+        /// [`IndexSet`] optimized for hashing [`Selector`].
+        pub type SelectorIndexSet = IndexSet<Selector, FbBuildHasher<4>>;
+        /// [`IndexMap`] optimized for hashing [`Address`].
+        pub type AddressIndexMap<V> = IndexMap<Address, V, FbBuildHasher<20>>;
+        /// [`IndexSet`] optimized for hashing [`Address`].
+        pub type AddressIndexSet = IndexSet<Address, FbBuildHasher<20>>;
+        /// [`IndexMap`] optimized for hashing [`B256`].
+        pub type B256IndexMap<V> = IndexMap<B256, V, FbBuildHasher<32>>;
+        /// [`IndexSet`] optimized for hashing [`B256`].
+        pub type B256IndexSet = IndexSet<B256, FbBuildHasher<32>>;
+        /// [`IndexMap`] optimized for hashing [`U256`].
+        pub type U256IndexMap<V> = IndexMap<U256, V, FbBuildHasher<32>>;
+        /// [`IndexSet`] optimized for hashing [`U256`].
+        pub type U256IndexSet = IndexSet<U256, FbBuildHasher<32>>;
+    }
 }
-
-fb_alias_maps!(Selector<4>, Address<20>, B256<32>, U256<32>);
 
 #[cfg(alloy_fixed_hash)]
 type FbBuildHasherInner = foldhash::fast::FixedState;
