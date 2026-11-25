@@ -217,20 +217,43 @@ impl Signature {
     /// Returns the ERC-2098 compact representation of this signature.
     ///
     /// The first 32 bytes are the `r` value, and the next 32 bytes are the `s` value with `yParity`
-    /// in the top bit of the `s` value, as described in ERC-2098.
+    /// in the top bit of the `s` value, as described in ERC-2098. The signature is normalized to
+    /// "low S" form first.
+    ///
+    /// This does not validate the signature: `r` is preserved as-is, and zero `s` is accepted.
     ///
     /// See <https://eips.ethereum.org/EIPS/eip-2098>
+    ///
+    /// # Panics
+    ///
+    /// Panics if `s` is greater than or equal to the secp256k1 curve order. Use
+    /// [`Self::try_as_erc2098`] to handle such raw signatures without panicking.
+    #[track_caller]
     pub fn as_erc2098(&self) -> [u8; 64] {
+        self.try_as_erc2098().expect("signature cannot be represented in ERC-2098 format")
+    }
+
+    /// Returns the ERC-2098 compact representation of this signature, normalizing it to "low S"
+    /// form first.
+    ///
+    /// This only checks whether `s` can be normalized for compact encoding; it does not validate
+    /// the ECDSA signature. In particular, `r` is preserved as-is, and zero `s` is accepted.
+    ///
+    /// See [`Self::as_erc2098`] for the encoding format.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if `s` is greater than or equal to the secp256k1 curve order.
+    pub fn try_as_erc2098(&self) -> Result<[u8; 64], SignatureError> {
+        if self.s >= SECP256K1N_ORDER {
+            return Err(SignatureError::FromBytes("s is greater than or equal to the curve order"));
+        }
         let normalized = self.normalized_s();
-        // The top bit of the `s` parameters is always 0, due to the use of canonical
-        // signatures which flip the solution parity to prevent negative values, which was
-        // introduced as a constraint in Homestead.
         let mut sig = [0u8; 64];
         sig[..32].copy_from_slice(&normalized.r().to_be_bytes::<32>());
         sig[32..64].copy_from_slice(&normalized.s().to_be_bytes::<32>());
-        debug_assert_eq!(sig[32] >> 7, 0, "top bit of s should be 0");
         sig[32] |= (normalized.y_parity as u8) << 7;
-        sig
+        Ok(sig)
     }
 
     /// Sets the recovery ID by normalizing a `v` value.
@@ -275,13 +298,14 @@ impl Signature {
     /// Normalizes the signature into "low S" form as described in
     /// [BIP 0062: Dealing with Malleability][1].
     ///
-    /// If `s` is already normalized, returns `None`.
+    /// Returns `None` if `s` is already normalized or is greater than or equal to the secp256k1
+    /// curve order. This does not validate the signature.
     ///
     /// [1]: https://github.com/bitcoin/bips/blob/master/bip-0062.mediawiki
     #[inline]
     pub fn normalize_s(&self) -> Option<Self> {
         let s = self.s();
-        if s > SECP256K1N_ORDER >> 1 {
+        if s > SECP256K1N_ORDER >> 1 && s < SECP256K1N_ORDER {
             Some(Self { y_parity: !self.y_parity, r: self.r, s: SECP256K1N_ORDER - s })
         } else {
             None
@@ -291,7 +315,8 @@ impl Signature {
     /// Normalizes the signature into "low S" form as described in
     /// [BIP 0062: Dealing with Malleability][1].
     ///
-    /// If `s` is already normalized, returns `self`.
+    /// Returns `self` unchanged if `s` is already normalized or is greater than or equal to the
+    /// secp256k1 curve order. This does not validate the signature.
     ///
     /// [1]: https://github.com/bitcoin/bips/blob/master/bip-0062.mediawiki
     #[inline]
@@ -799,6 +824,40 @@ mod tests {
 
         let signature = signature.with_parity(true);
         assert_eq!(signature.v_byte(), 28);
+    }
+
+    #[test]
+    fn erc2098_scalar_boundaries() {
+        let half_order = SECP256K1N_ORDER >> 1;
+        for (s, normalized_s, flip_parity) in [
+            (U256::ZERO, U256::ZERO, false),
+            (half_order, half_order, false),
+            (half_order + U256::ONE, half_order, true),
+            (SECP256K1N_ORDER - U256::ONE, U256::ONE, true),
+        ] {
+            // Compact encoding preserves r even when it is not a valid ECDSA scalar.
+            let signature = Signature::new(U256::MAX, s, false);
+            let expected = Signature::new(U256::MAX, normalized_s, flip_parity);
+            assert_eq!(signature.normalize_s(), flip_parity.then_some(expected));
+            let compact = signature.try_as_erc2098().unwrap();
+            assert_eq!(Signature::from_erc2098(&compact), expected);
+        }
+    }
+
+    #[test]
+    fn try_as_erc2098_rejects_out_of_range_s() {
+        for s in [SECP256K1N_ORDER, SECP256K1N_ORDER + U256::ONE, U256::MAX] {
+            let signature = Signature::new(U256::ONE, s, false);
+            assert_eq!(signature.normalize_s(), None);
+            assert_eq!(signature.normalized_s(), signature);
+            assert!(matches!(signature.try_as_erc2098(), Err(SignatureError::FromBytes(_))));
+        }
+    }
+
+    #[test]
+    #[should_panic(expected = "signature cannot be represented in ERC-2098 format")]
+    fn as_erc2098_panics_for_out_of_range_s() {
+        Signature::new(U256::ONE, SECP256K1N_ORDER, false).as_erc2098();
     }
 
     #[test]
