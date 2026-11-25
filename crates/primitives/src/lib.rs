@@ -13,7 +13,6 @@
 #[macro_use]
 extern crate alloc;
 
-use paste as _;
 use sha3 as _;
 #[cfg(feature = "tiny-keccak")]
 use tiny_keccak as _;

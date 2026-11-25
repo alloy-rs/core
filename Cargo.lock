@@ -114,7 +114,6 @@ dependencies = [
  "itoa",
  "k256",
  "keccak-asm",
- "paste",
  "postgres-types",
  "proptest",
  "proptest-derive",
