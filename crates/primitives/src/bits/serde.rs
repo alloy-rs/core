@@ -45,7 +45,7 @@ impl<'de, const N: usize> Deserialize<'de> for FixedBytes<N> {
                     *byte = seq.next_element()?.ok_or_else(|| len_error(i))?;
                 }
 
-                if let Ok(Some(_)) = seq.next_element::<u8>() {
+                if seq.next_element::<de::IgnoredAny>()?.is_some() {
                     return Err(len_error(N + 1));
                 }
 
@@ -108,5 +108,28 @@ mod tests {
 
         let bin = bincode::serialize(&bytes).unwrap();
         assert_eq!(bincode::deserialize::<FixedBytes<12>>(&bin).unwrap(), bytes);
+    }
+
+    #[test]
+    fn serde_num_array_extra_element() {
+        for extra in ["4", "256", "-1", "1e999", "null", "\"0x04\"", "[4]", "{}"] {
+            let json = format!("[0,1,2,3,{extra}]");
+            let err = serde_json::from_str::<FixedBytes<4>>(&json).unwrap_err();
+            assert_eq!(
+                err.to_string(),
+                format!(
+                    "invalid length 5, expected exactly 4 bytes at line 1 column {}",
+                    json.len()
+                ),
+                "{json}"
+            );
+        }
+
+        let err = serde_json::from_str::<FixedBytes<4>>("[0,1,2,3,]").unwrap_err();
+        assert_eq!(err.to_string(), "trailing comma at line 1 column 10");
+
+        let value = serde_json::json!([0, 1, 2, 3, "0x04"]);
+        let err = serde_json::from_value::<FixedBytes<4>>(value).unwrap_err();
+        assert_eq!(err.to_string(), "invalid length 5, expected exactly 4 bytes");
     }
 }
