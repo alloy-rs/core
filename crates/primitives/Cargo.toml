@@ -48,7 +48,6 @@ derive_more = { workspace = true, features = [
     "display",
     "deref",
 ] }
-paste.workspace = true
 
 # keccak256
 keccak-asm = { workspace = true, optional = true }

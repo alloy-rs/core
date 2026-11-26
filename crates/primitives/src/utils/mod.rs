@@ -338,6 +338,61 @@ impl Keccak256 {
     }
 }
 
+// SAFETY: `chunk_mut` never hands out memory, and `advance_mut` panics on a non-zero count.
+unsafe impl bytes::BufMut for Keccak256 {
+    #[inline]
+    fn remaining_mut(&self) -> usize {
+        usize::MAX
+    }
+
+    /// # Panics
+    ///
+    /// Panics if `cnt` is not zero: the hasher has no buffer to advance.
+    #[inline]
+    unsafe fn advance_mut(&mut self, cnt: usize) {
+        assert_eq!(cnt, 0, "Keccak256 does not support advance_mut");
+    }
+
+    /// # Panics
+    ///
+    /// Always panics: the hasher has no buffer to lend. Writes go straight to the hasher through
+    /// [`put_slice`](bytes::BufMut::put_slice) and the other `put` methods instead.
+    #[inline]
+    fn chunk_mut(&mut self) -> &mut bytes::buf::UninitSlice {
+        panic!("Keccak256 does not support chunk_mut")
+    }
+
+    #[inline]
+    fn put<T: bytes::Buf>(&mut self, mut src: T) {
+        while src.has_remaining() {
+            let chunk = src.chunk();
+            let n = chunk.len();
+            self.update(chunk);
+            src.advance(n);
+        }
+    }
+
+    #[inline]
+    fn put_slice(&mut self, src: &[u8]) {
+        self.update(src);
+    }
+
+    #[inline]
+    fn put_u8(&mut self, n: u8) {
+        self.update([n]);
+    }
+
+    #[inline]
+    fn put_bytes(&mut self, val: u8, mut cnt: usize) {
+        let chunk = [val; 64];
+        while cnt > 0 {
+            let n = cnt.min(chunk.len());
+            self.update(&chunk[..n]);
+            cnt -= n;
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -383,6 +438,78 @@ mod tests {
         let mut hash = [0u8; 32];
         unsafe { hasher.finalize_into_raw(hash.as_mut_ptr()) };
         assert_eq!(hash, expected);
+    }
+
+    #[test]
+    fn keccak256_buf_mut_matches_one_shot() {
+        use bytes::{Buf, BufMut};
+
+        let data: Vec<u8> = (0..300u32).map(|i| (i * 31 + 7) as u8).collect();
+        for len in [0, 1, 135, 136, 137, 300] {
+            let input = &data[..len];
+            let expected = keccak256(input);
+
+            for step in 1..=len.max(1) {
+                let mut hasher = Keccak256::new();
+                input.chunks(step).for_each(|chunk| hasher.put_slice(chunk));
+                assert_eq!(hasher.finalize(), expected, "len {len} step {step}");
+            }
+
+            let mut hasher = Keccak256::new();
+            input.iter().for_each(|&b| hasher.put_u8(b));
+            assert_eq!(hasher.finalize(), expected);
+
+            let (a, b) = input.split_at(len / 2);
+            let mut hasher = Keccak256::new();
+            hasher.put(a.chain(b));
+            assert_eq!(hasher.finalize(), expected);
+        }
+
+        let mut hasher = Keccak256::new();
+        hasher.put_bytes(0xaa, 1000);
+        assert_eq!(hasher.finalize(), keccak256([0xaa; 1000]));
+    }
+
+    #[test]
+    #[cfg(feature = "rlp")]
+    fn keccak256_rlp_encode_matches_one_shot() {
+        use crate::{Address, B256, Bytes, U256};
+        use alloy_rlp::{Encodable, Header};
+        use bytes::BufMut;
+
+        fn check(value: &dyn Encodable) {
+            let mut hasher = Keccak256::new();
+            value.encode(&mut hasher);
+            assert_eq!(hasher.finalize(), keccak256(alloy_rlp::encode(value)));
+        }
+
+        check(&0u64);
+        check(&0x7fu8);
+        check(&u64::MAX);
+        check(&U256::MAX);
+        check(&Address::repeat_byte(0x11));
+        check(&B256::repeat_byte(0x22));
+        check(&"hello");
+        for len in [0, 1, 55, 56, 135, 136, 137, 1000] {
+            check(&Bytes::from(vec![0xab; len]));
+            check(&vec![U256::from(len); len]);
+        }
+        check(&vec![Address::repeat_byte(0x33); 20]);
+        check(&vec![vec![Bytes::from_static(b"abc"); 3]; 100]);
+
+        // A type byte, then a list header and its fields, as in a signing hash.
+        let (a, b, c) = (1u64, Address::repeat_byte(0x44), Bytes::from(vec![0xcd; 300]));
+        let header = Header { list: true, payload_length: a.length() + b.length() + c.length() };
+        let mut buf = Vec::new();
+        let mut hasher = Keccak256::new();
+        for out in [&mut buf as &mut dyn BufMut, &mut hasher] {
+            out.put_u8(0x02);
+            header.encode(out);
+            a.encode(out);
+            b.encode(out);
+            c.encode(out);
+        }
+        assert_eq!(hasher.finalize(), keccak256(&buf));
     }
 
     #[test]

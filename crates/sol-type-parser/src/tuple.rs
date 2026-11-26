@@ -1,10 +1,11 @@
 use crate::{
     Error, Input, Result, TypeSpecifier, new_input,
-    utils::{spanned, tuple_parser},
+    utils::{opt_ws_ident, spanned, tuple_parser},
 };
 use alloc::vec::Vec;
 use winnow::{
     ModalResult, Parser,
+    ascii::space0,
     combinator::{opt, preceded, trace},
 };
 
@@ -67,7 +68,17 @@ impl<'a> TupleSpecifier<'a> {
 
     #[inline]
     fn parse_types(input: &mut Input<'a>) -> ModalResult<Vec<TypeSpecifier<'a>>> {
-        preceded(opt("tuple"), tuple_parser(TypeSpecifier::parser)).parse_next(input)
+        preceded(opt("tuple"), tuple_parser(Self::parse_member)).parse_next(input)
+    }
+
+    /// A member type, followed by a name that is skipped when the parser allows component names.
+    fn parse_member(input: &mut Input<'a>) -> ModalResult<TypeSpecifier<'a>> {
+        let ty = TypeSpecifier::parser(input)?;
+        if input.state.component_names() {
+            opt_ws_ident(input)?;
+            space0(input)?;
+        }
+        Ok(ty)
     }
 
     /// [`winnow`] parser for EIP-712 types.

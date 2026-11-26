@@ -232,7 +232,7 @@ impl<const BITS: usize, const LIMBS: usize> TryFrom<i128> for Signed<BITS, LIMBS
         if overflow {
             return Err(BigIntConversionError);
         }
-        Ok(Self(twos_complement(num)))
+        Self::checked_from_sign_and_abs(Sign::Negative, num).ok_or(BigIntConversionError)
     }
 }
 
@@ -241,13 +241,6 @@ impl<const BITS: usize, const LIMBS: usize> TryFrom<Signed<BITS, LIMBS>> for u12
 
     fn try_from(value: Signed<BITS, LIMBS>) -> Result<Self, Self::Error> {
         if value.is_negative() {
-            return Err(BigIntConversionError);
-        }
-
-        let saturated = Uint::<BITS, LIMBS>::saturating_from(Self::MAX);
-
-        // if the value is greater than the saturated value, return an error
-        if value > Signed(saturated) {
             return Err(BigIntConversionError);
         }
 
