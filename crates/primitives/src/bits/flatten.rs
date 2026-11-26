@@ -188,7 +188,7 @@ impl<const BITS: usize, const LIMBS: usize> FixedBytesVecExt for Vec<crate::Uint
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::Address;
+    use crate::{Address, U64, U256, U512, Uint};
 
     #[test]
     fn test_as_flattened() {
@@ -242,8 +242,6 @@ mod tests {
 
     #[test]
     fn test_uint_as_flattened() {
-        use crate::{U64, U256, U512, Uint};
-
         let a = [U64::from(1), U64::from(2)];
         let mut expected = 1u64.to_ne_bytes().to_vec();
         expected.extend(2u64.to_ne_bytes());
