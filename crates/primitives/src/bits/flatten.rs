@@ -124,8 +124,8 @@ impl<const N: usize> FixedBytesVecExt for Vec<FixedBytes<N>> {
 
 // Can't put in `wrap_fixed_bytes` macro due to orphan rules.
 macro_rules! impl_flatten {
-    ([$($gen:tt)*] $t:ty, $n:expr) => {
-        impl<$($gen)*> $crate::FixedBytesSliceExt for [$t] {
+    ($t:ty, $n:expr) => {
+        impl $crate::FixedBytesSliceExt for [$t] {
             #[inline]
             fn as_flattened(&self) -> &[u8] {
                 unsafe { core::mem::transmute::<&[$t], &[FixedBytes<$n>]>(self) }.as_flattened()
@@ -138,7 +138,7 @@ macro_rules! impl_flatten {
             }
         }
 
-        impl<$($gen)*> $crate::FixedBytesVecExt for $crate::private::Vec<$t> {
+        impl $crate::FixedBytesVecExt for $crate::private::Vec<$t> {
             #[inline]
             fn into_flattened(self) -> $crate::private::Vec<u8> {
                 unsafe { core::mem::transmute::<Vec<$t>, Vec<FixedBytes<$n>>>(self) }
@@ -148,14 +148,47 @@ macro_rules! impl_flatten {
     };
 }
 
-impl_flatten!([] crate::Address, 20);
-impl_flatten!([] crate::Bloom, 256);
-impl_flatten!([const BITS: usize, const LIMBS: usize] crate::Uint<BITS, LIMBS>, 32);
+impl_flatten!(crate::Address, 20);
+impl_flatten!(crate::Bloom, 256);
+
+/// Flattens to the limbs' native-endian bytes.
+impl<const BITS: usize, const LIMBS: usize> FixedBytesSliceExt for [crate::Uint<BITS, LIMBS>] {
+    #[inline]
+    fn as_flattened(&self) -> &[u8] {
+        const { assert!(core::mem::size_of::<crate::Uint<BITS, LIMBS>>() == LIMBS * 8) };
+        // SAFETY: `Uint` is plain `u64` limbs with no padding, and `u8` has alignment 1.
+        unsafe { slice::from_raw_parts(self.as_ptr().cast(), core::mem::size_of_val(self)) }
+    }
+
+    /// # Panics
+    ///
+    /// Panics if the slice is not empty and `BITS != LIMBS * 64`, since writing the unused high
+    /// bits would break the `Uint` invariant.
+    #[inline]
+    fn as_flattened_mut(&mut self) -> &mut [u8] {
+        assert!(
+            self.is_empty() || BITS == LIMBS * 64,
+            "as_flattened_mut requires a limb-aligned Uint"
+        );
+        const { assert!(core::mem::size_of::<crate::Uint<BITS, LIMBS>>() == LIMBS * 8) };
+        // SAFETY: as in `as_flattened`; every bit pattern is a valid limb-aligned `Uint`.
+        unsafe { slice::from_raw_parts_mut(self.as_mut_ptr().cast(), core::mem::size_of_val(self)) }
+    }
+}
+
+/// Copies the limbs' native-endian bytes into a new allocation.
+impl<const BITS: usize, const LIMBS: usize> FixedBytesVecExt for Vec<crate::Uint<BITS, LIMBS>> {
+    #[inline]
+    fn into_flattened(self) -> Vec<u8> {
+        // The allocation is aligned to 8, so it can't be reused as a `Vec<u8>`.
+        self.as_flattened().to_vec()
+    }
+}
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::Address;
+    use crate::{Address, U64, U256, U512, Uint};
 
     #[test]
     fn test_as_flattened() {
@@ -205,6 +238,44 @@ mod tests {
         let mut arr = [Address::repeat_byte(0x11), Address::repeat_byte(0x22)];
         arr.as_flattened_mut()[0] = 0xff;
         assert_eq!(arr[0].0[0], 0xff);
+    }
+
+    #[test]
+    fn test_uint_as_flattened() {
+        let a = [U64::from(1), U64::from(2)];
+        let mut expected = 1u64.to_ne_bytes().to_vec();
+        expected.extend(2u64.to_ne_bytes());
+        assert_eq!(a.as_flattened(), expected);
+
+        let b = [U512::MAX, U512::ZERO];
+        assert_eq!(b.as_flattened().len(), 128);
+        assert!(b.as_flattened()[..64].iter().all(|&x| x == 0xff));
+        assert!(b.as_flattened()[64..].iter().all(|&x| x == 0));
+
+        assert!([Uint::<0, 0>::ZERO; 3].as_flattened().is_empty());
+
+        let mut c = [U64::ZERO];
+        c.as_flattened_mut().fill(0xff);
+        assert_eq!(c[0], U64::MAX);
+
+        let v = vec![U256::from(1), U256::MAX];
+        let expected: Vec<u8> =
+            v.iter().flat_map(|x| x.as_limbs().iter().flat_map(|l| l.to_ne_bytes())).collect();
+        assert_eq!(expected.len(), 64);
+        assert_eq!(v.into_flattened(), expected);
+    }
+
+    #[test]
+    #[should_panic = "limb-aligned"]
+    fn test_uint_as_flattened_mut_unaligned() {
+        let mut a = [crate::U160::ZERO];
+        a.as_flattened_mut();
+    }
+
+    #[test]
+    fn test_uint_as_flattened_mut_unaligned_empty() {
+        let mut a: [crate::U160; 0] = [];
+        assert!(a.as_flattened_mut().is_empty());
     }
 
     #[test]
