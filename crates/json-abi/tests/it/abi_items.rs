@@ -247,3 +247,27 @@ fn tuple_component_names_with_whitespace_and_trailing_commas() {
         assert_eq!(Param::parse(&input).unwrap(), expected);
     }
 }
+
+#[test]
+fn tuple_components_with_address_payable_keep_their_names() {
+    let expected: Param = serde_json::from_value(serde_json::json!({
+        "name": "order", "type": "tuple", "components": [
+            { "name": "who", "type": "address" },
+            { "name": "", "type": "address[]" },
+            { "name": "to", "type": "address[2]" }
+        ]
+    }))
+    .unwrap();
+    for prefix in ["", "tuple"] {
+        let input = format!(
+            "{prefix}(address payable who, address payable[], address payable[2] to) order"
+        );
+        assert_eq!(Param::parse(&input).unwrap(), expected, "{input}");
+    }
+
+    let event =
+        Event::parse("event E(tuple(address payable who, uint256 amount) indexed order)").unwrap();
+    assert_eq!(event.inputs[0].components[0].name, "who");
+    assert_eq!(event.inputs[0].components[0].ty, "address");
+    assert_eq!(Event::parse(&event.full_signature()).unwrap(), event);
+}
