@@ -155,6 +155,7 @@ impl_flatten!(crate::Bloom, 256);
 impl<const BITS: usize, const LIMBS: usize> FixedBytesSliceExt for [crate::Uint<BITS, LIMBS>] {
     #[inline]
     fn as_flattened(&self) -> &[u8] {
+        const { assert!(core::mem::size_of::<crate::Uint<BITS, LIMBS>>() == LIMBS * 8) };
         // SAFETY: `Uint` is plain `u64` limbs with no padding, and `u8` has alignment 1.
         unsafe { slice::from_raw_parts(self.as_ptr().cast(), core::mem::size_of_val(self)) }
     }
@@ -169,6 +170,7 @@ impl<const BITS: usize, const LIMBS: usize> FixedBytesSliceExt for [crate::Uint<
             self.is_empty() || BITS == LIMBS * 64,
             "as_flattened_mut requires a limb-aligned Uint"
         );
+        const { assert!(core::mem::size_of::<crate::Uint<BITS, LIMBS>>() == LIMBS * 8) };
         // SAFETY: as in `as_flattened`; every bit pattern is a valid limb-aligned `Uint`.
         unsafe { slice::from_raw_parts_mut(self.as_mut_ptr().cast(), core::mem::size_of_val(self)) }
     }
