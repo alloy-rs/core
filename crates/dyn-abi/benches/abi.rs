@@ -1,6 +1,7 @@
 #![allow(unknown_lints, clippy::incompatible_msrv, missing_docs)]
 
-use alloy_dyn_abi::{DynSolType, DynSolValue};
+use alloy_dyn_abi::{DynSolType, DynSolValue, JsonAbiExt};
+use alloy_json_abi::Function;
 use alloy_primitives::{Address, B256, U256, Uint, hex};
 use alloy_sol_types::{SolType, SolValue, sol, sol_data};
 use criterion::{
@@ -71,6 +72,23 @@ fn dyn_abi_encode(c: &mut Criterion) {
         b.iter(|| black_box(&input).abi_encode_params());
     });
 
+    g.finish();
+}
+
+fn call_encoding(c: &mut Criterion) {
+    let function = Function::parse("multicall(bytes[] data)").unwrap();
+    let mut g = group(c, "dyn-abi/call");
+    for size in [32, 512, 4096] {
+        let values = vec![DynSolValue::Array(
+            (0..16u8).map(|i| DynSolValue::Bytes(vec![i; size])).collect(),
+        )];
+        g.bench_function(format!("batch16_{size}B"), |b| {
+            b.iter(|| function.abi_encode_input(black_box(&values)).unwrap());
+        });
+        g.bench_function(format!("batch16_{size}B_raw"), |b| {
+            b.iter(|| function.abi_encode_input_raw(black_box(&values)).unwrap());
+        });
+    }
     g.finish();
 }
 
@@ -368,6 +386,7 @@ criterion_group!(
     ethabi_decode,
     dyn_abi_encode,
     dyn_abi_decode,
+    call_encoding,
     sol_types_encode,
     sol_types_decode,
 );
