@@ -232,6 +232,7 @@ macro_rules! wrap_fixed_bytes {
         $crate::impl_rlp!($name, $n);
         $crate::impl_serde!($name);
         $crate::impl_schemars!($name, $n);
+        $crate::impl_utoipa!($name, $n);
         $crate::impl_allocative!($name);
         $crate::impl_arbitrary!($name, $n);
         $crate::impl_rand!($name);
@@ -759,6 +760,36 @@ macro_rules! impl_schemars {
 #[macro_export]
 #[cfg(not(feature = "schemars"))]
 macro_rules! impl_schemars {
+    ($t:ty, $n:literal) => {};
+}
+
+#[doc(hidden)]
+#[macro_export]
+#[cfg(feature = "utoipa")]
+macro_rules! impl_utoipa {
+    ($t:ty, $n:literal) => {
+        #[cfg_attr(docsrs, doc(cfg(feature = "utoipa")))]
+        impl $crate::private::utoipa::PartialSchema for $t {
+            fn schema() -> $crate::private::utoipa::openapi::RefOr<
+                $crate::private::utoipa::openapi::schema::Schema,
+            > {
+                <$crate::FixedBytes<$n> as $crate::private::utoipa::PartialSchema>::schema()
+            }
+        }
+
+        #[cfg_attr(docsrs, doc(cfg(feature = "utoipa")))]
+        impl $crate::private::utoipa::ToSchema for $t {
+            fn name() -> $crate::private::Cow<'static, str> {
+                $crate::private::Cow::Borrowed($crate::private::stringify!($t))
+            }
+        }
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+#[cfg(not(feature = "utoipa"))]
+macro_rules! impl_utoipa {
     ($t:ty, $n:literal) => {};
 }
 
