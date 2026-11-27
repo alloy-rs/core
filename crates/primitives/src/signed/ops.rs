@@ -743,22 +743,36 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     /// Arithmetic shift left operation. Computes `self << rhs`, checking for
     /// overflow on the final result.
     ///
-    /// Returns `None` if the operation overflowed (most significant bit
-    /// changes).
+    /// Returns `None` if the mathematical value `self * 2^rhs` does not fit in
+    /// the signed range, `Some` with the shifted value otherwise.
     #[inline]
     #[must_use]
     pub fn asl(self, rhs: usize) -> Option<Self> {
         if rhs == 0 || BITS == 0 {
-            Some(self)
-        } else {
-            let result = self.wrapping_shl(rhs);
-            if result.sign() != self.sign() {
-                // Overflow occurred
-                None
-            } else {
-                Some(result)
-            }
+            return Some(self);
         }
+
+        // Shifting by the full width (or more) keeps only the lowest bits,
+        // which are zero; that value is representable only when shifting zero.
+        if rhs >= BITS {
+            return if self.sign() == Sign::Positive { Some(Self::ZERO) } else { None };
+        }
+
+        let result = self.wrapping_shl(rhs);
+
+        // The mathematical result is `self * 2^rhs`. Checking only whether the
+        // sign changed misses values whose shifted-out bits wrap around (e.g.
+        // `64i8 << 2` is `256`, which wraps to `0` while keeping its sign):
+        // - a non-negative value overflows when any of the `rhs` bits shifted
+        //   out past the most significant bit is set;
+        // - a negative value overflows when the wrapped result lost its sign,
+        //   which happens exactly when the magnitude exceeds `MIN`.
+        let overflowed = match self.sign() {
+            Sign::Positive => self.0 >> (BITS - 1 - rhs) != Uint::<BITS, LIMBS>::ZERO,
+            Sign::Negative => result.sign() != Sign::Negative,
+        };
+
+        if overflowed { None } else { Some(result) }
     }
 
     /// Compute the [two's complement](https://en.wikipedia.org/wiki/Two%27s_complement) of this number.
