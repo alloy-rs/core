@@ -533,8 +533,7 @@ impl Address {
     #[inline]
     #[cfg(feature = "secp256k1")]
     pub fn from_secp256k1_secret_key(secret_key: &secp256k1::SecretKey) -> Self {
-        let secp = secp256k1::Secp256k1::signing_only();
-        let pubkey = secp256k1::PublicKey::from_secret_key(&secp, secret_key);
+        let pubkey = secp256k1::PublicKey::from_secret_key(secret_key);
         Self::from_secp256k1_public_key(&pubkey)
     }
 }
@@ -855,5 +854,16 @@ mod tests {
         let pubkey_bytes = hex::decode("76698beebe8ee5c74d8cc50ab84ac301ee8f10af6f28d0ffd6adf4d6d3b9b762d46ca56d3dad2ce13213a6f42278dabbb53259f2d92681ea6a0b98197a719be3").unwrap();
 
         assert_eq!(Address::from_raw_public_key(&pubkey_bytes), addr);
+    }
+
+    #[test]
+    #[cfg(feature = "secp256k1")]
+    #[cfg_attr(miri, ignore = "secp256k1 calls unsupported foreign functions")]
+    fn secp256k1_keys_to_address() {
+        let secret =
+            secp256k1::SecretKey::from_secret_bytes(crate::B256::with_last_byte(1).0).unwrap();
+        let expected = address!("7E5F4552091A69125d5DfCb7b8C2659029395Bdf");
+        assert_eq!(Address::from_secp256k1_secret_key(&secret), expected);
+        assert_eq!(Address::from_secp256k1_public_key(&secret.public_key()), expected);
     }
 }
