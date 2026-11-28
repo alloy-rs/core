@@ -19,11 +19,13 @@ pub use variable::{VariableAttribute, VariableAttributes};
 
 kw_enum! {
     /// A storage location.
+    ///
+    /// Solidity reference:
+    /// <https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityParser.dataLocation>
     pub enum Storage {
         Memory(kw::memory),
         Storage(kw::storage),
         Calldata(kw::calldata),
-        Transient(kw::transient),
     }
 }
 

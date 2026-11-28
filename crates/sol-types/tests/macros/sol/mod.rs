@@ -391,6 +391,36 @@ fn getter_names() {
 }
 
 #[test]
+fn transient_storage() {
+    sol! {
+        struct Field {
+            uint256 transient;
+        }
+
+        error Failure(uint256 transient);
+
+        contract Transient {
+            uint256 public transient x;
+            uint256 public transient;
+
+            function parameter(uint256 transient) external;
+            function returnValue() external returns (uint256 transient);
+        }
+    }
+
+    assert_eq!(Transient::xCall::SIGNATURE, "x()");
+    let _ = Transient::xReturn { x: U256::ZERO };
+
+    assert_eq!(Transient::transientCall::SIGNATURE, "transient()");
+    let _ = Transient::transientReturn { transient: U256::ZERO };
+
+    let _ = Field { transient: U256::ZERO };
+    let _ = Failure { transient: U256::ZERO };
+    let _ = Transient::parameterCall { transient: U256::ZERO };
+    let _ = Transient::returnValueReturn { transient: U256::ZERO };
+}
+
+#[test]
 fn abigen_sol_multicall() {
     sol!("../syn-solidity/tests/contracts/Multicall.sol");
 

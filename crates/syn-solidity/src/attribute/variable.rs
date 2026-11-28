@@ -29,35 +29,33 @@ impl fmt::Display for VariableAttributes {
 impl Parse for VariableAttributes {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
         let mut attributes = Vec::new();
+        let mut exclusive_attribute_index = None;
         while let Ok(attribute) = input.parse::<VariableAttribute>() {
-            let error = |prev: &VariableAttribute| {
-                let mut e = Error::new(attribute.span(), "duplicate attribute");
+            let error = |prev: &VariableAttribute, msg: &str| {
+                let mut e = Error::new(attribute.span(), msg);
                 e.combine(Error::new(prev.span(), "previous declaration is here"));
                 e
             };
 
-            // Only one of: `constant`, `immutable`
-            match attribute {
-                VariableAttribute::Constant(_) => {
-                    if let Some(prev) =
-                        attributes.iter().find(|a| matches!(a, VariableAttribute::Immutable(_)))
-                    {
-                        return Err(error(prev));
-                    }
-                }
-                VariableAttribute::Immutable(_) => {
-                    if let Some(prev) =
-                        attributes.iter().find(|a| matches!(a, VariableAttribute::Constant(_)))
-                    {
-                        return Err(error(prev));
-                    }
-                }
-                _ => {}
+            if let Some(prev) = attributes.iter().find(|a| **a == attribute) {
+                return Err(error(prev, "duplicate attribute"));
             }
 
-            if let Some(prev) = attributes.iter().find(|a| **a == attribute) {
-                return Err(error(prev));
+            // Only one of: `constant`, `immutable`, `transient`.
+            if matches!(
+                &attribute,
+                VariableAttribute::Constant(_)
+                    | VariableAttribute::Immutable(_)
+                    | VariableAttribute::Transient(_)
+            ) {
+                if let Some(i) = exclusive_attribute_index {
+                    let conflicting = &attributes[i];
+                    return Err(error(conflicting, "conflicting attribute"));
+                }
+
+                exclusive_attribute_index = Some(attributes.len());
             }
+
             attributes.push(attribute);
         }
         Ok(Self(attributes))
@@ -103,6 +101,10 @@ impl VariableAttributes {
         self.0.iter().any(VariableAttribute::is_immutable)
     }
 
+    pub fn has_transient(&self) -> bool {
+        self.0.iter().any(VariableAttribute::is_transient)
+    }
+
     pub fn has_override(&self, path: Option<&SolPath>) -> bool {
         self.0.iter().any(|attr| attr.is_override(path))
     }
@@ -117,6 +119,8 @@ pub enum VariableAttribute {
     Constant(kw::constant),
     /// `immutable`.
     Immutable(kw::immutable),
+    /// `transient`.
+    Transient(kw::transient),
     /// An [Override] attribute.
     Override(Override),
 }
@@ -127,6 +131,7 @@ impl fmt::Display for VariableAttribute {
             Self::Visibility(v) => v.fmt(f),
             Self::Constant(_) => f.write_str("constant"),
             Self::Immutable(_) => f.write_str("immutable"),
+            Self::Transient(_) => f.write_str("transient"),
             Self::Override(o) => o.fmt(f),
         }
     }
@@ -138,6 +143,7 @@ impl fmt::Debug for VariableAttribute {
             Self::Visibility(v) => v.fmt(f),
             Self::Constant(_) => f.write_str("Constant"),
             Self::Immutable(_) => f.write_str("Immutable"),
+            Self::Transient(_) => f.write_str("Transient"),
             Self::Override(o) => o.fmt(f),
         }
     }
@@ -168,6 +174,12 @@ impl Parse for VariableAttribute {
             input.parse().map(Self::Override)
         } else if lookahead.peek(kw::immutable) {
             input.parse().map(Self::Immutable)
+        // Like solc: `transient` before `=` or `;` is the variable name, e.g. `uint transient;`.
+        } else if lookahead.peek(kw::transient)
+            && !input.peek2(Token![=])
+            && !input.peek2(Token![;])
+        {
+            input.parse().map(Self::Transient)
         } else {
             Err(lookahead.error())
         }
@@ -179,8 +191,9 @@ impl Spanned for VariableAttribute {
         match self {
             Self::Visibility(v) => v.span(),
             Self::Constant(c) => c.span,
-            Self::Override(o) => o.span(),
             Self::Immutable(i) => i.span,
+            Self::Transient(t) => t.span,
+            Self::Override(o) => o.span(),
         }
     }
 
@@ -188,8 +201,9 @@ impl Spanned for VariableAttribute {
         match self {
             Self::Visibility(v) => v.set_span(span),
             Self::Constant(c) => c.span = span,
-            Self::Override(o) => o.set_span(span),
             Self::Immutable(i) => i.span = span,
+            Self::Transient(t) => t.span = span,
+            Self::Override(o) => o.set_span(span),
         }
     }
 }
@@ -239,6 +253,11 @@ impl VariableAttribute {
     #[inline]
     pub const fn is_immutable(&self) -> bool {
         matches!(self, Self::Immutable(_))
+    }
+
+    #[inline]
+    pub const fn is_transient(&self) -> bool {
+        matches!(self, Self::Transient(_))
     }
 
     #[inline]
