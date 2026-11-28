@@ -1,4 +1,4 @@
-use crate::{Modifier, Mutability, Override, SolPath, Spanned, VariableAttribute, Visibility, kw};
+use crate::{Modifier, Mutability, Override, SolPath, Spanned, Visibility, kw};
 use proc_macro2::Span;
 use std::{
     fmt,
@@ -189,21 +189,6 @@ impl Parse for FunctionAttribute {
             Err(input.error("functions cannot have an implementation"))
         } else {
             Err(lookahead.error())
-        }
-    }
-}
-
-impl From<VariableAttribute> for FunctionAttribute {
-    /// Converts a variable attribute to its corresponding function attribute.
-    ///
-    /// - `constant` -> `pure`
-    /// - `immutable` -> `view`
-    fn from(value: VariableAttribute) -> Self {
-        match value {
-            VariableAttribute::Visibility(v) => Self::Visibility(v),
-            VariableAttribute::Constant(c) => Self::Mutability(Mutability::new_pure(c.span)),
-            VariableAttribute::Immutable(i) => Self::Mutability(Mutability::new_view(i.span)),
-            VariableAttribute::Override(o) => Self::Override(o),
         }
     }
 }
