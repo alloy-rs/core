@@ -2,7 +2,7 @@ use crate::{
     Expr, SolIdent, Spanned, kw,
     utils::{DebugPunctuated, ParseNested},
 };
-use proc_macro2::Span;
+use proc_macro2::{Delimiter, Span};
 use std::fmt;
 use syn::{
     Result, Token, braced, parenthesized,
@@ -156,6 +156,18 @@ impl ParseNested for ExprCallOptions {
 }
 
 derive_parse!(ExprCallOptions);
+
+impl ExprCallOptions {
+    /// Peeks function call options: a braced group starting with `ident :`.
+    pub fn peek(input: ParseStream<'_>) -> bool {
+        input.cursor().group(Delimiter::Brace).is_some_and(|(inner, ..)| {
+            inner
+                .ident()
+                .and_then(|(_, rest)| rest.punct())
+                .is_some_and(|(p, _)| p.as_char() == ':')
+        })
+    }
+}
 
 impl Spanned for ExprCallOptions {
     fn span(&self) -> Span {

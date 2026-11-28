@@ -7,7 +7,7 @@ use syn::{
 };
 
 mod contract;
-pub use contract::{ContractKind, Inheritance, ItemContract};
+pub use contract::{ContractKind, Inheritance, ItemContract, Layout};
 
 mod r#enum;
 pub use r#enum::{ItemEnum, Variant};

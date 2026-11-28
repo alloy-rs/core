@@ -332,6 +332,24 @@ fn function_names() {
 }
 
 #[test]
+fn storage_layout() {
+    sol! {
+        contract Base {}
+
+        contract WithLayout is Base layout at 0xAAAA + 0x11 {
+            function f() external;
+        }
+
+        contract WithLayoutFirst layout at 2 ** 255 is Base {
+            function g() external;
+        }
+    }
+
+    assert_eq!(WithLayout::fCall::SIGNATURE, "f()");
+    assert_eq!(WithLayoutFirst::gCall::SIGNATURE, "g()");
+}
+
+#[test]
 fn getters() {
     // modified from https://docs.soliditylang.org/en/latest/contracts.html#getter-functions
     sol! {

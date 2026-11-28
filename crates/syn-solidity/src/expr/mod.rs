@@ -264,8 +264,7 @@ impl Expr {
         if lookahead.peek(Bracket) {
             parse!(Self::Index)
         } else if lookahead.peek(Brace) {
-            // Special case: `try` stmt block
-            if input.peek2(kw::catch) { parse!(break) } else { parse!(Self::CallOptions) }
+            if ExprCallOptions::peek(input) { parse!(Self::CallOptions) } else { parse!(break) }
         } else if lookahead.peek(Paren) {
             parse!(Self::Call)
         } else if lookahead.peek(Token![.]) {
