@@ -43,6 +43,8 @@ custom_keywords!(
     contract,
     interface,
     library,
+    layout,
+    at,
 
     // Error
     error,

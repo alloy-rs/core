@@ -1,4 +1,4 @@
-use crate::{Item, Modifier, SolIdent, Spanned, Type, kw, utils::DebugPunctuated};
+use crate::{Expr, Item, Modifier, SolIdent, Spanned, Type, kw, utils::DebugPunctuated};
 use proc_macro2::Span;
 use std::{cmp::Ordering, fmt};
 use syn::{
@@ -19,6 +19,7 @@ pub struct ItemContract {
     pub kind: ContractKind,
     pub name: SolIdent,
     pub inheritance: Option<Inheritance>,
+    pub layout: Option<Layout>,
     pub brace_token: Brace,
     pub body: Vec<Item>,
 }
@@ -28,6 +29,9 @@ impl fmt::Display for ItemContract {
         write!(f, "{} {}", self.kind, self.name)?;
         if let Some(inheritance) = &self.inheritance {
             write!(f, " {inheritance}")?;
+        }
+        if let Some(layout) = &self.layout {
+            write!(f, " {layout}")?;
         }
         let s = self
             .body
@@ -47,6 +51,7 @@ impl fmt::Debug for ItemContract {
             .field("kind", &self.kind)
             .field("name", &self.name)
             .field("inheritance", &self.inheritance)
+            .field("layout", &self.layout)
             .field("body", &self.body)
             .finish()
     }
@@ -54,38 +59,46 @@ impl fmt::Debug for ItemContract {
 
 impl Parse for ItemContract {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
-        let kind;
+        let attrs = input.call(Attribute::parse_outer)?;
+        let kind: ContractKind = input.parse()?;
+        let name = input.parse()?;
+
+        let mut inheritance = None;
+        let mut layout = None;
+        loop {
+            if input.peek(kw::is) {
+                if kind.is_library() {
+                    return Err(input.error("libraries are not allowed to inherit"));
+                }
+                if inheritance.is_some() {
+                    return Err(input.error("more than one inheritance list"));
+                }
+                inheritance = Some(input.parse()?);
+            } else if input.peek(kw::layout) {
+                if kind.is_interface() || kind.is_library() {
+                    return Err(input.error("storage layout can only be specified for contracts"));
+                }
+                if layout.is_some() {
+                    return Err(input.error("more than one storage layout specifier"));
+                }
+                layout = Some(input.parse()?);
+            } else {
+                break;
+            }
+        }
+
         let content;
-        Ok(Self {
-            attrs: input.call(Attribute::parse_outer)?,
-            kind: {
-                kind = input.parse()?;
-                kind
-            },
-            name: input.parse()?,
-            inheritance: {
-                if input.peek(kw::is) {
-                    if kind.is_library() {
-                        return Err(input.error("libraries are not allowed to inherit"));
-                    }
-                    Some(input.parse()?)
-                } else {
-                    None
-                }
-            },
-            brace_token: braced!(content in input),
-            body: {
-                let mut body = Vec::new();
-                while !content.is_empty() {
-                    let item: Item = content.parse()?;
-                    if matches!(item, Item::Contract(_)) {
-                        return Err(Error::new(item.span(), "cannot declare nested contracts"));
-                    }
-                    body.push(item);
-                }
-                body
-            },
-        })
+        let brace_token = braced!(content in input);
+        let mut body = Vec::new();
+        while !content.is_empty() {
+            let item: Item = content.parse()?;
+            if matches!(item, Item::Contract(_)) {
+                return Err(Error::new(item.span(), "cannot declare nested contracts"));
+            }
+            body.push(item);
+        }
+
+        Ok(Self { attrs, kind, name, inheritance, layout, brace_token, body })
     }
 }
 
@@ -300,7 +313,7 @@ impl Parse for Inheritance {
                 break;
             }
             inheritance.push_value(input.parse()?);
-            if input.is_empty() || input.peek(Brace) {
+            if input.is_empty() || input.peek(Brace) || input.peek(kw::layout) {
                 break;
             }
             inheritance.push_punct(input.parse()?);
@@ -321,5 +334,52 @@ impl Spanned for Inheritance {
 
     fn set_span(&mut self, span: Span) {
         self.is_token.span = span;
+    }
+}
+
+/// A storage layout specifier of an [`ItemContract`]: `layout at 0xAAAA + 0x11`.
+///
+/// Solidity reference:
+/// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.contractDefinition>
+#[derive(Clone)]
+pub struct Layout {
+    pub layout_token: kw::layout,
+    pub at_token: kw::at,
+    pub base_slot: Expr,
+}
+
+impl fmt::Display for Layout {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // TODO: fmt::Display for Expr
+        f.write_str("layout at <expr>")
+    }
+}
+
+impl fmt::Debug for Layout {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Layout").field("base_slot", &self.base_slot).finish()
+    }
+}
+
+impl Parse for Layout {
+    fn parse(input: ParseStream<'_>) -> Result<Self> {
+        Ok(Self {
+            layout_token: input.parse()?,
+            at_token: input.parse()?,
+            base_slot: input.parse()?,
+        })
+    }
+}
+
+impl Spanned for Layout {
+    fn span(&self) -> Span {
+        let span = self.layout_token.span;
+        span.join(self.base_slot.span()).unwrap_or(span)
+    }
+
+    fn set_span(&mut self, span: Span) {
+        self.layout_token.span = span;
+        self.at_token.span = span;
+        self.base_slot.set_span(span);
     }
 }

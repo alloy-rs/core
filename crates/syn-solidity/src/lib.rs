@@ -37,7 +37,7 @@ mod item;
 pub use item::{
     ContractKind, EventParameter, FunctionBody, FunctionKind, ImportAlias, ImportAliases,
     ImportDirective, ImportGlob, ImportPath, ImportPlain, Inheritance, Item, ItemContract,
-    ItemEnum, ItemError, ItemEvent, ItemFunction, ItemStruct, ItemUdt, PragmaDirective,
+    ItemEnum, ItemError, ItemEvent, ItemFunction, ItemStruct, ItemUdt, Layout, PragmaDirective,
     PragmaTokens, Returns, UserDefinableOperator, UsingDirective, UsingList, UsingListItem,
     UsingType, Variant,
 };
